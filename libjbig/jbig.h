@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.h,v 1.14 2003-06-11 16:57:02 mgk25 Exp $
+ *  $Id: jbig.h,v 1.15 2004-06-10 20:55:06 mgk25 Exp $
  */
 
 #ifndef JBG_H
@@ -238,7 +238,7 @@ int jbg_enc_lrlmax(struct jbg_enc_state *s, unsigned long mwidth,
 void jbg_enc_layers(struct jbg_enc_state *s, int d);
 int  jbg_enc_lrange(struct jbg_enc_state *s, int dl, int dh);
 void jbg_enc_options(struct jbg_enc_state *s, int order, int options,
-		     long l0, int mx, int my);
+		     unsigned long l0, int mx, int my);
 void jbg_enc_out(struct jbg_enc_state *s);
 void jbg_enc_free(struct jbg_enc_state *s);
 
