@@ -3,19 +3,23 @@
  * 
  *  Run this test sequence after each modification on the JBIG library.
  *
- *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
+ *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: tstcodec.c,v 1.6 1998-04-05 17:36:19 mgk25 Exp $
+ *  $Id: tstcodec.c,v 1.7 1998-04-11 01:26:33 mgk25 Exp $
  */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "jbig.h"
 
 #define TESTBUF_SIZE 400000L
 #define TESTPIC_SIZE 477995L
+
+#define FAILED "F\bFA\bAI\bIL\bLE\bED\bD"
+#define PASSED "PASSED"
 
 unsigned char *testbuf;
 unsigned char *testpic;
@@ -27,6 +31,7 @@ static void testbuf_write(int v, void *dummy)
 {
   if (testbuf_len < TESTBUF_SIZE)
     testbuf[testbuf_len++] = v;
+  (void) dummy;
   return;
 }
 
@@ -40,6 +45,18 @@ static void testbuf_writel(unsigned char *start, size_t len, void *dummy)
       memcpy(testbuf + testbuf_len, start, TESTBUF_SIZE - testbuf_len);
   testbuf_len += len;
 
+#ifdef DEBUG
+  {
+    unsigned char *p;
+    unsigned sum = 0;
+    
+    for (p = start; p - start < (ptrdiff_t) len; sum = (sum ^ *p++) << 1);
+    printf("  testbuf_writel: %4d bytes, checksum %04x\n",
+	   len, sum & 0xffff);
+  }
+#endif
+
+  (void) dummy;
   return;
 }
 
@@ -129,7 +146,7 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
   int i, result;
   unsigned char **image;
 
-  plane_size = ((((width - 1L) | 7) + 1) >> 3) * height;
+  plane_size = ((width + 7) / 8) * height;
   image = malloc(planes * sizeof(unsigned char *));
   if (!image) {
     printf("Sorry, not enough memory available!\n");
@@ -155,69 +172,70 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
     free(image[i]);
   free(image);
   printf("Encoded BIE has %6ld bytes: ", testbuf_len);
-  if (testbuf_len == correct_length)
-    puts("PASSED");
-  else {
-    trouble++;
-    printf("FAILED, correct would have been %ld\n", correct_length);
-  }
-
+  if (correct_length >= 0)
+    if (testbuf_len == correct_length)
+      puts(PASSED);
+    else {
+      trouble++;
+      printf(FAILED ", correct would have been %ld\n", correct_length);
+    }
+  else
+    puts("");
+  
   printf("Test %s.2: Decoding whole chunk ...\n", test_id);
   jbg_dec_init(&sjd);
   result = jbg_dec_in(&sjd, testbuf, testbuf_len, NULL);
   if (result != JBG_EOK) {
-    printf("Decoder complained with return value %d: FAILED\n"
+    printf("Decoder complained with return value %d: " FAILED "\n"
 	   "Cause: '%s'\n", result, jbg_strerror(result, JBG_EN));
     trouble++;
-  }
-  if (result == JBG_EOK) {
+  } else {
     printf("Image comparison: ");
     result = 1;
-    for (i = 0; i < planes && result; i++) {
+    for (i = 0; i < planes; i++) {
       if (memcmp(orig_image[i], sjd.lhp[layers & 1][i],
-		 ((((width - 1L) | 7) + 1) >> 3) * height)) {
+		 ((width + 7) / 8) * height)) {
 	result = 0;
 	trouble++;
-	printf("FAILED for plane %d\n", i);
+	printf(FAILED " for plane %d\n", i);
       }
     }
     if (result)
-      puts("PASSED");
+      puts(PASSED);
   }
   jbg_dec_free(&sjd);
 
-  printf("Test %s.3: Decoding with single byte feed ...\n", test_id);
+  printf("Test %s.3: Decoding with single-byte feed ...\n", test_id);
   jbg_dec_init(&sjd);
   result = JBG_EAGAIN;
   for (l = 0; l < testbuf_len; l++) {
     result = jbg_dec_in(&sjd, testbuf + l, 1, NULL);
     if (l < testbuf_len - 1 && result != JBG_EAGAIN) {
-      printf("Decoder complained with return value %d at byte %ld: FAILED\n"
-	     "Cause: '%s'\n", result, l, jbg_strerror(result, JBG_EN));
+      printf("Decoder complained with return value %d at byte %ld: " FAILED
+	     "\nCause: '%s'\n", result, l, jbg_strerror(result, JBG_EN));
       trouble++;
       break;
     }
   }
-  if (l == testbuf_len && result != JBG_EOK) {
-    printf("Decoder complained with return value %d at final byte: FAILED\n"
-	   "Cause: '%s'\n", result, jbg_strerror(result, JBG_EN));
-    trouble++;
-  }
-
-  if (result == JBG_EOK) {
-    printf("Image comparison: ");
-    result = 1;
-    for (i = 0; i < planes && result; i++) {
-      if (memcmp(orig_image[i], sjd.lhp[layers & 1][i],
-		 ((((width - 1L) | 7) + 1) >> 3) * height)) {
-	result = 0;
-	trouble++;
-	printf("FAILED for plane %d\n", i);
+  if (l == testbuf_len)
+    if (result != JBG_EOK) {
+      printf("Decoder complained with return value %d at final byte: " FAILED
+	     "\nCause: '%s'\n", result, jbg_strerror(result, JBG_EN));
+      trouble++;
+    } else {
+      printf("Image comparison: ");
+      result = 1;
+      for (i = 0; i < planes; i++) {
+	if (memcmp(orig_image[i], sjd.lhp[layers & 1][i],
+		   ((width + 7) / 8) * height)) {
+	  result = 0;
+	  trouble++;
+	  printf(FAILED " for plane %d\n", i);
+	}
       }
+      if (result)
+	puts(PASSED);
     }
-    if (result)
-      puts("PASSED");
-  }
 
   jbg_dec_free(&sjd);
   puts("");
@@ -232,9 +250,11 @@ int main(void)
   struct jbg_arenc_state *se;
   struct jbg_ardec_state *sd;
   long i;
-  int pix;
+  int pix, order, layers;
+  char test[10];
   size_t st;
   unsigned char *pp;
+  unsigned char *ppp[4];
 
   int t82pix[16] = {
     0x05e0, 0x0000, 0x8b00, 0x01c4, 0x1700, 0x0034, 0x7fff, 0x1a3f,
@@ -251,6 +271,57 @@ int main(void)
     0xff, 0x00, 0x2d, 0x20, 0x82, 0x91, 0xff, 0x02
   };
 
+  /* three 23x5 pixel test images with the letters JBIG */
+  unsigned char jbig_normal[15*4] = {
+    0x7c, 0xe2, 0x38, 0x04, 0x92, 0x40, 0x04, 0xe2, 0x5c, 0x44,
+    0x92, 0x44, 0x38, 0xe2, 0x38,
+    0x7c, 0xe2, 0x38, 0x04, 0x92, 0x40, 0x04, 0xe2, 0x5c, 0x44,
+    0x92, 0x44, 0x38, 0xe2, 0x38,
+    0x7c, 0xe2, 0x38, 0x04, 0x92, 0x40, 0x04, 0xe2, 0x5c, 0x44,
+    0x92, 0x44, 0x38, 0xe2, 0x38,
+    0x7c, 0xe2, 0x38, 0x04, 0x92, 0x40, 0x04, 0xe2, 0x5c, 0x44,
+    0x92, 0x44, 0x38, 0xe2, 0x38
+  };
+  unsigned char jbig_upsidedown[15*4] = {
+    0x38, 0xe2, 0x38, 0x44, 0x92, 0x44, 0x04, 0xe2, 0x5c, 0x04,
+    0x92, 0x40, 0x7c, 0xe2, 0x38,
+    0x38, 0xe2, 0x38, 0x44, 0x92, 0x44, 0x04, 0xe2, 0x5c, 0x04,
+    0x92, 0x40, 0x7c, 0xe2, 0x38,
+    0x38, 0xe2, 0x38, 0x44, 0x92, 0x44, 0x04, 0xe2, 0x5c, 0x04,
+    0x92, 0x40, 0x7c, 0xe2, 0x38,
+    0x38, 0xe2, 0x38, 0x44, 0x92, 0x44, 0x04, 0xe2, 0x5c, 0x04,
+    0x92, 0x40, 0x7c, 0xe2, 0x38
+  };
+  unsigned char jbig_inverse[15*4] = {
+    0xff^0x7c, 0xff^0xe2, 0xfe^0x38, 0xff^0x04, 0xff^0x92,
+    0xfe^0x40, 0xff^0x04, 0xff^0xe2, 0xfe^0x5c, 0xff^0x44,
+    0xff^0x92, 0xfe^0x44, 0xff^0x38, 0xff^0xe2, 0xfe^0x38,
+    0xff^0x7c, 0xff^0xe2, 0xfe^0x38, 0xff^0x04, 0xff^0x92,
+    0xfe^0x40, 0xff^0x04, 0xff^0xe2, 0xfe^0x5c, 0xff^0x44,
+    0xff^0x92, 0xfe^0x44, 0xff^0x38, 0xff^0xe2, 0xfe^0x38,
+    0xff^0x7c, 0xff^0xe2, 0xfe^0x38, 0xff^0x04, 0xff^0x92,
+    0xfe^0x40, 0xff^0x04, 0xff^0xe2, 0xfe^0x5c, 0xff^0x44,
+    0xff^0x92, 0xfe^0x44, 0xff^0x38, 0xff^0xe2, 0xfe^0x38,
+    0xff^0x7c, 0xff^0xe2, 0xfe^0x38, 0xff^0x04, 0xff^0x92,
+    0xfe^0x40, 0xff^0x04, 0xff^0xe2, 0xfe^0x5c, 0xff^0x44,
+    0xff^0x92, 0xfe^0x44, 0xff^0x38, 0xff^0xe2, 0xfe^0x38
+  };
+  int orders[] = {
+    0,
+    JBG_ILEAVE,
+    JBG_ILEAVE | JBG_SMID,
+#if 0
+    JBG_SEQ,
+    JBG_SEQ | JBG_SMID,
+    JBG_SEQ | JBG_ILEAVE,
+    JBG_HITOLO,
+    JBG_HITOLO | JBG_ILEAVE,
+    JBG_HITOLO | JBG_ILEAVE | JBG_SMID,
+    JBG_HITOLO | JBG_SEQ,
+    JBG_HITOLO | JBG_SEQ | JBG_SMID,
+    JBG_HITOLO | JBG_SEQ | JBG_ILEAVE
+#endif
+  };
 
   printf("\nAutomatic JBIG Compatibility Test Suite\n"
 	 "---------------------------------------\n\n"
@@ -306,9 +377,9 @@ int main(void)
   printf("\n\nTest 1: ");
   if (testbuf_len != 30 || memcmp(testbuf, t82sde, 30)) {
     problems++;
-    printf("FAILED");
+    printf(FAILED);
   } else
-    printf("PASSED");
+    printf(PASSED);
   printf("\n\n");
 
 
@@ -339,9 +410,9 @@ int main(void)
   printf("Test result: ");
   if (trouble) {
     problems++;
-    puts("FAILED");
+    puts(FAILED);
   } else
-    puts("PASSED");
+    puts(PASSED);
   printf("\n");
 
   printf("Test 2.2: Decoding with single byte feed ...\n");
@@ -380,11 +451,10 @@ int main(void)
   printf("Test result: ");
   if (trouble) {
     problems++;
-    puts("FAILED");
+    puts(FAILED);
   } else
-    puts("PASSED");
+    puts(PASSED);
   printf("\n");
-#endif
   
   puts("3) Parametric algorithm test sequence from ITU-T T.82, clause 7.2\n"
        "-----------------------------------------------------------------\n");
@@ -412,10 +482,34 @@ int main(void)
 			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON,
 			 JBG_SEQ, 6, 1, 2, 8, 279314L, "3.5");
 #endif
+#endif
 
-  printf("\nTest result summary: the library has %s the test suite.\n",
-	 problems ? "FAILED" : "PASSED");
-  if (!problems)
+  puts("4) Additional regression tests\n"
+       "------------------------------\n");
+  ppp[0] = jbig_normal;
+  ppp[1] = jbig_upsidedown;
+  ppp[2] = jbig_inverse;
+  ppp[3] = jbig_inverse;
+
+  i = 0;
+  for (layers = 0; layers <= 3; layers++)
+    for (order = 0; order < (int) (sizeof(orders)/sizeof(int)); order++) {
+      sprintf(test, "4.%ld", ++i);
+      printf("Test %s: order=%d, %d layers, 4 planes", test, orders[order],
+	     layers);
+      problems += test_cycle(ppp, 23, 5*4, JBG_TPBON | JBG_TPDON | JBG_DPON,
+			     orders[order], layers, 4, 2, 8, -1, test);
+    }
+
+
+  printf("\nTest result summary: the library has %s the test suite.\n\n",
+	 problems ? FAILED : PASSED);
+  if (problems)
+    puts("This is bad. If you cannot identify the problem yourself, please "
+	 "send\nthis output plus a detailed description of your "
+	 "compile environment\n(OS, compiler, version, options, etc.) to "
+	 "Markus Kuhn <mkuhn@acm.org>.");
+  else
     puts("Congratulations, everything is fine.\n");
 
   return problems != 0;
