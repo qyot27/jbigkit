@@ -1,4 +1,4 @@
-.TH JBGTOPBM 1 "1996-01-09"
+.TH JBGTOPBM 1 "1996-02-05"
 .SH NAME
 jbgtopbm \- JBIG to portable bitmap file converter
 .SH SYNOPSIS
@@ -63,6 +63,12 @@ and
 .BI \-y
 can also be used together in which case the largest layer that satisfies
 both limits is selected.
+.SH BUGS
+Using standard input and standard output for binary data works only on
+systems where there is no difference between binary and text streams
+(e.g. UNIX). On other systems (e.g. MS-DOS), using standard input or
+standard output may cause control characters like CR or LF to be
+inserted or deleted and this will damage the binary data.
 .SH STANDARDS
 This program implements the
 .I JBIG

@@ -191,6 +191,12 @@ to pass some conformance test suite.
 .BI \-v
 After the BIE has been created, a few technical details of the created
 file will be listed (verbose mode).
+.SH BUGS
+Using standard input and standard output for binary data works only on
+systems where there is no difference between binary and text streams
+(e.g. UNIX). On other systems (e.g. MS-DOS), using standard input or
+standard output may cause control characters like CR or LF to be
+inserted or deleted and this will damage the binary data.
 .SH STANDARDS
 This program implements the
 .I JBIG
