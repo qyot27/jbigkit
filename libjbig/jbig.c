@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.c,v 1.24 2004-06-24 15:36:46 mgk25 Exp $
+ *  $Id: jbig.c,v 1.25 2004-06-24 19:34:34 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -95,7 +95,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.24 2004-06-24 15:36:46 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.25 2004-06-24 19:34:34 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -751,6 +751,7 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
 
   extern char jbg_resred[], jbg_dptable[];
 
+  assert(x > 0 && y > 0 && planes > 0 && planes < 256);
   s->xd = x;
   s->yd = y;
   s->yd1 = y; /* This is the hight initially announced in BIH. To provoke
