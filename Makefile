@@ -1,5 +1,5 @@
 # Unix makefile for JBIG-KIT
-# $Id: Makefile,v 1.7 1999-11-16 15:55:13 mgk25 Exp $
+# $Id: Makefile,v 1.8 2000-04-08 10:48:09 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
 CC = gcc
@@ -10,7 +10,7 @@ CCFLAGS = -O2 -W
 
 CFLAGS = $(CCFLAGS) -I../libjbig
 
-VERSION=1.1
+VERSION=1.2
 
 all: lib pbm
 	@echo "Enter 'make test' in order to start some automatic tests."
