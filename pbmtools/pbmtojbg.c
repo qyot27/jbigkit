@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
- *  $Id: pbmtojbg.c,v 1.14 2004-06-24 18:47:41 mgk25 Exp $
+ *  $Id: pbmtojbg.c,v 1.15 2004-06-24 19:34:58 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -323,6 +323,16 @@ int main (int argc, char **argv)
   }
   if (feof(fin)) {
     fprintf(stderr, "Unexpected end of input file '%s'!\n", fnin);
+    exit(1);
+  }
+
+  /* Test for valid parameters */
+  if (width < 0 || height < 0) {
+    fprintf(stderr, "Image dimensions must be positive!\n", fnin);
+    exit(1);
+  }
+  if (encode_planes < 1 || encode_planes > 255) {
+    fprintf(stderr, "Number of planes must be in range 1-255!\n", fnin);
     exit(1);
   }
 
