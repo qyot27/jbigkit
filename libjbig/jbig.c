@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.c,v 1.19 2003-06-11 16:57:02 mgk25 Exp $
+ *  $Id: jbig.c,v 1.20 2004-06-10 19:01:49 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -95,7 +95,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.19 2003-06-11 16:57:02 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.20 2004-06-10 19:01:49 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -165,44 +165,67 @@ static const char *errmsg[NEMSG_LANG][NEMSG] = {
  * The following three functions are the only places in this code, were
  * C library memory management functions are called. The whole JBIG
  * library has been designed in order to allow multi-threaded
- * execution. no static or global variables are used, so all fuctions
+ * execution. No static or global variables are used, so all fuctions
  * are fully reentrant. However if you want to use this multi-thread
  * capability and your malloc, realloc and free are not reentrant,
  * then simply add the necessary semaphores or mutex primitives below.
+ * In contrast to C's malloc() and realloc(), but like C's calloc(),
+ * these functions take two parameters nmemb and size that are multiplied
+ * before being passed on to the corresponding C function. 
+ * This we can catch all overflows during a size_t multiplication a
+ * a single place.
  */
 
-static void *checked_malloc(size_t size)
+#ifndef SIZE_MAX
+#define SIZE_MAX ((size_t) -1)     /* largest value of size_t */
+#endif
+
+static void *checked_malloc(size_t nmemb, size_t size)
 {
   void *p;
-  
-  p = malloc(size);
+
   /* Full manual exception handling is ugly here for performance
    * reasons. If an adequate handling of lack of memory is required,
-   * then use C++ and throw a C++ exception here. */
+   * then use C++ and throw a C++ exception instead of abort(). */
+
+  /* assert that nmemb * size <= SIZE_MAX */
+  if (size > SIZE_MAX / nmemb)
+    abort();
+  
+  p = malloc(nmemb * size);
+
   if (!p)
     abort();
 
 #if 0
-  fprintf(stderr, "%p = malloc(%ld)\n", p, (long) size);
+  fprintf(stderr, "%p = malloc(%lu * %lu)\n", p,
+	  (unsigned long) nmemb, (unsigned long) size);
 #endif
 
   return p;
 }
 
 
-static void *checked_realloc(void *ptr, size_t size)
+static void *checked_realloc(void *ptr, size_t nmemb, size_t size)
 {
   void *p;
 
-  p = realloc(ptr, size);
   /* Full manual exception handling is ugly here for performance
    * reasons. If an adequate handling of lack of memory is required,
-   * then use C++ and throw a C++ exception here. */
+   * then use C++ and throw a C++ exception here instead of abort(). */
+
+  /* assert that nmemb * size <= SIZE_MAX */
+  if (size > SIZE_MAX / nmemb)
+    abort();
+  
+  p = realloc(ptr, nmemb * size);
+
   if (!p)
     abort();
 
 #if 0
-  fprintf(stderr, "%p = realloc(%p, %ld)\n", p, ptr, (long) size);
+  fprintf(stderr, "%p = realloc(%p, %lu * %lu)\n", p, ptr,
+	  (unsigned long) nmemb, (unsigned long) size);
 #endif
 
   return p;
@@ -535,7 +558,7 @@ static struct jbg_buf *jbg_buf_init(struct jbg_buf **free_list)
     *free_list = new_block->next;
   } else {
     /* request a new memory block */
-    new_block = (struct jbg_buf *) checked_malloc(sizeof(struct jbg_buf));
+    new_block = (struct jbg_buf *) checked_malloc(1, sizeof(struct jbg_buf));
   }
   new_block->len = 0;
   new_block->next = NULL;
@@ -680,8 +703,34 @@ unsigned long jbg_ceil_half(unsigned long x, int n)
 {
   unsigned long mask;
   
+  assert(n >= 0 && n < 32);
   mask = (1UL << n) - 1;     /* the lowest n bits are 1 here */
   return (x >> n) + ((mask & x) != 0);
+}
+
+
+/*
+ * Set L0 (the number of lines in a stripe at lowest resolution)
+ * to a default value, such that there are about 35 stripes, as
+ * suggested in Annex C of ITU-T T.82, without exceeding the
+ * limit 128/2^D suggested in Annex A.
+ */
+static void jbg_set_default_l0(struct jbg_enc_state *s)
+{
+  s->l0 = jbg_ceil_half(s->yd, s->d) / 35;   /* 35 stripes/image */
+  while ((s->l0 << s->d) > 128)              /* but <= 128 lines/stripe */
+    --s->l0;
+  if (s->l0 < 2) s->l0 = 2;
+}
+
+
+/* Calculate the number of stripes that will be required */
+static unsigned long jbg_stripes(unsigned long l0, unsigned long yd,
+				 unsigned long d)
+{
+  unsigned long y0 = jbg_ceil_half(yd, d);
+
+  return y0 / l0 + (y0 % l0 != 0);
 }
 
 
@@ -696,7 +745,6 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
 {
   unsigned long l, lx;
   int i;
-  size_t bufsize;
 
   extern char jbg_resred[], jbg_dptable[];
 
@@ -712,10 +760,7 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
   s->d = 0;
   s->dl = 0;
   s->dh = s->d;
-  s->l0 = jbg_ceil_half(s->yd, s->d) / 35;   /* 35 stripes/image */
-  while ((s->l0 << s->d) > 128)              /* but <= 128 lines/stripe */
-    --s->l0;
-  if (s->l0 < 2) s->l0 = 2;
+  jbg_set_default_l0(s);
   s->mx = 8;
   s->my = 0;
   s->order = JBG_ILEAVE | JBG_SMID;
@@ -723,21 +768,20 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
   s->dppriv = jbg_dptable;
   s->res_tab = jbg_resred;
   
-  s->highres = checked_malloc(planes * sizeof(int));
+  s->highres = checked_malloc(planes, sizeof(int));
   s->lhp[0] = p;
-  s->lhp[1] = checked_malloc(planes * sizeof(unsigned char *));
-  bufsize = ((jbg_ceil_half(x, 1) + 7) / 8) * jbg_ceil_half(y, 1);
+  s->lhp[1] = checked_malloc(planes, sizeof(unsigned char *));
   for (i = 0; i < planes; i++) {
     s->highres[i] = 0;
-    s->lhp[1][i] = checked_malloc(sizeof(unsigned char) * bufsize);
+    s->lhp[1][i] = checked_malloc(jbg_ceil_half(y, 1), jbg_ceil_half(x, 1+3));
   }
   
   s->free_list = NULL;
   s->s = (struct jbg_arenc_state *) 
-    checked_malloc(s->planes * sizeof(struct jbg_arenc_state));
-  s->tx = (int *) checked_malloc(s->planes * sizeof(int));
+    checked_malloc(s->planes, sizeof(struct jbg_arenc_state));
+  s->tx = (int *) checked_malloc(s->planes, sizeof(int));
   lx = jbg_ceil_half(x, 1);
-  s->tp = (char *) checked_malloc(lx * sizeof(char));
+  s->tp = (char *) checked_malloc(lx, sizeof(char));
   for (l = 0; l < lx; s->tp[l++] = 2);
   s->sde = NULL;
 
@@ -765,12 +809,7 @@ int jbg_enc_lrlmax(struct jbg_enc_state *s, unsigned long x,
       break;
   s->dl = 0;
   s->dh = s->d;
-
-  s->l0 = jbg_ceil_half(s->yd, s->d) / 35;  /* 35 stripes/image */
-  while ((s->l0 << s->d) > 128)             /* but <= 128 lines/stripe */
-    --s->l0;
-  if (s->l0 < 2) s->l0 = 2;
-
+  jbg_set_default_l0(s);
   return s->d;
 }
 
@@ -787,12 +826,7 @@ void jbg_enc_layers(struct jbg_enc_state *s, int d)
   s->d  = d;
   s->dl = 0;
   s->dh = s->d;
-
-  s->l0 = jbg_ceil_half(s->yd, s->d) / 35;  /* 35 stripes/image */
-  while ((s->l0 << s->d) > 128)             /* but <= 128 lines/stripe */
-    --s->l0;
-  if (s->l0 < 2) s->l0 = 2;
-
+  jbg_set_default_l0(s);
   return;
 }
 
@@ -819,11 +853,11 @@ int jbg_enc_lrange(struct jbg_enc_state *s, int dl, int dh)
  * the number of layer 0 lines per stripes.
  */
 void jbg_enc_options(struct jbg_enc_state *s, int order, int options,
-		     long l0, int mx, int my)
+		     unsigned long l0, int mx, int my)
 {
   if (order >= 0 && order <= 0x0f) s->order = order;
   if (options >= 0) s->options = options;
-  if (l0 >= 0) s->l0 = l0;
+  if (l0 > 0) s->l0 = l0;
   if (mx >= 0 && my < 128) s->mx = mx;
   if (my >= 0 && my < 256) s->my = my;
 
@@ -872,6 +906,8 @@ static void encode_sde(struct jbg_enc_state *s,
 
   /* number of lines per stripe in highres image */
   hl = s->l0 << layer;
+  if (hl >> layer != s->l0)
+    hl = -1;
   /* number of lines per stripe in lowres image */
   ll = hl >> 1;
   /* current line number in highres image */
@@ -883,8 +919,8 @@ static void encode_sde(struct jbg_enc_state *s,
   lx = jbg_ceil_half(hx, 1);
   ly = jbg_ceil_half(hy, 1);
   /* bytes per line in highres and lowres image */
-  hbpl = (hx + 7) / 8;
-  lbpl = (lx + 7) / 8;
+  hbpl = jbg_ceil_half(hx, 3);
+  lbpl = jbg_ceil_half(lx, 3);
   /* pointer to first image byte of highres stripe */
   hp = s->lhp[s->highres[plane]][plane] + stripe * hl * hbpl;
   lp2 = s->lhp[1 - s->highres[plane]][plane] + stripe * ll * lbpl;
@@ -1454,8 +1490,8 @@ static void resolution_reduction(struct jbg_enc_state *s, int plane,
   lx = jbg_ceil_half(hx, 1);
   ly = jbg_ceil_half(hy, 1);
   /* bytes per line in highres and lowres image */
-  hbpl = (hx + 7) / 8;
-  lbpl = (lx + 7) / 8;
+  hbpl = jbg_ceil_half(hx, 3);
+  lbpl = jbg_ceil_half(lx, 3);
   /* pointers to first image bytes */
   hp2 = s->lhp[s->highres[plane]][plane];
   hp1 = hp2 + hbpl;
@@ -1484,7 +1520,7 @@ static void resolution_reduction(struct jbg_enc_state *s, int plane,
    *   76543210 76543210 76543210 76543210     line_l2
    *                            X
    */
-      
+
   for (i = 0; i < ly; i++) {
     if (2*i + 1 >= hy)
       hp1 = hp2;
@@ -1742,27 +1778,7 @@ void jbg_enc_out(struct jbg_enc_state *s)
 	s->lhp[0][plane][y * bpl + bpl - 1] &= ~((1 << (8 - (s->xd & 7))) - 1);
   }
 
-  /* calculate number of stripes that will be required */
-  s->stripes = ((s->yd >> s->d) + 
-		((((1UL << s->d) - 1) & s->yd) != 0) + s->l0 - 1) / s->l0;
-
-  /* allocate buffers for SDE pointers */
-  if (s->sde == NULL) {
-    s->sde = (struct jbg_buf ****)
-      checked_malloc(s->stripes * sizeof(struct jbg_buf ***));
-    for (stripe = 0; stripe < s->stripes; stripe++) {
-      s->sde[stripe] = (struct jbg_buf ***)
-	checked_malloc((s->d + 1) * sizeof(struct jbg_buf **));
-      for (layer = 0; layer < s->d + 1; layer++) {
-	s->sde[stripe][layer] = (struct jbg_buf **)
-	  checked_malloc(s->planes * sizeof(struct jbg_buf *));
-	for (plane = 0; plane < s->planes; plane++)
-	  s->sde[stripe][layer][plane] = SDE_TODO;
-      }
-    }
-  }
-
-  /* output BIH */
+  /* prepare BIH */
   buf[0] = s->dl;
   buf[1] = s->dh;
   buf[2] = s->planes;
@@ -1785,6 +1801,33 @@ void jbg_enc_out(struct jbg_enc_state *s)
   buf[17] = s->my;
   buf[18] = s->order;
   buf[19] = s->options & 0x7f;
+
+#if 0
+  /* sanitize L0 (if it was set to 0xffffffff for T.85-style NEWLEN tests) */
+  if (s->l0 > (s->yd >> s->d))
+    s->l0 = s->yd >> s->d;
+#endif
+
+  /* calculate number of stripes that will be required */
+  s->stripes = jbg_stripes(s->l0, s->yd, s->d);
+
+  /* allocate buffers for SDE pointers */
+  if (s->sde == NULL) {
+    s->sde = (struct jbg_buf ****)
+      checked_malloc(s->stripes, sizeof(struct jbg_buf ***));
+    for (stripe = 0; stripe < s->stripes; stripe++) {
+      s->sde[stripe] = (struct jbg_buf ***)
+	checked_malloc(s->d + 1, sizeof(struct jbg_buf **));
+      for (layer = 0; layer < s->d + 1; layer++) {
+	s->sde[stripe][layer] = (struct jbg_buf **)
+	  checked_malloc(s->planes, sizeof(struct jbg_buf *));
+	for (plane = 0; plane < s->planes; plane++)
+	  s->sde[stripe][layer][plane] = SDE_TODO;
+      }
+    }
+  }
+
+  /* output BIH */
   s->data_out(buf, 20, s->file);
   if ((s->options & (JBG_DPON | JBG_DPPRIV | JBG_DPLAST)) ==
       (JBG_DPON | JBG_DPPRIV)) {
@@ -2496,11 +2539,16 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     s->yd = y;
     s->l0 = (((long) s->buffer[12] << 24) | ((long) s->buffer[13] << 16) |
 	     ((long) s->buffer[14] <<  8) | (long) s->buffer[15]);
-    /* ITU-T T.85 trick currently not yet supported */
+    /* ITU-T T.85 trick not directly supported by decoder; for full
+     * T.85 compatibility with respect to all NEWLEN marker scenarios,
+     * preprocess BIE with jbg_newlen() before passing it to the decoder. */
     if (s->yd == 0xffffffff)
       return JBG_EIMPL;
     if (!s->planes || !s->xd || !s->yd || !s->l0)
       return JBG_EINVAL;
+    /* prevent uint32 overflow: s->l0 * 2 ^ s->d < 2 ^ 32 */
+    if (s->d > 31 || (s->d != 0 && s->l0 >= (1UL << (32 - s->d))))
+      return JBG_EIMPL;
     s->mx = s->buffer[16];
     if (s->mx > 127)
       return JBG_EINVAL;
@@ -2516,9 +2564,8 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     s->options = s->buffer[19];
 
     /* calculate number of stripes that will be required */
-    s->stripes = ((s->yd >> s->d) +
-		  ((((1UL << s->d) - 1) & s->yd) != 0) + s->l0 - 1) / s->l0;
-
+    s->stripes = jbg_stripes(s->l0, s->yd, s->d);
+    
     /* some initialization */
     s->ii[iindex[s->order & 7][STRIPE]] = 0;
     s->ii[iindex[s->order & 7][LAYER]] = s->dl;
@@ -2528,37 +2575,37 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     lsize = ((jbg_ceil_half(s->xd, 1) + 7) / 8) *
       jbg_ceil_half(s->yd, 1);
     if (s->dl == 0) {
-      s->s = checked_malloc(s->planes * sizeof(struct jbg_ardec_state *));
-      s->tx = checked_malloc(s->planes * sizeof(int *));
-      s->ty = checked_malloc(s->planes * sizeof(int *));
-      s->reset = checked_malloc(s->planes * sizeof(int *));
-      s->lntp = checked_malloc(s->planes * sizeof(int *));
-      s->lhp[0] = checked_malloc(s->planes * sizeof(unsigned char *));
-      s->lhp[1] = checked_malloc(s->planes * sizeof(unsigned char *));
+      s->s      = checked_malloc(s->planes, sizeof(struct jbg_ardec_state *));
+      s->tx     = checked_malloc(s->planes, sizeof(int *));
+      s->ty     = checked_malloc(s->planes, sizeof(int *));
+      s->reset  = checked_malloc(s->planes, sizeof(int *));
+      s->lntp   = checked_malloc(s->planes, sizeof(int *));
+      s->lhp[0] = checked_malloc(s->planes, sizeof(unsigned char *));
+      s->lhp[1] = checked_malloc(s->planes, sizeof(unsigned char *));
       for (i = 0; i < s->planes; i++) {
-	s->s[i] = checked_malloc((s->d - s->dl + 1) *
-				 sizeof(struct jbg_ardec_state));
-	s->tx[i] = checked_malloc((s->d - s->dl + 1) * sizeof(int));
-	s->ty[i] = checked_malloc((s->d - s->dl + 1) * sizeof(int));
-	s->reset[i] = checked_malloc((s->d - s->dl + 1) * sizeof(int));
-	s->lntp[i] = checked_malloc((s->d - s->dl + 1) * sizeof(int));
-	s->lhp[s->d    &1][i] = checked_malloc(sizeof(unsigned char) * hsize);
-	s->lhp[(s->d-1)&1][i] = checked_malloc(sizeof(unsigned char) * lsize);
+	s->s[i]     = checked_malloc(s->d - s->dl + 1,
+				     sizeof(struct jbg_ardec_state));
+	s->tx[i]    = checked_malloc(s->d - s->dl + 1, sizeof(int));
+	s->ty[i]    = checked_malloc(s->d - s->dl + 1, sizeof(int));
+	s->reset[i] = checked_malloc(s->d - s->dl + 1, sizeof(int));
+	s->lntp[i]  = checked_malloc(s->d - s->dl + 1, sizeof(int));
+	s->lhp[ s->d    & 1][i] = checked_malloc(hsize, sizeof(unsigned char));
+	s->lhp[(s->d-1) & 1][i] = checked_malloc(lsize, sizeof(unsigned char));
       }
     } else {
       for (i = 0; i < s->planes; i++) {
-	s->s[i] = checked_realloc(s->s[i], (s->d - s->dl + 1) *
-				  sizeof(struct jbg_ardec_state));
-	s->tx[i] = checked_realloc(s->tx[i], (s->d - s->dl + 1) * sizeof(int));
-	s->ty[i] = checked_realloc(s->ty[i], (s->d - s->dl + 1) * sizeof(int));
+	s->s[i]     = checked_realloc(s->s[i], s->d - s->dl + 1,
+				      sizeof(struct jbg_ardec_state));
+	s->tx[i]    = checked_realloc(s->tx[i], s->d - s->dl + 1, sizeof(int));
+	s->ty[i]    = checked_realloc(s->ty[i], s->d - s->dl + 1, sizeof(int));
 	s->reset[i] = checked_realloc(s->reset[i],
-				      (s->d - s->dl +1) * sizeof(int));
-	s->lntp[i] = checked_realloc(s->lntp[i],
-				     (s->d - s->dl +1) * sizeof(int));
-	s->lhp[s->d    &1][i] = checked_realloc(s->lhp[s->d    & 1][i],
-						sizeof(unsigned char) * hsize);
-	s->lhp[(s->d-1)&1][i] = checked_realloc(s->lhp[(s->d-1)&1][i],
-						sizeof(unsigned char) * lsize);
+				      s->d - s->dl + 1, sizeof(int));
+	s->lntp[i]  = checked_realloc(s->lntp[i],
+				      s->d - s->dl + 1, sizeof(int));
+	s->lhp[ s->d    & 1][i] = checked_realloc(s->lhp[s->d    & 1][i],
+						  hsize, sizeof(unsigned char));
+	s->lhp[(s->d-1) & 1][i] = checked_realloc(s->lhp[(s->d-1)&1][i],
+						  lsize, sizeof(unsigned char));
       }
     }
     for (i = 0; i < s->planes; i++)
@@ -2584,7 +2631,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     if (s->bie_len < 20 + 1728) 
       return JBG_EAGAIN;
     if (!s->dppriv || s->dppriv == jbg_dptable)
-      s->dppriv = checked_malloc(sizeof(char) * 1728);
+      s->dppriv = checked_malloc(1728, sizeof(char));
     jbg_dppriv2int(s->dppriv, s->buffer);
   }
 
@@ -2662,9 +2709,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	  return JBG_EINVAL;
 	s->yd = y;
 	/* calculate again number of stripes that will be required */
-	s->stripes = 
-	  ((s->yd >> s->d) +
-	   ((((1UL << s->d) - 1) & s->yd) != 0) + s->l0 - 1) / s->l0;
+	s->stripes = jbg_stripes(s->l0, s->yd, s->d);
 	break;
       case MARKER_ABORT:
 	return JBG_EABORT;
