@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
- *  $Id: pbmtojbg.c,v 1.13 2004-06-24 16:10:36 mgk25 Exp $
+ *  $Id: pbmtojbg.c,v 1.14 2004-06-24 18:47:41 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -44,13 +44,13 @@ static void usage(void)
      "  -p number\toptions byte value: add DPON=4, TPBON=8, TPDON=16, LRLTWO=64\n"
      "\t\t(default 28 = DPON+TPBON+TPDON)\n");
   fprintf(stderr,
-     "  -C string\tadd the provided string as a comment marker segment"
+     "  -C string\tadd the provided string as a comment marker segment\n"
      "  -c\t\tdelay adaptive template changes to first line of next stripe\n"
 	  "\t\t(only provided for a conformance test)\n"
      "  -r\t\tterminate each stripe with SDRST marker\n"
-	  "\t\t(only intended for decoder testing)" );
+	  "\t\t(only intended for decoder testing)\n" );
   fprintf(stderr,
-     "  -Y number\t\tannounce in header initially this larger image height\n"
+     "  -Y number\tannounce in header initially this larger image height\n"
      "\t\t(only for generating test files with NEWLEN and VLENGTH=1)\n"
      "  -v\t\tverbose output\n\n");
   exit(1);
