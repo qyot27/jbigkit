@@ -1,5 +1,5 @@
 # Unix makefile for JBIG-KIT
-# $Id: Makefile,v 1.8 2000-04-08 10:48:09 mgk25 Exp $
+# $Id: Makefile,v 1.9 2000-04-08 11:19:18 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
 CC = gcc
@@ -30,7 +30,7 @@ clean:
 	(cd libjbig; make clean)
 	(cd pbmtools; make clean)
 
-DISTHOST = faui04d.informatik.uni-erlangen.de
+DISTHOST = faui01c.informatik.uni-erlangen.de
 DISTUID  = mskuhn
 DISTPATH = ftp/ISO/JBIG
 
