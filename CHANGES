@@ -2,6 +2,11 @@
 JBIG-KIT revision history
 -------------------------
 
+Changes in version 1.5 (2002-??-??)
+
+  - fixed two minor memory leaks (special thanks to Davide Pizzolato
+    <ing.davide.pizzolato@libero.it> for locating one of these)
+
 Changes in version 1.4 (2002-04-09)
 
   - typo fixed in stripe number calculation, which caused encoder and
