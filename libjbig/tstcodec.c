@@ -5,7 +5,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: tstcodec.c,v 1.14 2004-06-11 14:17:06 mgk25 Exp $
+ *  $Id: tstcodec.c,v 1.15 2004-06-24 15:36:17 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -469,13 +469,13 @@ int main(int argc, char **argv)
   putchar('\n');
   pp = testpic;
 
-  puts("Test 3.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951");
+  puts("Test 3.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_DELAY_AT,
 			 0, 0, 1, 1951, 0, 317384L, "3.1");
-  puts("Test 3.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951");
+  puts("Test 3.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_DELAY_AT | JBG_LRLTWO,
 			 0, 0, 1, 1951, 0, 317132L, "3.2");
-  puts("Test 3.3: TPBON=1, DPON=1, TPDON=1, Mx=8, LRLTWO=0, L0=128");
+  puts("Test 3.3: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_DELAY_AT | JBG_TPBON,
 			 0, 0, 1, 128, 8, 253653L, "3.3");
   puts("Test 3.4: TPBON=1, DPON=1, TPDON=1, Mx=8, LRLTWO=0, L0=2, 6 layers");
@@ -483,15 +483,39 @@ int main(int argc, char **argv)
 			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON,
 			 0, 6, 1, 2, 8, 279314L, "3.4");
 #if 0
-  puts("Test 3.5: as TEST 4 but with order bit SEQ set");
+  puts("Test 3.5: as Test 3.4 but with order bit SEQ set");
   problems += test_cycle(&pp, 1960, 1951,
 			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON,
 			 JBG_SEQ, 6, 1, 2, 8, 279314L, "3.5");
 #endif
 #endif
 
-  puts("4) Additional regression tests\n"
-       "------------------------------\n");
+  puts("4) Same T.82 tests with SDRST instead of SDNORM\n"
+       "-----------------------------------------------\n");
+
+  puts("Test 4.0: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
+  problems += test_cycle(&pp, 1960, 1951, JBG_SDRST | JBG_TPBON,
+			 0, 0, 1, 128, 8, -1, "4.0");
+
+  puts("Test 4.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951, 0 layers");
+  problems += test_cycle(&pp, 1960, 1951, JBG_SDRST,
+			 0, 0, 1, 1951, 0, -1, "4.1");
+  puts("Test 4.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951, 0 layers");
+  problems += test_cycle(&pp, 1960, 1951, JBG_LRLTWO | JBG_SDRST,
+			 0, 0, 1, 1951, 0, -1, "4.2");
+  puts("Test 4.3: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
+  problems += test_cycle(&pp, 1960, 1951, JBG_TPBON | JBG_SDRST,
+			 0, 0, 1, 128, 8, -1, "4.3");
+  puts("Test 4.4: TPBON=1, DPON=1, TPDON=1, Mx=8, LRLTWO=0, L0=2, 6 layers");
+  problems += test_cycle(&pp, 1960, 1951,
+			 JBG_TPBON | JBG_TPDON |
+			 JBG_DPON | JBG_SDRST,
+			 0, 6, 1, 2, 8, -1, "4.4");
+
+  puts("5) Small test image, 0-3 layers, 4 planes, different orders\n"
+       "-----------------------------------------------------------\n");
+  
+  /* test a simple multi-plane image */
   ppp[0] = jbig_normal;
   ppp[1] = jbig_upsidedown;
   ppp[2] = jbig_inverse;
@@ -500,7 +524,7 @@ int main(int argc, char **argv)
   i = 0;
   for (layers = 0; layers <= 3; layers++)
     for (order = 0; order < (int) (sizeof(orders)/sizeof(int)); order++) {
-      sprintf(test, "4.%ld", ++i);
+      sprintf(test, "5.%ld", ++i);
       printf("Test %s: order=%d, %d layers, 4 planes", test, orders[order],
 	     layers);
       problems += test_cycle(ppp, 23, 5*4, JBG_TPBON | JBG_TPDON | JBG_DPON,
@@ -514,7 +538,7 @@ int main(int argc, char **argv)
     puts("This is bad. If you cannot identify the problem yourself, please "
 	 "send\nthis output plus a detailed description of your "
 	 "compile environment\n(OS, compiler, version, options, etc.) to "
-	 "Markus Kuhn <http://www.cl.cam.ac.uk/~mgk25/>.");
+	 "Markus Kuhn\n<http://www.cl.cam.ac.uk/~mgk25/>.");
   else
     puts("Congratulations, everything is fine.\n");
 
