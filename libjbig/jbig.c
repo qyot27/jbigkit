@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: jbig.c,v 1.4 1995-09-20 19:45:37 mskuhn Exp $
+ *  $Id: jbig.c,v 1.5 1995-12-10 22:47:32 mskuhn Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -30,12 +30,12 @@
  *  some countries (e.g. by patents about arithmetic coding algorithms
  *  owned by IBM and AT&T in the USA). Provision of this software by the
  *  author does NOT include any licences for any patents. In those
- *  countries were a patent licence is required for certain applications
+ *  countries where a patent licence is required for certain applications
  *  of this software module, you will have to obtain such a licence
  *  yourself.
  */
 
-/* #define DEBUG */
+#undef DEBUG
 
 #ifdef DEBUG
 #include <stdio.h>
@@ -93,7 +93,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.4 1995-09-20 19:45:37 mskuhn Exp $ ";
+"$Id: jbig.c,v 1.5 1995-12-10 22:47:32 mskuhn Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -1627,7 +1627,7 @@ void jbg_dppriv2int(char *internal, const unsigned char *dptable)
  */
 void jbg_enc_out(struct jbg_enc_state *s)
 {
-  long i;
+  long i, bpl;
   int j, k;
   unsigned char bih[20];
   unsigned long xd, yd;
@@ -1651,8 +1651,16 @@ void jbg_enc_out(struct jbg_enc_state *s)
   if (s->mx && s->mx < ((s->options & JBG_LRLTWO) ? 5 : 3))
     s->mx = 0;
   if (s->d > 255 || s->d < 0 || s->dh > s->d || s->dh < 0 ||
-      s->dl < 0 || s->dl > s->dh)
+      s->dl < 0 || s->dl > s->dh || s->planes < 0 || s->planes > 255)
     return;
+
+  /* ensure correct zero padding of bitmap at the final byte of each line */
+  if (s->xd & 7) {
+    bpl = (((s->xd - 1) | 7) + 1) >> 3;     /* bytes per line */
+    for (i = 0; i < s->planes; i++)
+      for (j = 0; j < s->yd; j++)
+	s->lhp[0][i][j * bpl + bpl - 1] &= ~((1 << (8 - (s->xd & 7))) - 1);
+  }
 
   /* calculate number of stripes that will be required */
   s->stripes = ((s->yd >> s->d) + 
