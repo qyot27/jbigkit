@@ -1,0 +1,15 @@
+Things which have not yet been done for this release but which I will
+hopefully have done before one of the next releases:
+
+  - checking problem reports about installing JBIG-KIT under MS-DOS
+
+  - routine which separates greyscale/color images into bit planes and joins
+    bit planes again to greyscale/color images
+
+  - pgmtojbg and jbgtopgm
+
+  - routine which prepares incompletely decoded images for Xlib
+
+  - some minor optimizations
+
+  - call-back function which allows to implement a graphical progress meter
