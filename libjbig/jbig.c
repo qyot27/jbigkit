@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.c,v 1.23 2004-06-24 13:06:27 mgk25 Exp $
+ *  $Id: jbig.c,v 1.24 2004-06-24 15:36:46 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -95,7 +95,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.23 2004-06-24 13:06:27 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.24 2004-06-24 15:36:46 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -947,7 +947,7 @@ static void encode_sde(struct jbg_enc_state *s,
   c_all = 0;
   for (t = 0; t <= s->mx; t++)
     c[t] = 0;
-  if (reset)
+  if (stripe == 0)    /* the SDRST case in handled at the end */
     s->tx[plane] = 0;
   new_tx = -1;
   at_determined = 0;  /* we haven't yet decided the template move */
@@ -1441,6 +1441,8 @@ static void encode_sde(struct jbg_enc_state *s,
   jbg_buf_write(MARKER_ESC, s->sde[stripe][layer][plane]);
   jbg_buf_write((s->options & JBG_SDRST) ? MARKER_SDRST : MARKER_SDNORM,
 		s->sde[stripe][layer][plane]);
+  if (s->options & JBG_SDRST)
+    s->tx[plane] = 0;
 
   /* add ATMOVE */
   if (new_tx != -1) {
@@ -2114,18 +2116,17 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
   line_l3 = s->line_l3;
   x = s->x;
 
-  if (s->x == 0 && s->i == 0 &&
-      (stripe == 0 || s->reset[plane][layer - s->dl])) {
-    s->tx[plane][layer - s->dl] = s->ty[plane][layer - s->dl] = 0;
-    if (s->pseudo)
-      s->lntp[plane][layer - s->dl] = 1;
-  }
-
 #ifdef DEBUG
   if (s->x == 0 && s->i == 0 && s->pseudo)
     fprintf(stderr, "decode_pscd(%p, %p, %ld): s/d/p = %2lu/%2u/%2u\n",
 	    (void *) s, (void *) data, (long) len, stripe, layer, plane);
 #endif
+
+  if (s->x == 0 && s->i == 0 &&
+      (stripe == 0 || s->reset[plane][layer - s->dl]) && s->pseudo) {
+    s->tx[plane][layer - s->dl] = s->ty[plane][layer - s->dl] = 0;
+    s->lntp[plane][layer - s->dl] = 1;
+  }
 
   if (layer == 0) {
 
@@ -2136,7 +2137,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
     for (; s->i < hl && y < hy; s->i++, y++) {
 
       /* adaptive template changes */
-      if (x == 0)
+      if (x == 0 && s->pseudo)
 	for (n = 0; n < s->at_moves; n++)
 	  if (s->at_line[n] == s->i) {
 	    s->tx[plane][layer - s->dl] = s->at_tx[n];
@@ -2156,10 +2157,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 	  goto leave;
 	s->lntp[plane][layer - s->dl] =
 	  !(slntp ^ s->lntp[plane][layer - s->dl]);
-	if (s->lntp[plane][layer - s->dl]) {
-	  /* this line is 'not typical' and has to be coded completely */
-	  s->pseudo = 0;
-	} else {
+	if (!s->lntp[plane][layer - s->dl]) {
 	  /* this line is 'typical' (i.e. identical to the previous one) */
 	  p1 = hp;
 	  if (s->i == 0 && (stripe == 0 || s->reset[plane][layer - s->dl]))
@@ -2171,7 +2169,9 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 	  hp += hbpl;
 	  continue;
 	}
+	/* this line is 'not typical' and has to be coded completely */
       }
+      s->pseudo = 0;
       
       /*
        * Layout of the variables line_h1, line_h2, line_h3, which contain
@@ -2332,13 +2332,12 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 	lp1 = lp2;
 
       /* typical prediction */
-      if (s->options & JBG_TPDON && s->pseudo) {
+      if ((s->options & JBG_TPDON) && s->pseudo) {
 	s->lntp[plane][layer - s->dl] = arith_decode(se, TPDCX);
 	if (se->result == JBG_MORE || se->result == JBG_MARKER)
 	  goto leave;
-	s->pseudo = 0;
       }
-
+      s->pseudo = 0;
 
       /*
        * Layout of the variables line_h1, line_h2, line_h3, which contain
