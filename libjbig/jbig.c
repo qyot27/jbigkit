@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: jbig.c,v 1.3 1995-06-10 18:46:39 mskuhn Exp $
+ *  $Id: jbig.c,v 1.4 1995-09-20 19:45:37 mskuhn Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -85,14 +85,15 @@
 #define LAYER   1
 #define PLANE   2
 
-/* special jbuf pointers (instead of NULL) */
-#define SDE_DONE ((struct jbuf *) -1)
-#define SDE_TODO ((struct jbuf *) 0)
+/* special jbg_buf pointers (instead of NULL) */
+#define SDE_DONE ((struct jbg_buf *) -1)
+#define SDE_TODO ((struct jbg_buf *) 0)
 
 /* object code version id */
 
-const char version[] = 
-" JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- $Id: jbig.c,v 1.3 1995-06-10 18:46:39 mskuhn Exp $ ";
+const char jbg_version[] = 
+" JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
+"$Id: jbig.c,v 1.4 1995-09-20 19:45:37 mskuhn Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -228,7 +229,7 @@ static void checked_free(void *ptr)
 static long encoded_pixels = 0;
 #endif
 
-ARITH void arith_encode_init(struct enc_state *s, int reuse_st)
+ARITH void arith_encode_init(struct jbg_arenc_state *s, int reuse_st)
 {
   int i;
   
@@ -244,7 +245,7 @@ ARITH void arith_encode_init(struct enc_state *s, int reuse_st)
 }
 
 
-ARITH void arith_encode_flush(struct enc_state *s)
+ARITH void arith_encode_flush(struct jbg_arenc_state *s)
 {
   long temp;
 
@@ -297,7 +298,7 @@ ARITH void arith_encode_flush(struct enc_state *s)
 }
 
 
-ARITH_INL void arith_encode(struct enc_state *s, int cx, int pix) 
+ARITH_INL void arith_encode(struct jbg_arenc_state *s, int cx, int pix) 
 {
   extern short jbg_lsz[];
   extern char jbg_nmps[], jbg_nlps[], jbg_swtch[];
@@ -396,7 +397,7 @@ ARITH_INL void arith_encode(struct enc_state *s, int cx, int pix)
 }
 
 
-ARITH void arith_decode_init(struct dec_state *s, int reuse_st)
+ARITH void arith_decode_init(struct jbg_ardec_state *s, int reuse_st)
 {
   int i;
   
@@ -411,7 +412,7 @@ ARITH void arith_decode_init(struct dec_state *s, int reuse_st)
 }
 
 
-ARITH_INL int arith_decode(struct dec_state *s, int cx)
+ARITH_INL int arith_decode(struct jbg_ardec_state *s, int cx)
 {
   extern short jbg_lsz[];
   extern char jbg_nmps[], jbg_nlps[], jbg_swtch[];
@@ -513,8 +514,8 @@ ARITH_INL int arith_decode(struct dec_state *s, int cx)
  * Memory management for buffers which are used for temporarily
  * storing SDEs by the encoder.
  *
- * The following functions manage a set of struct jbuf storage
- * containers were each can keep JBG_BUFSIZE bytes. The jbuf
+ * The following functions manage a set of struct jbg_buf storage
+ * containers were each can keep JBG_BUFSIZE bytes. The jbg_buf
  * containers can be linked to form linear double-chained lists for
  * which a number of operations are provided. Blocks which are
  * tempoarily not used any more are returned to a freelist which each
@@ -527,9 +528,9 @@ ARITH_INL int arith_decode(struct dec_state *s, int cx)
  * Allocate a new buffer block and initialize it. Try to get it from
  * the free_list, and if it is empty, call checked_malloc().
  */
-static struct jbuf *jbuf_init(struct jbuf **free_list)
+static struct jbg_buf *jbg_buf_init(struct jbg_buf **free_list)
 {
-  struct jbuf *new_block;
+  struct jbg_buf *new_block;
   
   /* Test whether a block from the free list is available */
   if (*free_list) {
@@ -537,7 +538,7 @@ static struct jbuf *jbuf_init(struct jbuf **free_list)
     *free_list = new_block->next;
   } else {
     /* request a new memory block */
-    new_block = (struct jbuf *) checked_malloc(sizeof(struct jbuf));
+    new_block = (struct jbg_buf *) checked_malloc(sizeof(struct jbg_buf));
   }
   new_block->len = 0;
   new_block->next = NULL;
@@ -553,9 +554,9 @@ static struct jbuf *jbuf_init(struct jbuf **free_list)
  * Return an entire free_list to the memory management of stdlib.
  * This is only done by jbg_enc_free().
  */
-static void jbuf_free(struct jbuf **free_list)
+static void jbg_buf_free(struct jbg_buf **free_list)
 {
-  struct jbuf *tmp;
+  struct jbg_buf *tmp;
   
   while (*free_list) {
     tmp = (*free_list)->next;
@@ -569,39 +570,39 @@ static void jbuf_free(struct jbuf **free_list)
 
 /*
  * Append a single byte to a single list that starts with the block
- * *(struct jbuf *) head. The type of *head is void here in order to
+ * *(struct jbg_buf *) head. The type of *head is void here in order to
  * keep the interface of the arithmetic encoder gereric, which uses this
  * function as a call-back function in order to deliver single bytes
  * for a PSCD.
  */
-static void jbuf_write(int b, void *head)
+static void jbg_buf_write(int b, void *head)
 {
-  struct jbuf *now;
+  struct jbg_buf *now;
 
-  now = ((struct jbuf *) head)->last;
+  now = ((struct jbg_buf *) head)->last;
   if (now->len < JBG_BUFSIZE - 1) {
     now->d[now->len++] = b;
     return;
   }
-  now->next = jbuf_init(((struct jbuf *) head)->free_list);
+  now->next = jbg_buf_init(((struct jbg_buf *) head)->free_list);
   now->next->previous = now;
   now->next->d[now->next->len++] = b;
-  ((struct jbuf *) head)->last = now->next;
+  ((struct jbg_buf *) head)->last = now->next;
 
   return;
 }
 
 
 /*
- * Remove any trailing zero bytes from the end of a linked jbuf list,
+ * Remove any trailing zero bytes from the end of a linked jbg_buf list,
  * however make sure that no zero byte is removed which directly
  * follows a 0xff byte (i.e., keep MARKER_ESC MARKER_STUFF sequences
  * intact). This function is used to remove any redundant final zero
  * bytes from a PSCD.
  */
-static void jbuf_remove_zeros(struct jbuf *head)
+static void jbg_buf_remove_zeros(struct jbg_buf *head)
 {
-  struct jbuf *last;
+  struct jbg_buf *last;
 
   while (1) {
     /* remove trailing 0x00 in last block of list until this block is empty */
@@ -623,19 +624,19 @@ static void jbuf_remove_zeros(struct jbuf *head)
    * removed a MARKER_STUFF and we will append it again now in order
    * to preserve PSCD status of byte stream.
    */
-  if (head->last->d[head->last->len - 1] == MARKER_ESC)
-    jbuf_write(MARKER_STUFF, head);
+  if (head->last->len && head->last->d[head->last->len - 1] == MARKER_ESC)
+    jbg_buf_write(MARKER_STUFF, head);
  
   return;
 }
 
 
 /*
- * The jbuf list which starts with block *new_prefix is concatenated
+ * The jbg_buf list which starts with block *new_prefix is concatenated
  * with the list which starts with block **start and *start will then point
  * to the first block of the new list.
  */
-static void jbuf_prefix(struct jbuf *new_prefix, struct jbuf **start)
+static void jbg_buf_prefix(struct jbg_buf *new_prefix, struct jbg_buf **start)
 {
   new_prefix->last->next = *start;
   new_prefix->last->next->previous = new_prefix->last;
@@ -647,17 +648,17 @@ static void jbuf_prefix(struct jbuf *new_prefix, struct jbuf **start)
 
 
 /*
- * Send the contents of a jbuf list that starts with block **head to
- * the call back function data_out and return the blocks of the jbuf
- * list to the freelist from which these jbuf blocks have been taken.
+ * Send the contents of a jbg_buf list that starts with block **head to
+ * the call back function data_out and return the blocks of the jbg_buf
+ * list to the freelist from which these jbg_buf blocks have been taken.
  * After the call, *head == NULL.
  */
-static void jbuf_output(struct jbuf **head,
+static void jbg_buf_output(struct jbg_buf **head,
 			void (*data_out)(unsigned char *start,
 					 size_t len, void *file),
 			void *file)
 {
-  struct jbuf *tmp;
+  struct jbg_buf *tmp;
   
   while (*head) {
     data_out((*head)->d, (*head)->len, file);
@@ -674,10 +675,10 @@ static void jbuf_output(struct jbuf **head,
 /*
  * Calculate y = ceil(x/2) applied n times. This function is used to
  * determine the number of pixels per row or column after n resolution
- * reductions. E.g. X[d-1] = ceil_half(X[d], 1) and X[0] =
- * ceil_half(X[d], d) as defined in clause 6.2.3 of T.82.
+ * reductions. E.g. X[d-1] = jbg_ceil_half(X[d], 1) and X[0] =
+ * jbg_ceil_half(X[d], d) as defined in clause 6.2.3 of T.82.
  */
-unsigned long ceil_half(unsigned long x, int n)
+unsigned long jbg_ceil_half(unsigned long x, int n)
 {
   unsigned long mask;
   
@@ -698,7 +699,7 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
   unsigned long i, lx;
   size_t bufsize;
 
-  extern char resred[], dptable[];
+  extern char jbg_resred[], jbg_dptable[];
 
   s->xd = x;
   s->yd = y;
@@ -709,29 +710,29 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
   s->d = 0;
   s->dl = 0;
   s->dh = s->d;
-  s->l0 = ceil_half(s->yd, s->d) / 35; /* 35 stripes/image */
-  while (s->l0 << s->d > 128)          /* but not more than 128 lines/stripe */
+  s->l0 = jbg_ceil_half(s->yd, s->d) / 35;   /* 35 stripes/image */
+  while (s->l0 << s->d > 128)                /* but <= 128 lines/stripe */
     --s->l0;
   if (s->l0 < 2) s->l0 = 2;
   s->mx = 8;
   s->my = 0;
   s->order = JBG_ILEAVE | JBG_SMID;
   s->options = JBG_TPBON | JBG_TPDON | JBG_DPON;
-  s->dppriv = dptable;
-  s->res_tab = resred;
+  s->dppriv = jbg_dptable;
+  s->res_tab = jbg_resred;
   
   s->highres = 0;
   s->lhp[0] = p;
   s->lhp[1] = checked_malloc(planes * sizeof(unsigned char *));
-  bufsize = ((((ceil_half(x, 1) - 1) | 7) + 1) >> 3) * ceil_half(y, 1);
+  bufsize = ((((jbg_ceil_half(x, 1) - 1) | 7) + 1) >> 3) * jbg_ceil_half(y, 1);
   for (i = 0; i < planes; i++)
     s->lhp[1][i] = checked_malloc(sizeof(unsigned char) * bufsize);
   
   s->free_list = NULL;
-  s->s = (struct enc_state *) 
-    checked_malloc(s->planes * sizeof(struct enc_state));
+  s->s = (struct jbg_arenc_state *) 
+    checked_malloc(s->planes * sizeof(struct jbg_arenc_state));
   s->tx = (int *) checked_malloc(s->planes * sizeof(int));
-  lx = ceil_half(x, 1);
+  lx = jbg_ceil_half(x, 1);
   s->tp = (char *) checked_malloc(lx * sizeof(char));
   for (i = 0; i < lx; s->tp[i++] = 2);
   s->sde = NULL;
@@ -756,13 +757,13 @@ int jbg_enc_lrlmax(struct jbg_enc_state *s, unsigned long x,
 		   unsigned long y)
 {
   for (s->d = 0; s->d < 6; s->d++)
-    if (ceil_half(s->xd, s->d) <= x && ceil_half(s->yd, s->d) <= y)
+    if (jbg_ceil_half(s->xd, s->d) <= x && jbg_ceil_half(s->yd, s->d) <= y)
       break;
   s->dl = 0;
   s->dh = s->d;
 
-  s->l0 = ceil_half(s->yd, s->d) / 35; /* 35 stripes/image */
-  while (s->l0 << s->d > 128)          /* but not more than 128 lines/stripe */
+  s->l0 = jbg_ceil_half(s->yd, s->d) / 35;  /* 35 stripes/image */
+  while (s->l0 << s->d > 128)               /* but <= 128 lines/stripe */
     --s->l0;
   if (s->l0 < 2) s->l0 = 2;
 
@@ -772,7 +773,7 @@ int jbg_enc_lrlmax(struct jbg_enc_state *s, unsigned long x,
 
 /*
  * As an alternative to jbg_enc_lrlmax(), the following function allows
- * to specify the number of layers directly. The stripe hight and layer
+ * to specify the number of layers directly. The stripe height and layer
  * range is also adjusted automatically here.
  */
 void jbg_enc_layers(struct jbg_enc_state *s, int d)
@@ -783,8 +784,8 @@ void jbg_enc_layers(struct jbg_enc_state *s, int d)
   s->dl = 0;
   s->dh = s->d;
 
-  s->l0 = ceil_half(s->yd, s->d) / 35; /* 35 stripes/image */
-  while (s->l0 << s->d > 128)          /* but not more than 128 lines/stripe */
+  s->l0 = jbg_ceil_half(s->yd, s->d) / 35;  /* 35 stripes/image */
+  while (s->l0 << s->d > 128)               /* but <= 128 lines/stripe */
     --s->l0;
   if (s->l0 < 2) s->l0 = 2;
 
@@ -838,13 +839,13 @@ static void encode_sde(struct jbg_enc_state *s,
   unsigned long hl, ll, hx, hy, lx, ly, hbpl, lbpl;
   unsigned long line_h0 = 0, line_h1 = 0;
   unsigned long line_h2, line_h3, line_l1, line_l2, line_l3;
-  struct enc_state *se;
+  struct jbg_arenc_state *se;
   unsigned long i, j, y;
   int t, ltp, ltp_old, cx;
   unsigned long c_all, c[MX_MAX + 1], cmin, cmax, clmin, clmax;
   int tmax, at_determined;
   int new_tx, new_tx_line = -1;
-  struct jbuf *new_jbuf;
+  struct jbg_buf *new_jbg_buf;
 
 #ifdef DEBUG
   static long tp_lines, tp_exceptions, tp_pixels, dp_pixels;
@@ -869,11 +870,11 @@ static void encode_sde(struct jbg_enc_state *s,
   /* current line number in highres image */
   y = stripe * hl;
   /* number of pixels in highres image */
-  hx = ceil_half(s->xd, s->d - layer);
-  hy = ceil_half(s->yd, s->d - layer);
+  hx = jbg_ceil_half(s->xd, s->d - layer);
+  hy = jbg_ceil_half(s->yd, s->d - layer);
   /* number of pixels in lowres image */
-  lx = ceil_half(hx, 1);
-  ly = ceil_half(hy, 1);
+  lx = jbg_ceil_half(hx, 1);
+  ly = jbg_ceil_half(hy, 1);
   /* bytes per line in highres and lowres image */
   hbpl = (((hx-1) | 7) + 1) >> 3;
   lbpl = (((lx-1) | 7) + 1) >> 3;
@@ -885,8 +886,8 @@ static void encode_sde(struct jbg_enc_state *s,
   /* initialize arithmetic encoder */
   se = s->s + plane;
   arith_encode_init(se, stripe != 0);
-  s->sde[stripe][layer][plane] = jbuf_init(&s->free_list);
-  se->byte_out = jbuf_write;
+  s->sde[stripe][layer][plane] = jbg_buf_init(&s->free_list);
+  se->byte_out = jbg_buf_write;
   se->file = s->sde[stripe][layer][plane];
 
   /* initialize adaptive template movement algorithm */
@@ -1326,36 +1327,36 @@ static void encode_sde(struct jbg_enc_state *s,
   }
   
   arith_encode_flush(se);
-  jbuf_remove_zeros(s->sde[stripe][layer][plane]);
-  jbuf_write(MARKER_ESC, s->sde[stripe][layer][plane]);
-  jbuf_write(MARKER_SDNORM, s->sde[stripe][layer][plane]);
+  jbg_buf_remove_zeros(s->sde[stripe][layer][plane]);
+  jbg_buf_write(MARKER_ESC, s->sde[stripe][layer][plane]);
+  jbg_buf_write(MARKER_SDNORM, s->sde[stripe][layer][plane]);
 
   /* add ATMOVE */
   if (new_tx != -1) {
     if (s->options & JBG_DELAY_AT) {
       /* ATMOVE will become active at the first line of the next stripe */
       s->tx[plane] = new_tx;
-      jbuf_write(MARKER_ESC, s->sde[stripe][layer][plane]);
-      jbuf_write(MARKER_ATMOVE, s->sde[stripe][layer][plane]);
-      jbuf_write(0, s->sde[stripe][layer][plane]);
-      jbuf_write(0, s->sde[stripe][layer][plane]);
-      jbuf_write(0, s->sde[stripe][layer][plane]);
-      jbuf_write(0, s->sde[stripe][layer][plane]);
-      jbuf_write(s->tx[plane], s->sde[stripe][layer][plane]);
-      jbuf_write(0, s->sde[stripe][layer][plane]);
+      jbg_buf_write(MARKER_ESC, s->sde[stripe][layer][plane]);
+      jbg_buf_write(MARKER_ATMOVE, s->sde[stripe][layer][plane]);
+      jbg_buf_write(0, s->sde[stripe][layer][plane]);
+      jbg_buf_write(0, s->sde[stripe][layer][plane]);
+      jbg_buf_write(0, s->sde[stripe][layer][plane]);
+      jbg_buf_write(0, s->sde[stripe][layer][plane]);
+      jbg_buf_write(s->tx[plane], s->sde[stripe][layer][plane]);
+      jbg_buf_write(0, s->sde[stripe][layer][plane]);
     } else {
       /* ATMOVE has already become active during this stripe
        * => we have to prefix the SDE data with an ATMOVE marker */
-      new_jbuf = jbuf_init(&s->free_list);
-      jbuf_write(MARKER_ESC, new_jbuf);
-      jbuf_write(MARKER_ATMOVE, new_jbuf);
-      jbuf_write((new_tx_line >> 24) & 0xff, new_jbuf);
-      jbuf_write((new_tx_line >> 16) & 0xff, new_jbuf);
-      jbuf_write((new_tx_line >> 8) & 0xff, new_jbuf);
-      jbuf_write(new_tx_line & 0xff, new_jbuf);
-      jbuf_write(new_tx, new_jbuf);
-      jbuf_write(0, new_jbuf);
-      jbuf_prefix(new_jbuf, &s->sde[stripe][layer][plane]);
+      new_jbg_buf = jbg_buf_init(&s->free_list);
+      jbg_buf_write(MARKER_ESC, new_jbg_buf);
+      jbg_buf_write(MARKER_ATMOVE, new_jbg_buf);
+      jbg_buf_write((new_tx_line >> 24) & 0xff, new_jbg_buf);
+      jbg_buf_write((new_tx_line >> 16) & 0xff, new_jbg_buf);
+      jbg_buf_write((new_tx_line >> 8) & 0xff, new_jbg_buf);
+      jbg_buf_write(new_tx_line & 0xff, new_jbg_buf);
+      jbg_buf_write(new_tx, new_jbg_buf);
+      jbg_buf_write(0, new_jbg_buf);
+      jbg_buf_prefix(new_jbg_buf, &s->sde[stripe][layer][plane]);
     }
   }
 
@@ -1383,11 +1384,11 @@ static void resolution_reduction(struct jbg_enc_state *s, int plane,
   int pix, k, l;
 
   /* number of pixels in highres image */
-  hx = ceil_half(s->xd, s->d - higher_layer);
-  hy = ceil_half(s->yd, s->d - higher_layer);
+  hx = jbg_ceil_half(s->xd, s->d - higher_layer);
+  hy = jbg_ceil_half(s->yd, s->d - higher_layer);
   /* number of pixels in lowres image */
-  lx = ceil_half(hx, 1);
-  ly = ceil_half(hy, 1);
+  lx = jbg_ceil_half(hx, 1);
+  ly = jbg_ceil_half(hy, 1);
   /* bytes per line in highres and lowres image */
   hbpl = (((hx-1) | 7) + 1) >> 3;
   lbpl = (((lx-1) | 7) + 1) >> 3;
@@ -1524,7 +1525,7 @@ static void output_sde(struct jbg_enc_state *s,
 #ifdef DEBUG
   printf("writing SDE: s/d/p = %2ld/%2d/%2d\n", stripe, layer, plane);
 #endif
-  jbuf_output(&s->sde[stripe][layer][plane], s->data_out, s->file);
+  jbg_buf_output(&s->sde[stripe][layer][plane], s->data_out, s->file);
   s->sde[stripe][layer][plane] = SDE_DONE;
   
   if (stripe == s->stripes - 1 && layer > 0 &&
@@ -1635,14 +1636,14 @@ void jbg_enc_out(struct jbg_enc_state *s)
   int layer, plane;
   int order;
   unsigned char dpbuf[1728];
-  extern char dptable[];
+  extern char jbg_dptable[];
 
   /* some sanity checks */
   s->order &= JBG_HITOLO | JBG_SEQ | JBG_ILEAVE | JBG_SMID;
   order = s->order & (JBG_SEQ | JBG_ILEAVE | JBG_SMID);
   if (index[order][0] < 0)
     s->order = JBG_SMID | JBG_ILEAVE;
-  if (s->options & JBG_DPON && s->dppriv != dptable)
+  if (s->options & JBG_DPON && s->dppriv != jbg_dptable)
     s->options |= JBG_DPPRIV;
   if (s->mx > MX_MAX)
     s->mx = MX_MAX;
@@ -1659,14 +1660,14 @@ void jbg_enc_out(struct jbg_enc_state *s)
 
   /* allocate buffers for SDE pointers */
   if (s->sde == NULL) {
-    s->sde = (struct jbuf ****)
-      checked_malloc(s->stripes * sizeof(struct jbuf ***));
+    s->sde = (struct jbg_buf ****)
+      checked_malloc(s->stripes * sizeof(struct jbg_buf ***));
     for (i = 0; i < s->stripes; i++) {
-      s->sde[i] = (struct jbuf ***)
-	checked_malloc((s->d + 1) * sizeof(struct jbuf **));
+      s->sde[i] = (struct jbg_buf ***)
+	checked_malloc((s->d + 1) * sizeof(struct jbg_buf **));
       for (j = 0; j < s->d + 1; j++) {
-	s->sde[i][j] = (struct jbuf **)
-	  checked_malloc(s->planes * sizeof(struct jbuf *));
+	s->sde[i][j] = (struct jbg_buf **)
+	  checked_malloc(s->planes * sizeof(struct jbg_buf *));
 	for (k = 0; k < s->planes; k++)
 	  s->sde[i][j][k] = SDE_TODO;
       }
@@ -1678,8 +1679,8 @@ void jbg_enc_out(struct jbg_enc_state *s)
   bih[1] = s->dh;
   bih[2] = s->planes;
   bih[3] = 0;
-  xd = ceil_half(s->xd, s->d - s->dh);
-  yd = ceil_half(s->yd, s->d - s->dh);
+  xd = jbg_ceil_half(s->xd, s->d - s->dh);
+  yd = jbg_ceil_half(s->yd, s->d - s->dh);
   bih[4] = xd >> 24;
   bih[5] = xd >> 16 & 0xff;
   bih[6] = xd >> 8 & 0xff;
@@ -1750,7 +1751,7 @@ void jbg_enc_free(struct jbg_enc_state *s)
       for (j = 0; j < s->d + 1; j++) {
 	for (k = 0; k < s->planes; k++)
 	  if (s->sde[i][j][k] != SDE_DONE && s->sde[i][j][k] != SDE_TODO)
-	    jbuf_free(&s->sde[i][j][k]);
+	    jbg_buf_free(&s->sde[i][j][k]);
 	checked_free(s->sde[i][j]);
       }
       checked_free(s->sde[i]);
@@ -1759,7 +1760,7 @@ void jbg_enc_free(struct jbg_enc_state *s)
   }
 
   /* clear free_list */
-  jbuf_free(&s->free_list);
+  jbg_buf_free(&s->free_list);
 
   /* clear memory for arithmetic encoder states */
   checked_free(s->s);
@@ -1847,7 +1848,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
   unsigned char *hp, *lp1, *lp2, *p1, *q1;
   register unsigned long line_h1, line_h2, line_h3;
   register unsigned long line_l1, line_l2, line_l3;
-  struct dec_state *se;
+  struct jbg_ardec_state *se;
   unsigned long x;
   int n;
   int pix, cx = 0, slntp, shift, tx;
@@ -1869,11 +1870,11 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
   /* current line number in highres image */
   y = stripe * hl + s->i;
   /* number of pixels in highres image */
-  hx = ceil_half(s->xd, s->d - layer);
-  hy = ceil_half(s->yd, s->d - layer);
+  hx = jbg_ceil_half(s->xd, s->d - layer);
+  hy = jbg_ceil_half(s->yd, s->d - layer);
   /* number of pixels in lowres image */
-  lx = ceil_half(hx, 1);
-  ly = ceil_half(hy, 1);
+  lx = jbg_ceil_half(hx, 1);
+  ly = jbg_ceil_half(hy, 1);
   /* bytes per line in highres and lowres image */
   hbpl = (((hx-1) | 7) + 1) >> 3;
   lbpl = (((lx-1) | 7) + 1) >> 3;
@@ -2294,7 +2295,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
   unsigned long x, y;
   unsigned long is[3], ie[3];
   long hsize, lsize;
-  extern char dptable[];
+  extern char jbg_dptable[];
   size_t dummy_cnt;
 
   if (!cnt) cnt = &dummy_cnt;
@@ -2359,16 +2360,18 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     s->ii[index[s->order & 7][PLANE]] = 0;
     /* bytes required for resolution layer D and D-1 */
     hsize = ((((s->xd - 1) | 7) + 1) >> 3) * s->yd;
-    lsize = ((((ceil_half(s->xd, 1) - 1) | 7) + 1) >> 3) * ceil_half(s->yd, 1);
+    lsize = ((((jbg_ceil_half(s->xd, 1) - 1) | 7) + 1) >> 3) *
+      jbg_ceil_half(s->yd, 1);
     if (s->dl == 0) {
-      s->s = checked_malloc(s->planes * sizeof(struct dec_state *));
+      s->s = checked_malloc(s->planes * sizeof(struct jbg_ardec_state *));
       s->tx = checked_malloc(s->planes * sizeof(int *));
       s->ty = checked_malloc(s->planes * sizeof(int *));
       s->reset = checked_malloc(s->planes * sizeof(int *));
       s->lhp[0] = checked_malloc(s->planes * sizeof(unsigned char *));
       s->lhp[1] = checked_malloc(s->planes * sizeof(unsigned char *));
       for (i = 0; i < s->planes; i++) {
-	s->s[i] = checked_malloc((s->d - s->dl + 1)*sizeof(struct dec_state));
+	s->s[i] = checked_malloc((s->d - s->dl + 1) *
+				 sizeof(struct jbg_ardec_state));
 	s->tx[i] = checked_malloc((s->d - s->dl + 1) * sizeof(int));
 	s->ty[i] = checked_malloc((s->d - s->dl + 1) * sizeof(int));
 	s->reset[i] = checked_malloc((s->d - s->dl + 1) * sizeof(int));
@@ -2377,8 +2380,8 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
       }
     } else {
       for (i = 0; i < s->planes; i++) {
-	s->s[i] = checked_realloc(s->s[i],
-				  (s->d - s->dl + 1)*sizeof(struct dec_state));
+	s->s[i] = checked_realloc(s->s[i], (s->d - s->dl + 1) *
+				  sizeof(struct jbg_ardec_state));
 	s->tx[i] = checked_realloc(s->tx[i], (s->d - s->dl + 1) * sizeof(int));
 	s->ty[i] = checked_realloc(s->ty[i], (s->d - s->dl + 1) * sizeof(int));
 	s->reset[i] = checked_realloc(s->reset[i],
@@ -2393,7 +2396,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
       for (j = 0; j <= s->d - s->dl; j++)
 	arith_decode_init(s->s[i] + j, 0);
     if (s->dl == 0 || (s->options & JBG_DPON && !(s->options & JBG_DPPRIV)))
-      s->dppriv = dptable;
+      s->dppriv = jbg_dptable;
     s->comment_skip = 0;
     s->buf_len = 0;
     s->x = 0;
@@ -2411,7 +2414,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
       s->buffer[s->bie_len++ - 20] = data[(*cnt)++];
     if (s->bie_len < 20 + 1728) 
       return JBG_EAGAIN;
-    if (!s->dppriv || s->dppriv == dptable)
+    if (!s->dppriv || s->dppriv == jbg_dptable)
       s->dppriv = checked_malloc(sizeof(char) * 1728);
     jbg_dppriv2int(s->dppriv, s->buffer);
   }
@@ -2541,8 +2544,8 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	/* check whether we have to abort because of xmax/ymax */
 	if (index[s->order & 7][LAYER] == 0 && i < 0) {
 	  /* LAYER is the outermost loop and we have just gone to next layer */
-	  if (ceil_half(s->xd, s->d - s->ii[0]) > s->xmax ||
-	      ceil_half(s->yd, s->d - s->ii[0]) > s->ymax) {
+	  if (jbg_ceil_half(s->xd, s->d - s->ii[0]) > s->xmax ||
+	      jbg_ceil_half(s->yd, s->d - s->ii[0]) > s->ymax) {
 	    s->xmax = 4294967295U;
 	    s->ymax = 4294967295U;
 	    return JBG_EOK_INTR;
@@ -2586,7 +2589,7 @@ long jbg_dec_getwidth(struct jbg_dec_state *s)
     if (s->ii[0] < 1)
       return -1;
     else
-      return ceil_half(s->xd, s->d - (s->ii[0] - 1));
+      return jbg_ceil_half(s->xd, s->d - (s->ii[0] - 1));
   
   return s->xd;
 }
@@ -2594,9 +2597,9 @@ long jbg_dec_getwidth(struct jbg_dec_state *s)
 
 /*
  * After jbg_dec_in() returned JBG_EOK or JBG_EOK_INTR, you can call this
- * function in order to find out the hight of the image.
+ * function in order to find out the height of the image.
  */
-long jbg_dec_gethight(struct jbg_dec_state *s)
+long jbg_dec_getheight(struct jbg_dec_state *s)
 {
   if (s->d < 0)
     return -1;
@@ -2604,7 +2607,7 @@ long jbg_dec_gethight(struct jbg_dec_state *s)
     if (s->ii[0] < 1)
       return -1;
     else
-      return ceil_half(s->yd, s->d - (s->ii[0] - 1));
+      return jbg_ceil_half(s->yd, s->d - (s->ii[0] - 1));
   
   return s->yd;
 }
@@ -2641,8 +2644,9 @@ long jbg_dec_getsize(struct jbg_dec_state *s)
     if (s->ii[0] < 1)
       return -1;
     else
-      return ((((ceil_half(s->xd, s->d - (s->ii[0] - 1)) - 1) | 7) + 1) >> 3) *
-	ceil_half(s->yd, s->d - (s->ii[0] - 1));
+      return 
+	((((jbg_ceil_half(s->xd, s->d - (s->ii[0] - 1)) - 1) | 7) + 1) >> 3) *
+	  jbg_ceil_half(s->yd, s->d - (s->ii[0] - 1));
   
   return ((((s->xd - 1) | 7) + 1) >> 3) * s->yd;
 }
