@@ -1,5 +1,5 @@
 # Unix makefile for the JBIG-KIT PBM tools
-# $Id: Makefile,v 1.8 1998-04-11 01:24:42 mgk25 Exp $
+# $Id: Makefile,v 1.9 1998-11-04 10:00:44 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, e.g. GNU gcc is recommended
 CC = gcc
@@ -49,10 +49,10 @@ dotest2:
 	cmp test-$(IMG).pgm ../examples/$(IMG).pgm
 
 .1.txt:
-	gtroff -man -Tascii $< | grotty - -u -b >$@
+	gtroff -man -Tascii $< | grotty -u -b - >$@
 
 .5.txt:
-	gtroff -man -Tascii $< | grotty - -u -b >$@
+	gtroff -man -Tascii $< | grotty -u -b - >$@
 
 clean:
 	rm -f *.o *~ core pbmtojbg jbgtopbm
