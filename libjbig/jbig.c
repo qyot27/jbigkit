@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.c,v 1.22 2004-06-11 14:17:06 mgk25 Exp $
+ *  $Id: jbig.c,v 1.23 2004-06-24 13:06:27 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -95,7 +95,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.22 2004-06-11 14:17:06 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.23 2004-06-24 13:06:27 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -768,6 +768,7 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
   s->my = 0;
   s->order = JBG_ILEAVE | JBG_SMID;
   s->options = JBG_TPBON | JBG_TPDON | JBG_DPON;
+  s->comment = NULL;
   s->dppriv = jbg_dptable;
   s->res_tab = jbg_resred;
   
@@ -883,7 +884,9 @@ static void encode_sde(struct jbg_enc_state *s,
   unsigned long line_h0 = 0, line_h1 = 0;
   unsigned long line_h2, line_h3, line_l1, line_l2, line_l3;
   struct jbg_arenc_state *se;
-  unsigned long i, j, y;
+  unsigned long y;  /* current line number in highres image */
+  unsigned long i;  /* current line number within highres stripe */
+  unsigned long j;  /* current column number in highres image */
   long o;
   unsigned a, p, t;
   int ltp, ltp_old, cx;
@@ -891,6 +894,7 @@ static void encode_sde(struct jbg_enc_state *s,
   int tmax, at_determined;
   int new_tx;
   long new_tx_line = -1;
+  int reset;
   struct jbg_buf *new_jbg_buf;
 
 #ifdef DEBUG
@@ -929,9 +933,12 @@ static void encode_sde(struct jbg_enc_state *s,
   lp2 = s->lhp[1 - s->highres[plane]][plane] + stripe * ll * lbpl;
   lp1 = lp2 + lbpl;
   
+  /* check whether we can refer to any state of a previous stripe */
+  reset = (stripe == 0) || (s->options & JBG_SDRST);
+
   /* initialize arithmetic encoder */
   se = s->s + plane;
-  arith_encode_init(se, stripe != 0);
+  arith_encode_init(se, !reset);
   s->sde[stripe][layer][plane] = jbg_buf_init(&s->free_list);
   se->byte_out = jbg_buf_write;
   se->file = s->sde[stripe][layer][plane];
@@ -940,7 +947,7 @@ static void encode_sde(struct jbg_enc_state *s,
   c_all = 0;
   for (t = 0; t <= s->mx; t++)
     c[t] = 0;
-  if (stripe == 0)
+  if (reset)
     s->tx[plane] = 0;
   new_tx = -1;
   at_determined = 0;  /* we haven't yet decided the template move */
@@ -949,7 +956,7 @@ static void encode_sde(struct jbg_enc_state *s,
 
   /* initialize typical prediction */
   ltp = 0;
-  if (stripe == 0)
+  if (reset)
     ltp_old = 0;
   else {
     ltp_old = 1;
@@ -1008,7 +1015,7 @@ static void encode_sde(struct jbg_enc_state *s,
       if (s->options & JBG_TPBON) {
 	ltp = 1;
 	p1 = hp;
-	if (y > 0) {
+	if (i > 0 || !reset) {
 	  q1 = hp - hbpl;
 	  while (q1 < hp && (ltp = (*p1++ == *q1++)) != 0);
 	} else
@@ -1036,15 +1043,15 @@ static void encode_sde(struct jbg_enc_state *s,
        */
       
       line_h1 = line_h2 = line_h3 = 0;
-      if (y > 0) line_h2 = (long)*(hp - hbpl) << 8;
-      if (y > 1) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
+      if (i > 0 || !reset) line_h2 = (long)*(hp - hbpl) << 8;
+      if (i > 1 || !reset) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
       
       /* encode line */
       for (j = 0; j < hx; hp++) {
 	line_h1 |= *hp;
-	if (j < hbpl * 8 - 8 && y > 0) {
+	if (j < hbpl * 8 - 8 && (i > 0 || !reset)) {
 	  line_h2 |= *(hp - hbpl + 1);
-	  if (y > 1)
+	  if (i > 1 || !reset)
 	    line_h3 |= *(hp - hbpl - hbpl + 1);
 	}
 	if (s->options & JBG_LRLTWO) {
@@ -1191,7 +1198,7 @@ static void encode_sde(struct jbg_enc_state *s,
 	p0 = p1 = hp;
 	if (i < hl - 1 && y < hy - 1)
 	  p0 = hp + hbpl;
-	if (y > 1)
+	if (i > 1 || !reset)
 	  line_l3 = (long)*(q2 - lbpl) << 8;
 	else
 	  line_l3 = 0;
@@ -1200,7 +1207,7 @@ static void encode_sde(struct jbg_enc_state *s,
 	ltp = 1;
 	for (j = 0; j < lx && ltp; q1++, q2++) {
 	  if (j < lbpl * 8 - 8) {
-	    if (y > 1)
+	    if (i > 1 || !reset)
 	      line_l3 |= *(q2 - lbpl + 1);
 	    line_l2 |= *(q2 + 1);
 	    line_l1 |= *(q1 + 1);
@@ -1270,8 +1277,8 @@ static void encode_sde(struct jbg_enc_state *s,
       
 
       line_h1 = line_h2 = line_h3 = line_l1 = line_l2 = line_l3 = 0;
-      if (y > 0) line_h2 = (long)*(hp - hbpl) << 8;
-      if (y > 1) {
+      if (i > 0 || !reset) line_h2 = (long)*(hp - hbpl) << 8;
+      if (i > 1 || !reset) {
 	line_h3 = (long)*(hp - hbpl - hbpl) << 8;
 	line_l3 = (long)*(lp2 - lbpl) << 8;
       }
@@ -1281,7 +1288,7 @@ static void encode_sde(struct jbg_enc_state *s,
       /* encode line */
       for (j = 0; j < hx; lp1++, lp2++) {
 	if ((j >> 1) < lbpl * 8 - 8) {
-	  if (y > 1)
+	  if (i > 1 || !reset)
 	    line_l3 |= *(lp2 - lbpl + 1);
 	  line_l2 |= *(lp2 + 1);
 	  line_l1 |= *(lp1 + 1);
@@ -1298,9 +1305,9 @@ static void encode_sde(struct jbg_enc_state *s,
 
 	  line_h1 |= *hp;
 	  if (j < hbpl * 8 - 8) {
-	    if (y > 0) {
+	    if (i > 0 || !reset) {
 	      line_h2 |= *(hp - hbpl + 1);
-	      if (y > 1)
+	      if (i > 1 || !reset)
 		line_h3 |= *(hp - hbpl - hbpl + 1);
 	    }
 	  }
@@ -1432,7 +1439,8 @@ static void encode_sde(struct jbg_enc_state *s,
   arith_encode_flush(se);
   jbg_buf_remove_zeros(s->sde[stripe][layer][plane]);
   jbg_buf_write(MARKER_ESC, s->sde[stripe][layer][plane]);
-  jbg_buf_write(MARKER_SDNORM, s->sde[stripe][layer][plane]);
+  jbg_buf_write((s->options & JBG_SDRST) ? MARKER_SDRST : MARKER_SDNORM,
+		s->sde[stripe][layer][plane]);
 
   /* add ATMOVE */
   if (new_tx != -1) {
@@ -1480,12 +1488,18 @@ static void encode_sde(struct jbg_enc_state *s,
 static void resolution_reduction(struct jbg_enc_state *s, int plane,
 				 int higher_layer)
 {
-  unsigned long hx, hy, lx, ly, hbpl, lbpl;
+  unsigned long hl, ll, hx, hy, lx, ly, hbpl, lbpl;
   unsigned char *hp1, *hp2, *hp3, *lp;
   unsigned long line_h1, line_h2, line_h3, line_l2;
-  unsigned long i, j;
+  unsigned long y;  /* current line number in lowres image */
+  unsigned long i;  /* current line number within lowres stripe */
+  unsigned long j;  /* current column number in lowres image */
   int pix, k, l;
 
+  /* number of lines per stripe in highres image */
+  hl = s->l0 << higher_layer;
+  /* number of lines per stripe in lowres image */
+  ll = hl >> 1;
   /* number of pixels in highres image */
   hx = jbg_ceil_half(s->xd, s->d - higher_layer);
   hy = jbg_ceil_half(s->yd, s->d - higher_layer);
@@ -1524,39 +1538,43 @@ static void resolution_reduction(struct jbg_enc_state *s, int plane,
    *                            X
    */
 
-  for (i = 0; i < ly; i++) {
-    if (2*i + 1 >= hy)
-      hp1 = hp2;
-    pix = 0;
-    line_h1 = line_h2 = line_h3 = line_l2 = 0;
-    for (j = 0; j < lbpl * 8; j += 8) {
-      *lp = 0;
-      line_l2 |= i ? *(lp-lbpl) : 0;
-      for (k = 0; k < 8 && j + k < lx; k += 4) {
-	if (((j + k) >> 2) < hbpl) {
-	  line_h3 |= i ? *hp3 : 0;
-	  ++hp3;
-	  line_h2 |= *(hp2++);
-	  line_h1 |= *(hp1++);
+  for (y = 0; y < ly;) {
+    for (i = 0; i < ll && y < ly; i++, y++) {
+      if (2*y + 1 >= hy)
+	hp1 = hp2;
+      pix = 0;
+      line_h1 = line_h2 = line_h3 = line_l2 = 0;
+      for (j = 0; j < lbpl * 8; j += 8) {
+	*lp = 0;
+	if (i > 0 || (y > 0 && !(s->options & JBG_SDRST)))
+	  line_l2 |= *(lp-lbpl);
+	for (k = 0; k < 8 && j + k < lx; k += 4) {
+	  if (((j + k) >> 2) < hbpl) {
+	    if (i > 0 || (y > 0 && !(s->options & JBG_SDRST)))
+	      line_h3 |= *hp3;
+	    ++hp3;
+	    line_h2 |= *(hp2++);
+	    line_h1 |= *(hp1++);
+	  }
+	  for (l = 0; l < 4 && j + k + l < lx; l++) {
+	    line_h3 <<= 2;
+	    line_h2 <<= 2;
+	    line_h1 <<= 2;
+	    line_l2 <<= 1;
+	    pix = s->res_tab[((line_h1 >> 8) & 0x007) |
+			     ((line_h2 >> 5) & 0x038) |
+			     ((line_h3 >> 2) & 0x1c0) |
+			     (pix << 9) | ((line_l2 << 2) & 0xc00)];
+	    *lp = (*lp << 1) | pix;
+	  }
 	}
-	for (l = 0; l < 4 && j + k + l < lx; l++) {
-	  line_h3 <<= 2;
-	  line_h2 <<= 2;
-	  line_h1 <<= 2;
-	  line_l2 <<= 1;
-	  pix = s->res_tab[((line_h1 >> 8) & 0x007) |
-			   ((line_h2 >> 5) & 0x038) |
-			   ((line_h3 >> 2) & 0x1c0) |
-			   (pix << 9) | ((line_l2 << 2) & 0xc00)];
-	  *lp = (*lp << 1) | pix;
-	}
+	++lp;
       }
-      ++lp;
+      *(lp - 1) <<= lbpl * 8 - lx;
+      hp1 += hbpl;
+      hp2 += hbpl;
+      hp3 += hbpl;
     }
-    *(lp - 1) <<= lbpl * 8 - lx;
-    hp1 += hbpl;
-    hp2 += hbpl;
-    hp3 += hbpl;
   }
 
 #ifdef DEBUG
@@ -1581,16 +1599,15 @@ static void resolution_reduction(struct jbg_enc_state *s, int plane,
  * order to write the next SDE. It has first to generate the required
  * SDE and all SDEs which have to be encoded before this SDE can be
  * created. The problem here is that if we want to output a lower
- * resolution layer, we have to allpy the resolution reduction
- * algorithm in order to get it. As we try to safe as much memory as
+ * resolution layer, we have to apply the resolution reduction
+ * algorithm first to get it. As we try to safe as much memory as
  * possible, the resolution reduction will overwrite previous higher
  * resolution bitmaps. Consequently, we have to encode and buffer SDEs
  * which depend on higher resolution layers before we can start the
- * resolution reduction. All this logic about which SDE has to be
- * encoded before resolution reduction is allowed is handled here.
- * This approach might be a little bit more complex than alternative
- * ways to do it, but it allows us to do the encoding with the minimal
- * possible amount of temporary memory.
+ * resolution reduction. All the logic about which SDE has to be
+ * encoded before resolution reduction is allowed is handled
+ * here. This approach may be a bit more complex than alternative ways
+ * of doing it, but it minimizes the amount of temporary memory used.
  */
 static void output_sde(struct jbg_enc_state *s,
 		       unsigned long stripe, int layer, int plane)
@@ -1882,6 +1899,19 @@ void jbg_enc_out(struct jbg_enc_state *s)
 	else
 	  layer = ii[iindex[order][LAYER]];
 	plane = ii[iindex[order][PLANE]];
+
+	/* output comment marker segment if there is any pending */
+	if (s->comment) {
+	  buf[0] = MARKER_ESC;
+	  buf[1] = MARKER_COMMENT;
+	  buf[2] = s->comment_len >> 24;
+	  buf[3] = (s->comment_len >> 16) & 0xff;
+	  buf[4] = (s->comment_len >> 8) & 0xff;
+	  buf[5] = s->comment_len & 0xff;
+	  s->data_out(buf, 6, s->file);
+	  s->data_out(s->comment, s->comment_len, s->file);
+	  s->comment = NULL;
+	}
 
 	output_sde(s, stripe, layer, plane);
 

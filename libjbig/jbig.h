@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.h,v 1.17 2004-06-11 14:18:21 mgk25 Exp $
+ *  $Id: jbig.h,v 1.18 2004-06-24 13:06:27 mgk25 Exp $
  */
 
 #ifndef JBG_H
@@ -56,10 +56,15 @@ struct jbg_buf {
 #define JBG_DPPRIV     0x02
 #define JBG_DPLAST     0x01
 
-#define JBG_DELAY_AT   0x100  /* delay ATMOVE until the first line of the next
-			       * stripe. Option available for compatibility
-			       * with conformance test example in clause 7.2.*/
+/* encoding options that will not be indicated in the header */
 
+#define JBG_DELAY_AT   0x100  /* Delay ATMOVE until the first line of the next
+			       * stripe. Option available for compatibility
+			       * with conformance test example in clause 7.2. */
+
+#define JBG_SDRST      0x200  /* Use SDRST instead of SDNORM. This option is
+			       * there for anyone who needs to generate
+			       * test data that covers the SDRST cases. */
 
 /*
  * Possible error code return values
@@ -165,6 +170,10 @@ struct jbg_enc_state {
                                                     /* data write callback */
   void *file;                            /* parameter passed to data_out() */
   char *tp;    /* buffer for temp. values used by diff. typical prediction */
+  unsigned char *comment; /* content of comment marker segment to be added
+                             at next opportunity (will be reset to NULL
+                             as soon as comment has been written)          */
+  unsigned long comment_len;       /* length of data pointed to by comment */
 };
 
 
