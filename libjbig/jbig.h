@@ -3,11 +3,11 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: jbig.h,v 1.3 1995-06-10 18:46:39 mskuhn Exp $
+ *  $Id: jbig.h,v 1.4 1995-09-20 19:39:19 mskuhn Exp $
  */
 
-#ifndef JBIG_H
-#define JBIG_H
+#ifndef JBG_H
+#define JBG_H
 
 #include <stddef.h>
 
@@ -15,7 +15,7 @@
  * JBIG-KIT version number
  */
 
-#define JBG_VERSION    "0.7"
+#define JBG_VERSION    "0.8"
 
 /*
  * Buffer block for SDEs which are temporarily stored by encoder
@@ -23,13 +23,14 @@
 
 #define JBG_BUFSIZE 4000
 
-struct jbuf {
+struct jbg_buf {
   unsigned char d[JBG_BUFSIZE];              /* one block of a buffer list */
   int len;                             /* length of the data in this block */
-  struct jbuf *next;                              /* pointer to next block */
-  struct jbuf *previous; /* pointer to previous block (unused in freelist) */
-  struct jbuf *last;        /* only used in list head: final block of list */
-  struct jbuf **free_list;      /* pointer to pointer to head of free list */
+  struct jbg_buf *next;                           /* pointer to next block */
+  struct jbg_buf *previous;                   /* pointer to previous block *
+					       * (unused in freelist)      */
+  struct jbg_buf *last;     /* only used in list head: final block of list */
+  struct jbg_buf **free_list;   /* pointer to pointer to head of free list */
 };
 
 /*
@@ -87,7 +88,7 @@ struct jbuf {
  * Status description of an arithmetic encoder
  */
 
-struct enc_state {
+struct jbg_arenc_state {
   unsigned char st[4096];    /* probability status for contexts, MSB = MPS */
   unsigned long c;                /* C register, base of coding intervall, *
                                    * layout as in Table 23                 */
@@ -104,7 +105,7 @@ struct enc_state {
  * Status description of an arithmetic decoder
  */
 
-struct dec_state {
+struct jbg_ardec_state {
   unsigned char st[4096];    /* probability status for contexts, MSB = MPS */
   unsigned long c;                /* C register, base of coding intervall, *
                                    * layout as in Table 25                 */
@@ -123,11 +124,11 @@ struct dec_state {
 };
 
 #ifdef TEST_CODEC
-void arith_encode_init(struct enc_state *s, int reuse_st);
-void arith_encode_flush(struct enc_state *s);
-void arith_encode(struct enc_state *s, int cx, int pix);
-void arith_decode_init(struct dec_state *s, int reuse_st);
-int arith_decode(struct dec_state *s, int cx);
+void arith_encode_init(struct jbg_arenc_state *s, int reuse_st);
+void arith_encode_flush(struct jbg_arenc_state *s);
+void arith_encode(struct jbg_arenc_state *s, int cx, int pix);
+void arith_decode_init(struct jbg_ardec_state *s, int reuse_st);
+int arith_decode(struct jbg_ardec_state *s, int cx);
 #endif
 
  
@@ -152,10 +153,10 @@ struct jbg_enc_state {
   int *tx;       /* array [plane] with x-offset of adaptive template pixel */
   char *dppriv;         /* optional private deterministic prediction table */
   char *res_tab;           /* table for the resolution reduction algorithm */
-  struct jbuf ****sde;         /* array [stripe][layer][plane] pointers to *
+  struct jbg_buf ****sde;      /* array [stripe][layer][plane] pointers to *
 				* buffers for stored SDEs                  */
-  struct enc_state *s;     /* array [planes] for arithmetic encoder status */
-  struct jbuf *free_list;    /* list of currently unused SDE block buffers */
+  struct jbg_arenc_state *s;  /* array [planes] for arithm. encoder status */
+  struct jbg_buf *free_list; /* list of currently unused SDE block buffers */
   void (*data_out)(unsigned char *start, size_t len, void *file);
                                                     /* data write callback */
   void *file;                            /* parameter passed to data_out() */
@@ -192,7 +193,8 @@ struct jbg_dec_state {
 
   /* status information */
   int **tx, **ty;   /* array [plane][layer-dl] with x,y-offset of AT pixel */
-  struct dec_state **s;  /* array [plane][layer-dl] for arith. dec. status */
+  struct jbg_ardec_state **s;    /* array [plane][layer-dl] for arithmetic *
+				  * decoder status */
   int **reset;     /* array [plane][layer-dl] remembers if previous stripe *
 		    * in that plane/resolution ended with SDRST.           */
   unsigned long bie_len;                    /* number of bytes read so far */
@@ -244,7 +246,7 @@ void jbg_dec_maxsize(struct jbg_dec_state *s, unsigned long xmax,
 int  jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 		size_t *cnt);
 long jbg_dec_getwidth(struct jbg_dec_state *s);
-long jbg_dec_gethight(struct jbg_dec_state *s);
+long jbg_dec_getheight(struct jbg_dec_state *s);
 unsigned char *jbg_dec_getimage(struct jbg_dec_state *s, int plane);
 long jbg_dec_getsize(struct jbg_dec_state *s);
 void jbg_dec_free(struct jbg_dec_state *s);
@@ -252,6 +254,6 @@ void jbg_dec_free(struct jbg_dec_state *s);
 const char *jbg_strerror(int errnum, int language);
 void jbg_int2dppriv(unsigned char *dptable, const char *internal);
 void jbg_dppriv2int(char *internal, const unsigned char *dptable);
-unsigned long ceil_half(unsigned long x, int n);
+unsigned long jbg_ceil_half(unsigned long x, int n);
 
-#endif /* JBIG_H */
+#endif /* JBG_H */
