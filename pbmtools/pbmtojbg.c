@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: pbmtojbg.c,v 1.4 1995-09-20 20:43:09 mskuhn Exp $
+ *  $Id: pbmtojbg.c,v 1.5 1995-12-10 22:51:35 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -85,6 +85,7 @@ int main (int argc, char **argv)
   int c, i, j;
   int all_args = 0, files = 0;
   unsigned long width, height;
+  unsigned long bpl;
   size_t bitmap_size;
   char type;
   unsigned char *bitmap, *p;
@@ -206,7 +207,8 @@ int main (int argc, char **argv)
   getc(fin);    /* skip line feed */
 
   /* read PBM image data */
-  bitmap_size = ((((width - 1) | 7) + 1) >> 3) * (size_t) height;
+  bpl = (((width - 1) | 7) + 1) >> 3;     /* bytes per line */
+  bitmap_size = bpl * (size_t) height;
   bitmap = malloc(sizeof(unsigned char) * bitmap_size);
   if (!bitmap) {
     fprintf(stderr, "Sorry, not enough memory available!\n");
@@ -241,6 +243,16 @@ int main (int argc, char **argv)
   if (feof(fin)) {
     fprintf(stderr, "Unexpected end of input file '%s'!\n", fnin);
     exit(1);
+  }
+
+  /* Test the final byte in each image line for correct zero padding */
+  if (width & 7) {
+    for (i = 0; i < height; i++)
+      if (bitmap[i * bpl + bpl - 1] & ((1 << (8 - (width & 7))) - 1)) {
+	fprintf(stderr, "Warning: No zero padding in last byte (0x%02x) of "
+		"line %d!\n", bitmap[i * bpl + bpl - 1], i + 1);
+	break;
+      }
   }
 
   /* Apply JBIG algorithm and write BIE to output file */
