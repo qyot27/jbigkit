@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: jbig.h,v 1.9 1999-11-16 15:58:45 mgk25 Exp $
+ *  $Id: jbig.h,v 1.10 2000-08-02 22:54:28 mgk25 Exp $
  */
 
 #ifndef JBG_H
@@ -15,7 +15,7 @@
  * JBIG-KIT version number
  */
 
-#define JBG_VERSION    "1.1"
+#define JBG_VERSION    "1.3"
 
 /*
  * Buffer block for SDEs which are temporarily stored by encoder
