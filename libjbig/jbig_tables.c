@@ -2,7 +2,7 @@
  *  Probability estimation tables for the arithmetic encoder/decoder
  *  given by ITU T.82 Table 24.
  *
- *  $Id: jbig_tab.c,v 1.2 1995-06-08 16:43:07 mskuhn Exp $
+ *  $Id: jbig_tab.c,v 1.3 1995-09-20 19:37:10 mskuhn Exp $
  */
 
 short jbg_lsz[113] = {
@@ -75,7 +75,7 @@ char jbg_swtch[113] = {
  * Resolution reduction table given by ITU-T T.82 Table 17
  */
 
-char resred[4096] = {
+char jbg_resred[4096] = {
   0,0,0,1,0,0,0,1,0,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
   0,0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
   0,0,0,0,0,0,0,1,0,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -212,7 +212,7 @@ char resred[4096] = {
  * index bits are permutated for higher efficiency.
  */
 
-char dptable[256 + 512 + 2048 + 4096] = {
+char jbg_dptable[256 + 512 + 2048 + 4096] = {
   /* phase 0: offset=0 */
   0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
   0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,2,0,2,2,2,2,2,2,2,2,2,2,2,2,2,
