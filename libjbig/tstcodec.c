@@ -5,7 +5,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: tstcodec.c,v 1.11 2004-06-08 14:34:53 mgk25 Exp $
+ *  $Id: tstcodec.c,v 1.12 2004-06-09 20:04:02 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -355,7 +355,9 @@ int main(int argc, char **argv)
     f = fopen(argv[1], "wb");
     if (!f) abort();
     fprintf(f, "P4\n");
+#if 0
     fprintf(f, "# Test image as defined in ITU-T T.82, clause 7.2.1\n");
+#endif
     fprintf(f, "1960 1951\n");
     fwrite(testpic, 1, TESTPIC_SIZE, f);
     fclose(f);
