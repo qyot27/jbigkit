@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.c,v 1.20 2004-06-10 19:01:49 mgk25 Exp $
+ *  $Id: jbig.c,v 1.21 2004-06-10 20:56:13 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -95,7 +95,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.20 2004-06-10 19:01:49 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.21 2004-06-10 20:56:13 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -694,7 +694,8 @@ static void jbg_buf_output(struct jbg_buf **head,
 
 
 /*
- * Calculate y = ceil(x/2) applied n times. This function is used to
+ * Calculate y = ceil(x/2) applied n times, which is equivalent to
+ * y = ceil(x/(2^n)). This function is used to
  * determine the number of pixels per row or column after n resolution
  * reductions. E.g. X[d-1] = jbg_ceil_half(X[d], 1) and X[0] =
  * jbg_ceil_half(X[d], d) as defined in clause 6.2.3 of T.82.
@@ -724,7 +725,9 @@ static void jbg_set_default_l0(struct jbg_enc_state *s)
 }
 
 
-/* Calculate the number of stripes that will be required */
+/*
+ * Calculate the number of stripes, as defined in clause 6.2.3 of T.82.
+ */
 static unsigned long jbg_stripes(unsigned long l0, unsigned long yd,
 				 unsigned long d)
 {
@@ -821,7 +824,7 @@ int jbg_enc_lrlmax(struct jbg_enc_state *s, unsigned long x,
  */
 void jbg_enc_layers(struct jbg_enc_state *s, int d)
 {
-  if (d < 0 || d > 255)
+  if (d < 0 || d > 31)
     return;
   s->d  = d;
   s->dl = 0;
@@ -906,8 +909,6 @@ static void encode_sde(struct jbg_enc_state *s,
 
   /* number of lines per stripe in highres image */
   hl = s->l0 << layer;
-  if (hl >> layer != s->l0)
-    hl = -1;
   /* number of lines per stripe in lowres image */
   ll = hl >> 1;
   /* current line number in highres image */
@@ -1528,7 +1529,7 @@ static void resolution_reduction(struct jbg_enc_state *s, int plane,
     line_h1 = line_h2 = line_h3 = line_l2 = 0;
     for (j = 0; j < lbpl * 8; j += 8) {
       *lp = 0;
-      line_l2 |= i ? lp[-lbpl] : 0;
+      line_l2 |= i ? *(lp-lbpl) : 0;
       for (k = 0; k < 8 && j + k < lx; k += 4) {
 	if (((j + k) >> 2) < hbpl) {
 	  line_h3 |= i ? *hp3 : 0;
@@ -1740,7 +1741,7 @@ void jbg_dppriv2int(char *internal, const unsigned char *dptable)
  */
 void jbg_enc_out(struct jbg_enc_state *s)
 {
-  long bpl;
+  unsigned long bpl;
   unsigned char buf[20];
   unsigned long xd, yd, y;
   long ii[3], is[3], ie[3];    /* generic variables for the 3 nested loops */ 
@@ -1765,6 +1766,9 @@ void jbg_enc_out(struct jbg_enc_state *s)
   if (s->d > 255 || s->d < 0 || s->dh > s->d || s->dh < 0 ||
       s->dl < 0 || s->dl > s->dh || s->planes < 0 || s->planes > 255)
     return;
+  /* prevent uint32 overflow: s->l0 * 2 ^ s->d < 2 ^ 32 */
+  if (s->d > 31 || (s->d != 0 && s->l0 >= (1UL << (32 - s->d))))
+    return;
   if (s->yd1 < s->yd)
     s->yd1 = s->yd;
   if (s->yd1 > s->yd)
@@ -1772,7 +1776,7 @@ void jbg_enc_out(struct jbg_enc_state *s)
 
   /* ensure correct zero padding of bitmap at the final byte of each line */
   if (s->xd & 7) {
-    bpl = (s->xd + 7) / 8;     /* bytes per line */
+    bpl = jbg_ceil_half(s->xd, 3);     /* bytes per line */
     for (plane = 0; plane < s->planes; plane++)
       for (y = 0; y < s->yd; y++)
 	s->lhp[0][plane][y * bpl + bpl - 1] &= ~((1 << (8 - (s->xd & 7))) - 1);
@@ -2060,8 +2064,8 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
   lx = jbg_ceil_half(hx, 1);
   ly = jbg_ceil_half(hy, 1);
   /* bytes per line in highres and lowres image */
-  hbpl = (hx + 7) / 8;
-  lbpl = (lx + 7) / 8;
+  hbpl = jbg_ceil_half(hx, 3);
+  lbpl = jbg_ceil_half(lx, 3);
   /* pointer to highres and lowres image bytes */
   hp  = s->lhp[ layer    & 1][plane] + (stripe * hl + s->i) * hbpl +
     (s->x >> 3);
@@ -2499,7 +2503,6 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
   int i, j, required_length;
   unsigned long x, y;
   unsigned long is[3], ie[3];
-  long hsize, lsize;
   extern char jbg_dptable[];
   size_t dummy_cnt;
 
@@ -2570,10 +2573,6 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     s->ii[iindex[s->order & 7][STRIPE]] = 0;
     s->ii[iindex[s->order & 7][LAYER]] = s->dl;
     s->ii[iindex[s->order & 7][PLANE]] = 0;
-    /* bytes required for resolution layer D and D-1 */
-    hsize = ((s->xd + 7) / 8) * s->yd;
-    lsize = ((jbg_ceil_half(s->xd, 1) + 7) / 8) *
-      jbg_ceil_half(s->yd, 1);
     if (s->dl == 0) {
       s->s      = checked_malloc(s->planes, sizeof(struct jbg_ardec_state *));
       s->tx     = checked_malloc(s->planes, sizeof(int *));
@@ -2589,8 +2588,10 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	s->ty[i]    = checked_malloc(s->d - s->dl + 1, sizeof(int));
 	s->reset[i] = checked_malloc(s->d - s->dl + 1, sizeof(int));
 	s->lntp[i]  = checked_malloc(s->d - s->dl + 1, sizeof(int));
-	s->lhp[ s->d    & 1][i] = checked_malloc(hsize, sizeof(unsigned char));
-	s->lhp[(s->d-1) & 1][i] = checked_malloc(lsize, sizeof(unsigned char));
+	s->lhp[ s->d    & 1][i] = checked_malloc(s->yd,
+						 jbg_ceil_half(s->xd, 3));
+	s->lhp[(s->d-1) & 1][i] = checked_malloc(jbg_ceil_half(s->yd, 1),
+						 jbg_ceil_half(s->xd, 1+3));
       }
     } else {
       for (i = 0; i < s->planes; i++) {
@@ -2603,9 +2604,11 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	s->lntp[i]  = checked_realloc(s->lntp[i],
 				      s->d - s->dl + 1, sizeof(int));
 	s->lhp[ s->d    & 1][i] = checked_realloc(s->lhp[s->d    & 1][i],
-						  hsize, sizeof(unsigned char));
+						  s->yd,
+						  jbg_ceil_half(s->xd, 3));
 	s->lhp[(s->d-1) & 1][i] = checked_realloc(s->lhp[(s->d-1)&1][i],
-						  lsize, sizeof(unsigned char));
+						  jbg_ceil_half(s->yd, 1),
+						  jbg_ceil_half(s->xd, 1+3));
       }
     }
     for (i = 0; i < s->planes; i++)
@@ -2878,11 +2881,11 @@ long jbg_dec_getsize(const struct jbg_dec_state *s)
       return -1;
     else
       return 
-	((jbg_ceil_half(s->xd, s->d - (s->ii[0] - 1)) + 7) / 8) *
+	jbg_ceil_half(s->xd, s->d - (s->ii[0] - 1) + 3) *
 	jbg_ceil_half(s->yd, s->d - (s->ii[0] - 1));
   }
   
-  return ((s->xd + 7) / 8) * s->yd;
+  return jbg_ceil_half(s->xd, 3) * s->yd;
 }
 
 
@@ -2961,10 +2964,10 @@ void jbg_split_planes(unsigned long x, unsigned long y, int has_planes,
 		      const unsigned char *src, unsigned char **dest,
 		      int use_graycode)
 {
-  unsigned bpl = (x + 7) / 8;           /* bytes per line in dest plane */
-  unsigned i, k = 8;
+  unsigned long bpl = jbg_ceil_half(x, 3);  /* bytes per line in dest plane */
+  unsigned long line, i;
+  unsigned k = 8;
   int p;
-  unsigned long line;
   unsigned prev;     /* previous *src byte shifted by 8 bit to the left */
   register int bits, msb = has_planes - 1;
   int bitno;
@@ -3022,9 +3025,9 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
 					   void *file), void *file)
 {
 #define BUFLEN 4096
-  int bpp, bpl;
-  unsigned long line;
-  unsigned i, k = 8;
+  int bpp;
+  unsigned long bpl, line, i;
+  unsigned k = 8;
   int p;
   unsigned char buf[BUFLEN];
   unsigned char *bp = buf;
@@ -3040,7 +3043,7 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
   if (x <= 0 || y <= 0)
     return;
   bpp = (s->planes + 7) / 8;   /* bytes per pixel in dest image */
-  bpl = (x + 7) / 8;           /* bytes per line in src plane */
+  bpl = jbg_ceil_half(x, 3);   /* bytes per line in src plane */
 
   if (iindex[s->order & 7][LAYER] == 0)
     if (s->ii[0] < 1)
