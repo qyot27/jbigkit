@@ -5,7 +5,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: tstcodec.c,v 1.12 2004-06-09 20:04:02 mgk25 Exp $
+ *  $Id: tstcodec.c,v 1.13 2004-06-10 20:50:29 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -130,7 +130,7 @@ static void testimage(unsigned char *pic)
  */
 static int test_cycle(unsigned char **orig_image, int width, int height,
 		      int options, int order, int layers, int planes,
-		      int l0, int mx, long correct_length,
+		      unsigned long l0, int mx, long correct_length,
 		      const char *test_id)
 {
   struct jbg_enc_state sje;
@@ -344,7 +344,7 @@ int main(int argc, char **argv)
 
   /* only supported command line option:
    * output file name for exporting test image */
-  if (argc > 0) {
+  if (argc > 1) {
     FILE *f;
 
     puts("Generating test image ...");
@@ -361,7 +361,7 @@ int main(int argc, char **argv)
     fprintf(f, "1960 1951\n");
     fwrite(testpic, 1, TESTPIC_SIZE, f);
     fclose(f);
-    return 0;
+    exit(0);
   }
 
 #if 1
