@@ -1,5 +1,5 @@
 # Unix makefile for JBIG-KIT
-# $Id: Makefile,v 1.9 2000-04-08 11:19:18 mgk25 Exp $
+# $Id: Makefile,v 1.10 2002-03-23 03:01:50 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
 CC = gcc
@@ -30,18 +30,8 @@ clean:
 	(cd libjbig; make clean)
 	(cd pbmtools; make clean)
 
-DISTHOST = faui01c.informatik.uni-erlangen.de
-DISTUID  = mskuhn
-DISTPATH = ftp/ISO/JBIG
-
 distribution: clean
 	rm -f libjbig/libjbig.a
 	(cd ..; tar -c -v --exclude RCS -f jbigkit-$(VERSION).tar jbigkit ; \
 	  gzip -9f jbigkit-$(VERSION).tar )
-	ssh -l $(DISTUID) $(DISTHOST) rm -f \
-	  $(DISTPATH)/jbigkit-$(VERSION).tar.gz \
-	  $(DISTPATH)/jbigkit-$(VERSION)-announce.txt
-	scp ../jbigkit-$(VERSION).tar.gz $(DISTUID)@$(DISTHOST):$(DISTPATH)/
-	scp ANNOUNCE \
-	  $(DISTUID)@$(DISTHOST):$(DISTPATH)/jbigkit-$(VERSION)-announce.txt
 	mv ../jbigkit-$(VERSION).tar.gz $(HOME)/.www/download/
