@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.c,v 1.18 2003-06-06 21:00:07 mgk25 Exp $
+ *  $Id: jbig.c,v 1.19 2003-06-11 16:57:02 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -45,6 +45,7 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #include "jbig.h"
@@ -94,14 +95,14 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.18 2003-06-06 21:00:07 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.19 2003-06-11 16:57:02 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
  * ordering bits, which ii[] variable represents which dimension
  * of s->sde.
  */
-static const int index[8][3] = {
+static const int iindex[8][3] = {
   { 2, 1, 0 },    /* no ordering bit set */
   { -1, -1, -1},  /* SMID -> illegal combination */
   { 2, 0, 1 },    /* ILEAVE */
@@ -701,6 +702,9 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
 
   s->xd = x;
   s->yd = y;
+  s->yd1 = y; /* This is the hight initially announced in BIH. To provoke
+                 generation of NEWLEN for T.85 compatibility tests,
+                 overwrite with new value s->yd1 > s->yd  */
   s->planes = planes;
   s->data_out = data_out;
   s->file = file;
@@ -1701,7 +1705,7 @@ void jbg_dppriv2int(char *internal, const unsigned char *dptable)
 void jbg_enc_out(struct jbg_enc_state *s)
 {
   long bpl;
-  unsigned char bih[20];
+  unsigned char buf[20];
   unsigned long xd, yd, y;
   long ii[3], is[3], ie[3];    /* generic variables for the 3 nested loops */ 
   unsigned long stripe;
@@ -1713,7 +1717,7 @@ void jbg_enc_out(struct jbg_enc_state *s)
   /* some sanity checks */
   s->order &= JBG_HITOLO | JBG_SEQ | JBG_ILEAVE | JBG_SMID;
   order = s->order & (JBG_SEQ | JBG_ILEAVE | JBG_SMID);
-  if (index[order][0] < 0)
+  if (iindex[order][0] < 0)
     s->order = order = JBG_SMID | JBG_ILEAVE;
   if (s->options & JBG_DPON && s->dppriv != jbg_dptable)
     s->options |= JBG_DPPRIV;
@@ -1725,6 +1729,10 @@ void jbg_enc_out(struct jbg_enc_state *s)
   if (s->d > 255 || s->d < 0 || s->dh > s->d || s->dh < 0 ||
       s->dl < 0 || s->dl > s->dh || s->planes < 0 || s->planes > 255)
     return;
+  if (s->yd1 < s->yd)
+    s->yd1 = s->yd;
+  if (s->yd1 > s->yd)
+    s->options |= JBG_VLENGTH;
 
   /* ensure correct zero padding of bitmap at the final byte of each line */
   if (s->xd & 7) {
@@ -1755,29 +1763,29 @@ void jbg_enc_out(struct jbg_enc_state *s)
   }
 
   /* output BIH */
-  bih[0] = s->dl;
-  bih[1] = s->dh;
-  bih[2] = s->planes;
-  bih[3] = 0;
+  buf[0] = s->dl;
+  buf[1] = s->dh;
+  buf[2] = s->planes;
+  buf[3] = 0;
   xd = jbg_ceil_half(s->xd, s->d - s->dh);
-  yd = jbg_ceil_half(s->yd, s->d - s->dh);
-  bih[4] = xd >> 24;
-  bih[5] = (xd >> 16) & 0xff;
-  bih[6] = (xd >> 8) & 0xff;
-  bih[7] = xd & 0xff;
-  bih[8] = yd >> 24;
-  bih[9] = (yd >> 16) & 0xff;
-  bih[10] = (yd >> 8) & 0xff;
-  bih[11] = yd & 0xff;
-  bih[12] = s->l0 >> 24;
-  bih[13] = (s->l0 >> 16) & 0xff;
-  bih[14] = (s->l0 >> 8) & 0xff;
-  bih[15] = s->l0 & 0xff;
-  bih[16] = s->mx;
-  bih[17] = s->my;
-  bih[18] = s->order;
-  bih[19] = s->options & 0x7f;
-  s->data_out(bih, 20, s->file);
+  yd = jbg_ceil_half(s->yd1, s->d - s->dh);
+  buf[4] = xd >> 24;
+  buf[5] = (xd >> 16) & 0xff;
+  buf[6] = (xd >> 8) & 0xff;
+  buf[7] = xd & 0xff;
+  buf[8] = yd >> 24;
+  buf[9] = (yd >> 16) & 0xff;
+  buf[10] = (yd >> 8) & 0xff;
+  buf[11] = yd & 0xff;
+  buf[12] = s->l0 >> 24;
+  buf[13] = (s->l0 >> 16) & 0xff;
+  buf[14] = (s->l0 >> 8) & 0xff;
+  buf[15] = s->l0 & 0xff;
+  buf[16] = s->mx;
+  buf[17] = s->my;
+  buf[18] = s->order;
+  buf[19] = s->options & 0x7f;
+  s->data_out(buf, 20, s->file);
   if ((s->options & (JBG_DPON | JBG_DPPRIV | JBG_DPLAST)) ==
       (JBG_DPON | JBG_DPPRIV)) {
     /* write private table */
@@ -1808,25 +1816,53 @@ void jbg_enc_out(struct jbg_enc_state *s)
    */
 
   /* start and end value vor each loop */
-  is[index[order][STRIPE]] = 0;
-  ie[index[order][STRIPE]] = s->stripes - 1;
-  is[index[order][LAYER]] = s->dl;
-  ie[index[order][LAYER]] = s->dh;
-  is[index[order][PLANE]] = 0;
-  ie[index[order][PLANE]] = s->planes - 1;
+  is[iindex[order][STRIPE]] = 0;
+  ie[iindex[order][STRIPE]] = s->stripes - 1;
+  is[iindex[order][LAYER]] = s->dl;
+  ie[iindex[order][LAYER]] = s->dh;
+  is[iindex[order][PLANE]] = 0;
+  ie[iindex[order][PLANE]] = s->planes - 1;
 
   for (ii[0] = is[0]; ii[0] <= ie[0]; ii[0]++)
     for (ii[1] = is[1]; ii[1] <= ie[1]; ii[1]++)
       for (ii[2] = is[2]; ii[2] <= ie[2]; ii[2]++) {
 	
-	stripe = ii[index[order][STRIPE]];
+	stripe = ii[iindex[order][STRIPE]];
 	if (s->order & JBG_HITOLO)
-	  layer = s->dh - (ii[index[order][LAYER]] - s->dl);
+	  layer = s->dh - (ii[iindex[order][LAYER]] - s->dl);
 	else
-	  layer = ii[index[order][LAYER]];
-	plane = ii[index[order][PLANE]];
+	  layer = ii[iindex[order][LAYER]];
+	plane = ii[iindex[order][PLANE]];
 
 	output_sde(s, stripe, layer, plane);
+
+	/*
+	 * When we generate a NEWLEN test case (s->yd1 > s->yd), output
+	 * NEWLEN after last stripe if we have only a single
+	 * resolution layer or plane (see ITU-T T.85 profile), otherwise
+	 * output NEWLEN before last stripe.
+	 */
+	if (s->yd1 > s->yd &&
+	    (stripe == s->stripes - 1 ||
+	     (stripe == s->stripes - 2 && 
+	      (s->dl != s->dh || s->planes > 1)))) {
+	  s->yd1 = s->yd;
+	  yd = jbg_ceil_half(s->yd, s->d - s->dh);
+	  buf[0] = MARKER_ESC;
+	  buf[1] = MARKER_NEWLEN;
+	  buf[2] = yd >> 24;
+	  buf[3] = (yd >> 16) & 0xff;
+	  buf[4] = (yd >> 8) & 0xff;
+	  buf[5] = yd & 0xff;
+	  s->data_out(buf, 6, s->file);
+#ifdef DEBUG
+	  fprintf(stderr, "NEWLEN: yd=%lu\n", yd);
+#endif
+	  if (stripe == s->stripes - 1) {
+	    buf[1] = MARKER_SDNORM;
+	    s->data_out(buf, 2, s->file);
+	  }
+	}
 
       }
 
@@ -1959,9 +1995,9 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
   int pix, cx = 0, slntp, tx;
 
   /* SDE loop variables */
-  stripe = s->ii[index[s->order & 7][STRIPE]];
-  layer = s->ii[index[s->order & 7][LAYER]];
-  plane = s->ii[index[s->order & 7][PLANE]];
+  stripe = s->ii[iindex[s->order & 7][STRIPE]];
+  layer = s->ii[iindex[s->order & 7][LAYER]];
+  plane = s->ii[iindex[s->order & 7][PLANE]];
 
   /* forward data to arithmetic decoder */
   se = s->s[plane] + layer - s->dl;
@@ -2472,7 +2508,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     if (s->my > 0) 
       return JBG_EIMPL;
     s->order = s->buffer[18];
-    if (index[s->order & 7][0] < 0)
+    if (iindex[s->order & 7][0] < 0)
       return JBG_EINVAL;
     /* HITOLO and SEQ currently not yet implemented */
     if (s->dl != s->d && (s->order & JBG_HITOLO || s->order & JBG_SEQ))
@@ -2484,9 +2520,9 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 		  ((((1UL << s->d) - 1) & s->yd) != 0) + s->l0 - 1) / s->l0;
 
     /* some initialization */
-    s->ii[index[s->order & 7][STRIPE]] = 0;
-    s->ii[index[s->order & 7][LAYER]] = s->dl;
-    s->ii[index[s->order & 7][PLANE]] = 0;
+    s->ii[iindex[s->order & 7][STRIPE]] = 0;
+    s->ii[iindex[s->order & 7][LAYER]] = s->dl;
+    s->ii[iindex[s->order & 7][PLANE]] = 0;
     /* bytes required for resolution layer D and D-1 */
     hsize = ((s->xd + 7) / 8) * s->yd;
     lsize = ((jbg_ceil_half(s->xd, 1) + 7) / 8) *
@@ -2599,7 +2635,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
       /* now the buffer is filled with exactly one marker segment */
       switch (s->buffer[1]) {
       case MARKER_COMMENT:
-	s->comment_skip = 
+	s->comment_skip =
 	  (((long) s->buffer[2] << 24) | ((long) s->buffer[3] << 16) |
 	   ((long) s->buffer[4] <<  8) | (long) s->buffer[5]);
 	break;
@@ -2638,13 +2674,13 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	/* decode final pixels based on trailing zero bytes */
 	decode_pscd(s, s->buffer, 2);
 
-	arith_decode_init(s->s[s->ii[index[s->order & 7][PLANE]]] + 
-			  s->ii[index[s->order & 7][LAYER]] - s->dl,
-			  s->ii[index[s->order & 7][STRIPE]] != s->stripes - 1
+	arith_decode_init(s->s[s->ii[iindex[s->order & 7][PLANE]]] + 
+			  s->ii[iindex[s->order & 7][LAYER]] - s->dl,
+			  s->ii[iindex[s->order & 7][STRIPE]] != s->stripes - 1
 			  && s->buffer[1] != MARKER_SDRST);
 	
-	s->reset[s->ii[index[s->order & 7][PLANE]]]
-	  [s->ii[index[s->order & 7][LAYER]] - s->dl] =
+	s->reset[s->ii[iindex[s->order & 7][PLANE]]]
+	  [s->ii[iindex[s->order & 7][LAYER]] - s->dl] =
 	    (s->buffer[1] == MARKER_SDRST);
 	
 	/* prepare for next SDE */
@@ -2655,12 +2691,12 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	
 	/* increment layer/stripe/plane loop variables */
 	/* start and end value for each loop: */
-	is[index[s->order & 7][STRIPE]] = 0;
-	ie[index[s->order & 7][STRIPE]] = s->stripes - 1;
-	is[index[s->order & 7][LAYER]] = s->dl;
-	ie[index[s->order & 7][LAYER]] = s->d;
-	is[index[s->order & 7][PLANE]] = 0;
-	ie[index[s->order & 7][PLANE]] = s->planes - 1;
+	is[iindex[s->order & 7][STRIPE]] = 0;
+	ie[iindex[s->order & 7][STRIPE]] = s->stripes - 1;
+	is[iindex[s->order & 7][LAYER]] = s->dl;
+	ie[iindex[s->order & 7][LAYER]] = s->d;
+	is[iindex[s->order & 7][PLANE]] = 0;
+	ie[iindex[s->order & 7][PLANE]] = s->planes - 1;
 	i = 2;  /* index to innermost loop */
 	do {
 	  j = 0;  /* carry flag */
@@ -2676,12 +2712,16 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	
 	/* check whether this have been all SDEs */
 	if (j) {
+#ifdef DEBUG
+	  fprintf(stderr, "This was the final SDE in this BIE, "
+		  "%d bytes left.\n", len - *cnt);
+#endif
 	  s->bie_len = 0;
 	  return JBG_EOK;
 	}
 
 	/* check whether we have to abort because of xmax/ymax */
-	if (index[s->order & 7][LAYER] == 0 && i < 0) {
+	if (iindex[s->order & 7][LAYER] == 0 && i < 0) {
 	  /* LAYER is the outermost loop and we have just gone to next layer */
 	  if (jbg_ceil_half(s->xd, s->d - s->ii[0]) > s->xmax ||
 	      jbg_ceil_half(s->yd, s->d - s->ii[0]) > s->ymax) {
@@ -2730,7 +2770,7 @@ long jbg_dec_getwidth(const struct jbg_dec_state *s)
 {
   if (s->d < 0)
     return -1;
-  if (index[s->order & 7][LAYER] == 0) {
+  if (iindex[s->order & 7][LAYER] == 0) {
     if (s->ii[0] < 1)
       return -1;
     else
@@ -2749,7 +2789,7 @@ long jbg_dec_getheight(const struct jbg_dec_state *s)
 {
   if (s->d < 0)
     return -1;
-  if (index[s->order & 7][LAYER] == 0) {
+  if (iindex[s->order & 7][LAYER] == 0) {
     if (s->ii[0] < 1)
       return -1;
     else
@@ -2768,7 +2808,7 @@ unsigned char *jbg_dec_getimage(const struct jbg_dec_state *s, int plane)
 {
   if (s->d < 0)
     return NULL;
-  if (index[s->order & 7][LAYER] == 0) {
+  if (iindex[s->order & 7][LAYER] == 0) {
     if (s->ii[0] < 1)
       return NULL;
     else
@@ -2788,7 +2828,7 @@ long jbg_dec_getsize(const struct jbg_dec_state *s)
 {
   if (s->d < 0)
     return -1;
-  if (index[s->order & 7][LAYER] == 0) {
+  if (iindex[s->order & 7][LAYER] == 0) {
     if (s->ii[0] < 1)
       return -1;
     else
@@ -2810,7 +2850,7 @@ long jbg_dec_getsize_merged(const struct jbg_dec_state *s)
 {
   if (s->d < 0)
     return -1;
-  if (index[s->order & 7][LAYER] == 0) {
+  if (iindex[s->order & 7][LAYER] == 0) {
     if (s->ii[0] < 1)
       return -1;
     else
@@ -2880,7 +2920,6 @@ void jbg_split_planes(unsigned long x, unsigned long y, int has_planes,
   unsigned i, k = 8;
   int p;
   unsigned long line;
-  extern void *memset(void *s, int c, size_t n);
   unsigned prev;     /* previous *src byte shifted by 8 bit to the left */
   register int bits, msb = has_planes - 1;
   int bitno;
@@ -2931,7 +2970,8 @@ void jbg_split_planes(unsigned long x, unsigned long y, int has_planes,
 /* 
  * Merge the separate bit planes decoded by the JBIG decoder into an
  * integer pixel field. This is essentially the counterpart to
- * jbg_split_planes(). */
+ * jbg_split_planes().
+ */
 void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
 			  void (*data_out)(unsigned char *start, size_t len,
 					   void *file), void *file)
@@ -2957,7 +2997,7 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
   bpp = (s->planes + 7) / 8;   /* bytes per pixel in dest image */
   bpl = (x + 7) / 8;           /* bytes per line in src plane */
 
-  if (index[s->order & 7][LAYER] == 0)
+  if (iindex[s->order & 7][LAYER] == 0)
     if (s->ii[0] < 1)
       return;
     else
@@ -2989,4 +3029,105 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
     data_out(buf, bp - buf, file);
   
   return;
+}
+
+
+/*
+ * Given a pointer p to the first byte of either a marker segment or a
+ * PSCD, as well as the length len of the remaining data, return
+ * either the pointer to the first byte of the next marker segment or
+ * PSCD, or p+len if this was the last one, or NULL if some error was
+ * encountered.
+ */
+unsigned char *jbg_next_pscdms(unsigned char *p, size_t len)
+{
+  unsigned char *pp;
+  unsigned long l;
+
+  if (len < 2)
+    return NULL;
+
+  if (p[0] != MARKER_ESC || p[1] == MARKER_STUFF) {
+    do {
+      while (p[0] == MARKER_ESC && p[1] == MARKER_STUFF) {
+	p += 2;
+	len -= 2;
+	if (len < 2) return NULL;
+      }
+      pp = memchr(p, MARKER_ESC, len - 1);
+      if (!pp) return NULL;
+      l = pp - p;
+      assert(l < len);
+      p += l;
+      len -= l;
+    } while (p[1] == MARKER_STUFF);
+  } else {
+    switch (p[1]) {
+    case MARKER_SDNORM:
+    case MARKER_SDRST:
+    case MARKER_ABORT:
+      return p + 2;
+    case MARKER_NEWLEN:
+      if (len < 6) return NULL;
+      return p + 6;
+    case MARKER_ATMOVE:
+      if (len < 8) return NULL;
+      return p + 8;
+    case MARKER_COMMENT:
+      if (len < 6) return NULL;
+      l = (((long) p[2] << 24) | ((long) p[3] << 16) |
+	   ((long) p[4] <<  8) |  (long) p[5]);
+      if (len - 6 < l) return NULL;
+      return p + 6 + l;
+    default:
+      return NULL;
+    }
+  }
+
+  return p;
+}
+
+
+/*
+ * Scan a complete BIE for a NEWLEN marker segment, then read the new
+ * YD value found in it and use it to overwrite the one in the BIE
+ * header. Use this procedure if a BIE initially declares an
+ * unreasonably high provisional YD value (e.g., 0xffffffff) or
+ * depends on the fact that section 6.2.6.2 of ITU-T T.82 says that a
+ * NEWLEN marker segment "could refer to a line in the immediately
+ * preceding stripe due to an unexpected termination of the image or
+ * the use of only such stripe". ITU-T.85 explicitely suggests the
+ * use of this for fax machines that start transmission before having
+ * encountered the end of the page. None of this is necessary for
+ * BIEs produced by JBIG-KIT, which normally does not use NEWLEN.
+ */
+int jbg_newlen(unsigned char *bie, size_t len)
+{
+  unsigned char *p = bie + 20;
+  int i;
+
+  if (len < 20)
+    return JBG_EAGAIN;
+  if ((bie[19] & (JBG_DPON | JBG_DPPRIV | JBG_DPLAST))
+      == (JBG_DPON | JBG_DPPRIV))
+    p += 1728; /* skip DPTABLE */
+  if (p >= bie + len)
+    return JBG_EAGAIN;
+
+  while ((p = jbg_next_pscdms(p, len - (p - bie)))) {
+    if (p == bie + len)
+      return JBG_EOK;
+    else if (p[0] == MARKER_ESC)
+      switch (p[1]) {
+      case MARKER_NEWLEN:
+	/* overwrite YD in BIH with YD from NEWLEN */
+	for (i = 0; i < 4; i++) {
+	  bie[8+i] = p[2+i];
+	}
+	return JBG_EOK;
+      case MARKER_ABORT:
+	return JBG_EABORT;
+      }
+  }
+  return JBG_EINVAL;
 }

@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.h,v 1.13 2003-06-06 20:57:30 mgk25 Exp $
+ *  $Id: jbig.h,v 1.14 2003-06-11 16:57:02 mgk25 Exp $
  */
 
 #ifndef JBG_H
@@ -139,6 +139,8 @@ int arith_decode(struct jbg_ardec_state *s, int cx);
 struct jbg_enc_state {
   int d;                            /* resolution layer of the input image */
   unsigned long xd, yd;    /* size of the input image (resolution layer d) */
+  unsigned long yd1;    /* BIH announced height of image, use yd1 != yd to
+                        emulate T.85-style NEWLEN height updates for tests */
   int planes;                         /* number of different bitmap planes */
   int dl;                       /* lowest resolution layer in the next BIE */
   int dh;                      /* highest resolution layer in the next BIE */
@@ -263,5 +265,6 @@ void jbg_split_planes(unsigned long x, unsigned long y, int has_planes,
 		      int encode_planes,
 		      const unsigned char *src, unsigned char **dest,
 		      int use_graycode);
+int jbg_newlen(unsigned char *bie, size_t len);
 
 #endif /* JBG_H */
