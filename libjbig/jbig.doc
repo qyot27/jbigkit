@@ -2,7 +2,7 @@
 Using the JBIG-KIT library
 --------------------------
 
-Markus Kuhn -- 1995-05-27
+Markus Kuhn -- 1995-09-20
 
 
 This text explains how to include the functions provided by the
@@ -14,9 +14,9 @@ software.
 
 Below follows a short introduction into some technical aspects of the
 JBIG standard. More detailed information is provided in the
-"Introduction and overview" section of the JBIG standard, which is
-freely available on the Internet as a PostScript file from gopher
-server info.itu.ch or from <http://www.itu.ch>.
+"Introduction and overview" section of the JBIG standard. Information
+about how to obtain a copy of the standard is available on the
+Internet from <http://www.itu.ch/> or <http://www.iso.ch/>.
 
 Image data encoded with the JBIG algorithm is separated into planes,
 layers and stripes. Each plane contains one bit per pixel, the number
@@ -242,7 +242,7 @@ The parameters have the following meaning:
 
   x             The width of your image.
 
-  y             The hight of your image.
+  y             The height of your image.
 
   pl            the number of bitmap planes you want to encode.
 
@@ -584,7 +584,7 @@ jbg_dec_in() will be JBG_EOK. After this has happened, the functions
 and macros
 
   long jbg_dec_getwidth(struct jbg_dec_state *s);
-  long jbg_dec_gethight(struct jbg_dec_state *s);
+  long jbg_dec_getheight(struct jbg_dec_state *s);
   int jbg_dec_getplanes(struct jbg_dec_state *s);
   unsigned char *jbg_dec_getimage(struct jbg_dec_state *s, int plane);
   long jbg_dec_getsize(struct jbg_dec_state *s);
