@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: jbig.c,v 1.12 2000-04-08 10:42:18 mgk25 Exp $
+ *  $Id: jbig.c,v 1.13 2000-08-02 23:03:31 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -94,7 +94,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.12 2000-04-08 10:42:18 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.13 2000-08-02 23:03:31 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -2382,6 +2382,9 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     s->yd = y;
     s->l0 = (((long) s->buffer[12] << 24) | ((long) s->buffer[13] << 16) |
 	     ((long) s->buffer[14] <<  8) | (long) s->buffer[15]);
+    /* ITU-T T.85 trick currently not yet supported */
+    if (s->yd == 0xffffffff)
+      return JBG_EIMPL;
     if (!s->planes || !s->xd || !s->yd || !s->l0)
       return JBG_EINVAL;
     s->mx = s->buffer[16];
