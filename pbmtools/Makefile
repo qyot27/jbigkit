@@ -1,5 +1,5 @@
 # Unix makefile for the JBIG-KIT PBM tools
-# $Id: Makefile,v 1.11 2003-06-11 16:56:19 mgk25 Exp $
+# $Id: Makefile,v 1.12 2003-06-11 17:27:22 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, e.g. GNU gcc is recommended
 CC = gcc
@@ -35,10 +35,11 @@ test: pbmtojbg jbgtopbm
 	make IMG=sandra    "OPTIONSP=-o 2" OPTIONSJ=       dotest2g
 	make IMG=multi      OPTIONSP=      OPTIONSJ=       dotest2g
 	make IMG=multi      OPTIONSP=-b    OPTIONSJ=-b     dotest2g
-	make IMG=jbgtestmx "OPTIONSP=-q -s 3 -m 128"       dotest2b
-	make IMG=jbgtestmx "OPTIONSP=-q -s 3 -m 128 -p 92" dotest2b
-	make IMG=jbgtestmx "OPTIONSP=-q -Y -1"             dotest2b
-	make IMG=jbgtestmx "OPTIONSP=-Y -1"                dotest2b
+	make IMG=mx        "OPTIONSP=-q -s 3 -m 128"       dotest1
+	make IMG=mx        "OPTIONSP=-q -s 3 -m 128"       dotest2b
+	make IMG=mx        "OPTIONSP=-q -s 3 -m 128 -p 92" dotest2b
+	make IMG=mx        "OPTIONSP=-q -Y -1"             dotest2b
+	make IMG=mx        "OPTIONSP=-Y -1"                dotest2b
 	rm -f test-*.jbg test-*.pbm test-*.pgm
 	./jbgtopbm ../examples/ccitt1.jbg | ./pbmtojbg > test-ccitt1.jbg
 	cmp ../examples/ccitt1.jbg test-ccitt1.jbg
@@ -64,9 +65,9 @@ dotest1:
 	cmp test-$(IMG).jbg ../examples/$(IMG).jbg
 
 dotest2b:
-	./pbmtojbg $(OPTIONSP) ../examples/$(IMG).pbm test-$(IMG).jbg
-	./jbgtopbm $(OPTIONSJ) test-$(IMG).jbg test-$(IMG).pbm
-	cmp test-$(IMG).pbm ../examples/$(IMG).pbm
+	./pbmtojbg $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg
+	./jbgtopbm $(OPTIONSJ) test-$(IMG).jbg test-$(IMG)-2.pbm
+	cmp test-$(IMG).pbm test-$(IMG)-2.pbm
 
 dotest2g:
 	./pbmtojbg $(OPTIONSP) ../examples/$(IMG).pgm test-$(IMG).jbg
