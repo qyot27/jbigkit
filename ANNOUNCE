@@ -1,8 +1,8 @@
 
-Version 1.3 of the JBIG-KIT lossless image compression library available
-------------------------------------------------------------------------
+JBIG-KIT lossless image compression library
+-------------------------------------------
 
-Markus Kuhn -- 2002-03-23
+by Markus Kuhn
 
 
 The latest release of JBIG-KIT can be downloaded from
@@ -131,6 +131,12 @@ Special features of the JBIG-KIT implementation are:
     of grayscale images.
 
   - Ready-to-use pbmtojbg and jbgtopbm converters.
+
+Changes in version 1.4 (2002-04-09)
+
+  - typo fixed in stripe number calculation, which caused encoder and
+    decoder to fail on certain image sizes (special thanks to Koen Denecker
+    <denecker@elis.rug.ac.be> for locating this one)
 
 Changes in version 1.3 (2002-03-23):
 
