@@ -1,5 +1,5 @@
 # Unix makefile for the JBIG-KIT PBM tools
-# $Id: Makefile,v 1.10 2002-03-23 01:38:51 mgk25 Exp $
+# $Id: Makefile,v 1.11 2003-06-11 16:56:19 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, e.g. GNU gcc is recommended
 CC = gcc
@@ -24,17 +24,35 @@ pbmtojbg.o: pbmtojbg.c ../libjbig/jbig.h
 	cd ../libjbig ; make libjbig.a
 
 test: pbmtojbg jbgtopbm
-	make IMG=ccitt1  OPTIONSJ=      OPTIONSP=      dotest1
-	make IMG=ccitt2  OPTIONSJ=      OPTIONSP=      dotest1
-	make IMG=ccitt3  OPTIONSJ=      OPTIONSP=      dotest1
-	make IMG=xvlogo  OPTIONSJ=     "OPTIONSP=-d 3" dotest1
-	make IMG=sandra  OPTIONSP=      OPTIONSJ=      dotest2
-	make IMG=sandra  OPTIONSP=-b    OPTIONSJ=-b    dotest2
-	make IMG=sandra  OPTIONSP=-q    OPTIONSJ=      dotest2
-	make IMG=sandra "OPTIONSP=-o 0" OPTIONSJ=      dotest2
-	make IMG=sandra "OPTIONSP=-o 2" OPTIONSJ=      dotest2
-	make IMG=multi   OPTIONSP=      OPTIONSJ=      dotest2
-	make IMG=multi   OPTIONSP=-b    OPTIONSJ=-b    dotest2
+	make IMG=ccitt1     OPTIONSJ=      OPTIONSP=       dotest1
+	make IMG=ccitt2     OPTIONSJ=      OPTIONSP=       dotest1
+	make IMG=ccitt3     OPTIONSJ=      OPTIONSP=       dotest1
+	make IMG=xvlogo     OPTIONSJ=     "OPTIONSP=-d 3"  dotest1
+	make IMG=sandra     OPTIONSP=      OPTIONSJ=       dotest2g
+	make IMG=sandra     OPTIONSP=-b    OPTIONSJ=-b     dotest2g
+	make IMG=sandra     OPTIONSP=-q    OPTIONSJ=       dotest2g
+	make IMG=sandra    "OPTIONSP=-o 0" OPTIONSJ=       dotest2g
+	make IMG=sandra    "OPTIONSP=-o 2" OPTIONSJ=       dotest2g
+	make IMG=multi      OPTIONSP=      OPTIONSJ=       dotest2g
+	make IMG=multi      OPTIONSP=-b    OPTIONSJ=-b     dotest2g
+	make IMG=jbgtestmx "OPTIONSP=-q -s 3 -m 128"       dotest2b
+	make IMG=jbgtestmx "OPTIONSP=-q -s 3 -m 128 -p 92" dotest2b
+	make IMG=jbgtestmx "OPTIONSP=-q -Y -1"             dotest2b
+	make IMG=jbgtestmx "OPTIONSP=-Y -1"                dotest2b
+	rm -f test-*.jbg test-*.pbm test-*.pgm
+	./jbgtopbm ../examples/ccitt1.jbg | ./pbmtojbg > test-ccitt1.jbg
+	cmp ../examples/ccitt1.jbg test-ccitt1.jbg
+	rm -f test-*.jbg test-*.pbm test-*.pgm
+	./jbgtopbm < ../examples/ccitt1.jbg | ./pbmtojbg - test-ccitt1.jbg
+	cmp ../examples/ccitt1.jbg test-ccitt1.jbg
+	rm -f test-*.jbg test-*.pbm test-*.pgm
+	./jbgtopbm < ../examples/ccitt1.jbg - test-ccitt1.pbm ; \
+	  ./pbmtojbg test-ccitt1.pbm test-ccitt1.jbg
+	cmp ../examples/ccitt1.jbg test-ccitt1.jbg
+	rm -f test-*.jbg test-*.pbm test-*.pgm
+	./jbgtopbm ../examples/ccitt1.jbg test-ccitt1.pbm ; \
+	  ./pbmtojbg test-ccitt1.pbm >test-ccitt1.jbg
+	cmp ../examples/ccitt1.jbg test-ccitt1.jbg
 	rm -f test-*.jbg test-*.pbm test-*.pgm
 	@echo
 	@echo "The pbmtools have PASSED the functional tests. Good!"
@@ -45,7 +63,12 @@ dotest1:
 	./pbmtojbg $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg
 	cmp test-$(IMG).jbg ../examples/$(IMG).jbg
 
-dotest2:
+dotest2b:
+	./pbmtojbg $(OPTIONSP) ../examples/$(IMG).pbm test-$(IMG).jbg
+	./jbgtopbm $(OPTIONSJ) test-$(IMG).jbg test-$(IMG).pbm
+	cmp test-$(IMG).pbm ../examples/$(IMG).pbm
+
+dotest2g:
 	./pbmtojbg $(OPTIONSP) ../examples/$(IMG).pgm test-$(IMG).jbg
 	./jbgtopbm $(OPTIONSJ) test-$(IMG).jbg test-$(IMG).pgm
 	cmp test-$(IMG).pgm ../examples/$(IMG).pgm
@@ -58,3 +81,4 @@ dotest2:
 
 clean:
 	rm -f *.o *~ core pbmtojbg jbgtopbm
+	rm -f test-*.jbg test-*.pbm test-*.pgm
