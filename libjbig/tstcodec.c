@@ -5,7 +5,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: tstcodec.c,v 1.5 1996-01-09 15:18:00 mskuhn Exp $
+ *  $Id: tstcodec.c,v 1.6 1998-04-05 17:36:19 mgk25 Exp $
  */
 
 #include <stdio.h>

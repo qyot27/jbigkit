@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: pbmtojbg.c,v 1.6 1996-01-09 15:23:21 mskuhn Exp $
+ *  $Id: pbmtojbg.c,v 1.7 1998-04-05 17:28:43 mgk25 Exp $
  */
 
 #include <stdio.h>

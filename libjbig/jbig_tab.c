@@ -2,7 +2,7 @@
  *  Probability estimation tables for the arithmetic encoder/decoder
  *  given by ITU T.82 Table 24.
  *
- *  $Id: jbig_tab.c,v 1.5 1996-01-09 15:18:00 mskuhn Exp $
+ *  $Id: jbig_tab.c,v 1.6 1998-04-05 17:36:19 mgk25 Exp $
  */
 
 short jbg_lsz[113] = {
