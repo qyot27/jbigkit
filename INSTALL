@@ -2,37 +2,36 @@
 Installing and Using the JBIG-KIT Package
 -----------------------------------------
 
-Markus Kuhn -- 1995-05-28
+Markus Kuhn -- 1995-06-10
 
 
 This text will help you to compile the software and to get started by
 giving you a guided tour in playing around with the demo examples.
 
-The portable JBIG library is located in subdirectory libjbig/. On a
-Unix system, just edit the Makefile there so that an ANSI C compiler
+On a Unix system, just edit the Makefile so that an ANSI C compiler
 with a good optimization level is used and start "make". On other
-operating systems, just link jbig.c and jbig_tables.c together with
-any application in which you want to use the JBIG-KIT library. If you
-get any compiler warnings or error messages, please check whether your
-compiler, C library and include files really conform to the ANSI C
-standard (there are still a few ancient K&R compilers around and on
-some Unix systems with ANSI C compilers, broken include files might
-cause a few warnings which you can ignore savely). In case you don't
-already have an ANSI compatible C compiler, you should seriously
-consider to install GNU gcc which is available with anonymous ftp from
-prep.ai.mit.edu.
+operating systems, just link libjbig/jbig.c and libjbig/jbig_tables.c
+together with any application in which you want to use the JBIG-KIT
+library. If you get any compiler warnings or error messages, please
+check whether your compiler, C library and include files really
+conform to the ANSI C standard (there are still a few ancient K&R
+compilers around and on some old Unix systems with ANSI C compilers,
+broken include files might cause a few warnings which you can ignore
+safely). In case you don't already have an ANSI compatible C compiler,
+you should seriously consider to install GNU gcc which is available
+with anonymous ftp from prep.ai.mit.edu.
 
 If libjbig.a has been produced correctly, then activate the automatic
-library test suite with "make test" or just start test_codec. If this
-test fails, please let me know.
+library test suite with "make test" or just start libjbig/test_codec.
+If this test fails, please let me know.
 
-Then you should go to directory ../pbmtools, edit Makefile there and
-start "make" in order to build the programs pbmtojbig and jbigtopbm.
-After testing them on some of the example JBIG files, you can move
-these executable files together with the manpages (if you are in a
-UNIX style environment) to the appropriate directories on your system.
-Options -h and --help will give you short command line usage summaries
-of both programs.
+In subdirectory pbmtools/, you will find the programs pbmtojbig and
+jbigtopbm. These are two file converters as examples for applications
+which use the JBIG-KIT library. After testing them on some of the
+example JBIG files, you can move these executable files together with
+the man-pages (if you are in a UNIX style environment) to the
+appropriate directories on your system. Options -h and --help will
+give you short command line usage summaries of both programs.
 
 The subdirectory examples/ contains a few files as raw JBIG data
 streams (these are called bi-level image entities (BIE) in the
@@ -62,7 +61,7 @@ previous one. Resolution layer 0 encodes all is pixels independent
 from any other data, all other resolution layers encode only the
 difference between the previous and the new resolution layer which
 requires much less space than encoding resolution layers without
-refering to the lower layer. By default, the BIE files produced by
+referring to the lower layer. By default, the BIE files produced by
 pbmtojbig start all with a lowest resolution layer 0 which will fit on
 a 640 x 480 screen.
 
@@ -111,7 +110,7 @@ bit more efficient and requires a little bit less space than
 progressive encoding.
 
 
-Ok, another small exercise: Assume you want to build a document
+OK, another small exercise: Assume you want to build a document
 database in which you want to store scanned images in two resolution
 layers, one for screen previewing and one for laser printer output.
 However you do not want that your decision to store images in two
@@ -134,7 +133,7 @@ in the second file test-high.bie. No problem, just call
 were -d specifies the total number of layers and -l/-h select the
 range of layers written to the output file. You will see that the low
 and high resolution file together are only 1.6 kb larger than if you
-would have stored only the highres version directly without
+would have stored only the high-res version directly without
 progressive mode (option -q). Progressive mode has here reduced the
 additional storage requirement by 50 % compared to storing the 3.2 kb
 long low resolution version completely separately from the high

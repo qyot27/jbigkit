@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: jbig.h,v 1.2 1995-06-08 16:43:07 mskuhn Exp $
+ *  $Id: jbig.h,v 1.3 1995-06-10 18:46:39 mskuhn Exp $
  */
 
 #ifndef JBIG_H
@@ -11,6 +11,11 @@
 
 #include <stddef.h>
 
+/*
+ * JBIG-KIT version number
+ */
+
+#define JBG_VERSION    "0.7"
 
 /*
  * Buffer block for SDEs which are temporarily stored by encoder
@@ -108,11 +113,11 @@ struct dec_state {
   unsigned char *pscd_ptr;               /* pointer to next PSCD data byte */
   unsigned char *pscd_end;                   /* pointer to byte after PSCD */
   enum {
-    OK,                            /* symbol has been successfully decoded */
-    READY,                 /* no more bytes of this PSCD required, marker  *
+    JBG_OK,                        /* symbol has been successfully decoded */
+    JBG_READY,             /* no more bytes of this PSCD required, marker  *
 		            * encountered, probably more symbols available */
-    MORE,              /* more PSCD data bytes required to decode a symbol */
-    MARKER       /* more PSCD data bytes required, ignored final 0xff byte */
+    JBG_MORE,          /* more PSCD data bytes required to decode a symbol */
+    JBG_MARKER   /* more PSCD data bytes required, ignored final 0xff byte */
   } result;                              /* result of previous decode call */
   int startup;                            /* controls initial fill of s->c */
 };

@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: pbmtojbg.c,v 1.2 1995-06-08 16:44:30 mskuhn Exp $
+ *  $Id: pbmtojbg.c,v 1.3 1995-06-10 18:46:55 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include "jbig.h"
 
-const char usage_msg[] = "PBMtoJBIG converter 0.6 -- "
+const char usage_msg[] = "PBMtoJBIG converter " JBG_VERSION " -- "
 "creates bi-level image entity (BIE) as output file\n\n"
 "usage: %s [<options>] [<input-file> | -  [<output-file>]]\n\n"
 "options:\n\n"

@@ -1,14 +1,14 @@
 
-Version 0.6 of the JBIG-KIT lossless image compression library available
+Version 0.7 of the JBIG-KIT lossless image compression library available
 ------------------------------------------------------------------------
 
-Markus Kuhn -- 1995-06-08
+Markus Kuhn -- 1995-06-10
 
 
 The latest release of JBIG-KIT can be downloaded over the Internet
 with anonymous ftp from
 
-  ftp.uni-erlangen.de   /pub/doc/ISO/JBIG/jbigkit-0.6.tar.gz
+  ftp.uni-erlangen.de   /pub/doc/ISO/JBIG/jbigkit-0.7.tar.gz
 
 and from a number of other servers.
 
@@ -30,7 +30,7 @@ JBIG-KIT implements the specification
   and audio information - progressive bi-level image compression",
   <http://www.itu.ch/itudoc/metadocs/23822.html>,
 
-which is commonly refered to as the "JBIG standard". JBIG (Joint
+which is commonly referred to as the "JBIG standard". JBIG (Joint
 Bi-level Image experts Group) is the committee which developed this
 international standard for the lossless compression of images using
 arithmetic coding. Like the well-known compression algorithms JPEG and
@@ -66,7 +66,7 @@ The JBIG compression algorithm offers the following features:
     resolution enhancement data. This allows e.g. a document browser
     to display already e.g. a good 75 dpi low resolution version of an
     image, while the data necessary to reconstruct the full 300 dpi
-    version for laserprinter reproduction is still arriving (e.g. over
+    version for laser printer reproduction is still arriving (e.g. over
     a slow network link or mass storage medium).
 
   - The various resolution layers of a JBIG image in progressive
@@ -82,11 +82,11 @@ The JBIG compression algorithm offers the following features:
   - JBIG supports multiple bit planes and can this way also be used
     for greyscale and color images, although the main field of
     application is compression of bi-level images, i.e. images with
-    only two different pixel values. For grayscale images with up to
-    6 bit per pixel, JBIG performs superiour to JBIG's lossless
+    only two different pixel values. For greyscale images with up to
+    6 bit per pixel, JBIG performs superior to JPEG's lossless
     mode.
 
-The JBIG-KIT is free software under the GNU General Public Licence and
+The JBIG-KIT is free software under the GNU General Public License and
 provides a portable library implemented in ANSI C for encoding and
 decoding JBIG data streams together with documentation. The library is
 not intended for 8- or 16-bit machine architectures (e.g. MS-DOS,
@@ -127,6 +127,13 @@ Special features of the JBIG-KIT implementation are:
 
   - Ready-to-use pbmtojbig and jbigtopbm converters.
 
+Changes since version 0.6:
+
+  - more problems on 16-bit int systems and on Macintosh systems fixed
+    (special thanks to Jean-Pierre Gachen <jpg11@calvanet.calvacom.fr>)
+
+  - global Makefile
+
 Changes since version 0.5:
 
   - memory leak fixed
@@ -142,12 +149,12 @@ success stories, etc. to
 
   <mskuhn@cip.informatik.uni-erlangen.de>
 
-I will try to provide free support and maintainance for this software
+I will try to provide free support and maintenance for this software
 at least for the next few months depending on my available time.
 
 This library has been published in the hope that it will encourage the
 development of good freely available scanned document handling and
-transmission systems for the Internet so that large abounts of scanned
+transmission systems for the Internet so that large amounts of scanned
 text can be made available to the global village easily.
 
 Happy compressing ...

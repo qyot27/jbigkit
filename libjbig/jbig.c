@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: jbig.c,v 1.2 1995-06-08 16:43:07 mskuhn Exp $
+ *  $Id: jbig.c,v 1.3 1995-06-10 18:46:39 mskuhn Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -88,6 +88,11 @@
 /* special jbuf pointers (instead of NULL) */
 #define SDE_DONE ((struct jbuf *) -1)
 #define SDE_TODO ((struct jbuf *) 0)
+
+/* object code version id */
+
+const char version[] = 
+" JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- $Id: jbig.c,v 1.3 1995-06-10 18:46:39 mskuhn Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -400,7 +405,7 @@ ARITH void arith_decode_init(struct dec_state *s, int reuse_st)
   s->c = 0;
   s->a = 1;
   s->ct = 0;
-  s->result = OK;
+  s->result = JBG_OK;
   s->startup = 1;
   return;
 }
@@ -416,29 +421,29 @@ ARITH_INL int arith_decode(struct dec_state *s, int cx)
 
   /* renormalization */
   while (s->a < 0x8000 || s->startup) {
-    if (s->ct < 1 && s->result != READY) {
+    if (s->ct < 1 && s->result != JBG_READY) {
       /* first we have to move a new byte into s->c */
       if (s->pscd_ptr >= s->pscd_end) {
-	s->result = MORE;
+	s->result = JBG_MORE;
 	return -1;
       }
       if (*s->pscd_ptr == 0xff) 
 	if (s->pscd_ptr + 1 >= s->pscd_end) {
-	  s->result = MARKER;
+	  s->result = JBG_MARKER;
 	  return -1;
 	} else {
 	  if (*(s->pscd_ptr + 1) == MARKER_STUFF) {
-	    s->c |= 0xff << (8 - s->ct);
+	    s->c |= 0xffL << (8 - s->ct);
 	    s->ct += 8;
 	    s->pscd_ptr += 2;
-	    s->result = OK;
+	    s->result = JBG_OK;
 	  } else
-	    s->result = READY;
+	    s->result = JBG_READY;
 	}
       else {
-	s->c |= *(s->pscd_ptr++) << (8 - s->ct);
+	s->c |= (long)*(s->pscd_ptr++) << (8 - s->ct);
 	s->ct += 8;
-	s->result = OK;
+	s->result = JBG_OK;
       }
     }
     s->c <<= 1;
@@ -676,7 +681,7 @@ unsigned long ceil_half(unsigned long x, int n)
 {
   unsigned long mask;
   
-  mask = (1 << n) - 1;     /* the lowest n bits are 1 here */
+  mask = (1UL << n) - 1;     /* the lowest n bits are 1 here */
   return (x >> n) + ((mask & x) != 0);
 }
 
@@ -979,8 +984,8 @@ static void encode_sde(struct jbg_enc_state *s,
        */
       
       line_h1 = line_h2 = line_h3 = 0;
-      if (y > 0) line_h2 = *(hp - hbpl) << 8;
-      if (y > 1) line_h3 = *(hp - hbpl - hbpl) << 8;
+      if (y > 0) line_h2 = (long)*(hp - hbpl) << 8;
+      if (y > 1) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
       
       /* encode line */
       for (j = 0; j < hx; hp++) {
@@ -1095,11 +1100,11 @@ static void encode_sde(struct jbg_enc_state *s,
 	if (i < hl - 1 && y < hy - 1)
 	  p0 = hp + hbpl;
 	if ((y >> 1) > 0)
-	  line_l3 = *(q2 - lbpl) << 8;
+	  line_l3 = (long)*(q2 - lbpl) << 8;
 	else
 	  line_l3 = 0;
-	line_l2 = *q2 << 8;
-	line_l1 = *q1 << 8;
+	line_l2 = (long)*q2 << 8;
+	line_l1 = (long)*q1 << 8;
 	ltp = 1;
 	for (j = 0; j < lx && ltp; q1++, q2++) {
 	  if (j < lbpl * 8 - 8) {
@@ -1173,12 +1178,12 @@ static void encode_sde(struct jbg_enc_state *s,
       
 
       line_h1 = line_h2 = line_h3 = line_l1 = line_l2 = line_l3 = 0;
-      if (y > 0) line_h2 = *(hp - hbpl) << 8;
-      if (y > 1) line_h3 = *(hp - hbpl - hbpl) << 8;
+      if (y > 0) line_h2 = (long)*(hp - hbpl) << 8;
+      if (y > 1) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
       if ((y >> 1) > 0)
-	line_l3 = *(lp2 - lbpl) << 8;
-      line_l2 = *lp2 << 8;
-      line_l1 = *lp1 << 8;
+	line_l3 = (long)*(lp2 - lbpl) << 8;
+      line_l2 = (long)*lp2 << 8;
+      line_l1 = (long)*lp1 << 8;
       
       /* encode line */
       for (j = 0; j < hx; lp1++, lp2++) {
@@ -1287,7 +1292,7 @@ static void encode_sde(struct jbg_enc_state *s,
 			(line_h3 >> 11 & 0x020));
 		if (j & 1) 
 		  cx |= ((line_l2 >> 9  & 0x0c0) |
-			 (line_l1 >> 7  & 0x300)) | (1 << 10);
+			 (line_l1 >> 7  & 0x300)) | (1UL << 10);
 		else
 		  cx |= ((line_l2 >> 10 & 0x0c0) |
 			 (line_l1 >> 8  & 0x300));
@@ -1624,7 +1629,7 @@ void jbg_enc_out(struct jbg_enc_state *s)
   long i;
   int j, k;
   unsigned char bih[20];
-  unsigned long xd, yd, mask;
+  unsigned long xd, yd;
   long ii[3], is[3], ie[3];    /* generic variables for the 3 nested loops */ 
   long stripe;
   int layer, plane;
@@ -1649,8 +1654,8 @@ void jbg_enc_out(struct jbg_enc_state *s)
     return;
 
   /* calculate number of stripes that will be required */
-  s->stripes =
-    ((s->yd >> s->d) + ((((1 << s->d) - 1) & s->xd) != 0) + s->l0 - 1) / s->l0;
+  s->stripes = ((s->yd >> s->d) + 
+		((((1UL << s->d) - 1) & s->xd) != 0) + s->l0 - 1) / s->l0;
 
   /* allocate buffers for SDE pointers */
   if (s->sde == NULL) {
@@ -1673,9 +1678,8 @@ void jbg_enc_out(struct jbg_enc_state *s)
   bih[1] = s->dh;
   bih[2] = s->planes;
   bih[3] = 0;
-  mask = (1 << (s->d - s->dh)) - 1;     /* the lowest (layer-d) bits are 1 */
-  xd = (s->xd >> (s->d - s->dh)) + ((mask & s->xd) != 0);
-  yd = (s->yd >> (s->d - s->dh)) + ((mask & s->yd) != 0);
+  xd = ceil_half(s->xd, s->d - s->dh);
+  yd = ceil_half(s->yd, s->d - s->dh);
   bih[4] = xd >> 24;
   bih[5] = xd >> 16 & 0xff;
   bih[6] = xd >> 8 & 0xff;
@@ -1927,7 +1931,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
       /* typical prediction */
       if (s->options & JBG_TPBON && s->pseudo) {
 	slntp = arith_decode(se, (s->options & JBG_LRLTWO) ? TPB2CX : TPB3CX);
-	if (se->result == MORE || se->result == MARKER)
+	if (se->result == JBG_MORE || se->result == JBG_MARKER)
 	  goto leave;
 	s->lntp = !(slntp ^ s->lntp);
 	if (s->lntp) {
@@ -1959,9 +1963,9 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
       if (x == 0) {
 	line_h1 = line_h2 = line_h3 = 0;
 	if (s->i > 0 || (y > 0 && !s->reset[plane][layer - s->dl]))
-	  line_h2 = *(hp - hbpl) << 8;
+	  line_h2 = (long)*(hp - hbpl) << 8;
 	if (s->i > 1 || (y > 1 && !s->reset[plane][layer - s->dl]))
-	  line_h3 = *(hp - hbpl - hbpl) << 8;
+	  line_h3 = (long)*(hp - hbpl - hbpl) << 8;
       }
       
       /*
@@ -2028,7 +2032,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 	    else
 	      pix = arith_decode(se, (((line_h2 >> 9) & 0x3f0) |
 				      (line_h1 & 0x00f)));
-	    if (se->result == MORE || se->result == MARKER)
+	    if (se->result == JBG_MORE || se->result == JBG_MARKER)
 	      goto leave;
 	    line_h1 = line_h1 << 1 | pix;  
 	    line_h2 <<= 1;
@@ -2045,7 +2049,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 	      pix = arith_decode(se, ((line_h3 >>  7 & 0x380) |
 				      (line_h2 >> 11 & 0x07c) |
 				      (line_h1 & 0x003)));
-	    if (se->result == MORE || se->result == MARKER)
+	    if (se->result == JBG_MORE || se->result == JBG_MARKER)
 	      goto leave;
 	    
 	    line_h1 = line_h1 << 1 | pix;  
@@ -2089,7 +2093,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
       /* typical prediction */
       if (s->options & JBG_TPDON && s->pseudo) {
 	s->lntp = arith_decode(se, TPDCX);
-	if (se->result == MORE || se->result == MARKER)
+	if (se->result == JBG_MORE || se->result == JBG_MARKER)
 	  goto leave;
 	s->pseudo = 0;
       }
@@ -2118,14 +2122,14 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
       if (x == 0) {
 	line_h1 = line_h2 = line_h3 = line_l1 = line_l2 = line_l3 = 0;
 	if (s->i > 0 || (y > 0 && !s->reset[plane][layer - s->dl])) {
-	  line_h2 = *(hp - hbpl) << 8;
+	  line_h2 = (long)*(hp - hbpl) << 8;
 	  if (s->i > 1 || (y > 1 && !s->reset[plane][layer - s->dl]))
-	    line_h3 = *(hp - hbpl - hbpl) << 8;
+	    line_h3 = (long)*(hp - hbpl - hbpl) << 8;
 	}
 	if ((s->i >> 1) > 0 || ((y >> 1) > 0 && !s->reset[plane][layer-s->dl]))
-	  line_l3 = *(lp2 - lbpl) << 8;
-	line_l2 = *lp2 << 8;
-	line_l1 = *lp1 << 8;
+	  line_l3 = (long)*(lp2 - lbpl) << 8;
+	line_l2 = (long)*lp2 << 8;
+	line_l1 = (long)*lp1 << 8;
       }
       
       /* decode line */
@@ -2212,14 +2216,14 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 			  (line_h3 >> 10 & 0x020));
 		  if (x & 1) 
 		    cx |= ((line_l2 >> 8  & 0x0c0) |
-			   (line_l1 >> 6  & 0x300)) | (1 << 10);
+			   (line_l1 >> 6  & 0x300)) | (1UL << 10);
 		  else
 		    cx |= ((line_l2 >> 9 & 0x0c0) |
 			   (line_l1 >> 7 & 0x300));
 		  cx |= (y & 1) << 11;
 		  
 		  pix = arith_decode(se, cx);
-		  if (se->result == MORE || se->result == MARKER)
+		  if (se->result == JBG_MORE || se->result == JBG_MARKER)
 		    goto leave;
 		}
 
@@ -2318,15 +2322,17 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     else
       if (s->planes != s->buffer[2])
 	return JBG_ENOCONT;
-    x = s->buffer[4]<<24 | s->buffer[5]<<16 | s->buffer[ 6]<<8 | s->buffer[ 7];
-    y = s->buffer[8]<<24 | s->buffer[9]<<16 | s->buffer[10]<<8 | s->buffer[11];
+    x = ((long) s->buffer[ 4] << 24 | (long) s->buffer[ 5] << 16 |
+	 (long) s->buffer[ 6] <<  8 | (long) s->buffer[ 7]);
+    y = ((long) s->buffer[ 8] << 24 | (long) s->buffer[ 9] << 16 |
+	 (long) s->buffer[10] <<  8 | (long) s->buffer[11]);
     if (s->dl != 0 && (s->xd << (s->d - s->dl + 1) != x &&
 		       s->yd << (s->d - s->dl + 1) != y))
       return JBG_ENOCONT;
     s->xd = x;
     s->yd = y;
-    s->l0 = 
-      s->buffer[12]<<24 | s->buffer[13]<<16 | s->buffer[14]<<8 | s->buffer[15];
+    s->l0 = ((long) s->buffer[12] << 24 | (long) s->buffer[13] << 16 |
+	     (long) s->buffer[14] <<  8 | (long) s->buffer[15]);
     if (!s->planes || !s->xd || !s->yd || !s->l0)
       return JBG_EINVAL;
     s->mx = s->buffer[16];
@@ -2344,9 +2350,8 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     s->options = s->buffer[19];
 
     /* calculate number of stripes that will be required */
-    s->stripes =
-      ((s->yd >> s->d) + ((((1 << s->d) - 1) & s->xd) != 0) +
-       s->l0 - 1) / s->l0;
+    s->stripes = ((s->yd >> s->d) +
+		  ((((1UL << s->d) - 1) & s->xd) != 0) + s->l0 - 1) / s->l0;
 
     /* some initialization */
     s->ii[index[s->order & 7][STRIPE]] = 0;
@@ -2453,13 +2458,15 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
       /* now the buffer is filled with exactly one marker segment */
       switch (s->buffer[1]) {
       case MARKER_COMMENT:
-	s->comment_skip =  (s->buffer[2] << 24 | s->buffer[3] << 16 |
-			    s->buffer[4] <<  8 | s->buffer[5]);
+	s->comment_skip = 
+	  ((long) s->buffer[2] << 24 | (long) s->buffer[3] << 16 |
+	   (long) s->buffer[4] <<  8 | (long) s->buffer[5]);
 	break;
       case MARKER_ATMOVE:
 	if (s->at_moves < JBG_ATMOVES_MAX) {
-	  s->at_line[s->at_moves] =  (s->buffer[2] << 24 | s->buffer[3] << 16 |
-				      s->buffer[4] <<  8 | s->buffer[5]);
+	  s->at_line[s->at_moves] =
+	    ((long) s->buffer[2] << 24 | (long) s->buffer[3] << 16 |
+	     (long) s->buffer[4] <<  8 | (long) s->buffer[5]);
 	  s->at_tx[s->at_moves] = (signed char) s->buffer[6];
 	  s->at_ty[s->at_moves] = s->buffer[7];
 	  if (s->at_tx[s->at_moves] < -s->mx ||
@@ -2472,14 +2479,14 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	  return JBG_EINVAL;
 	break;
       case MARKER_NEWLEN:
-	y =  (s->buffer[2] << 24 | s->buffer[3] << 16 |
-	      s->buffer[4] <<  8 | s->buffer[5]);
+	y = ((long) s->buffer[2] << 24 | (long) s->buffer[3] << 16 |
+	     (long) s->buffer[4] <<  8 | (long) s->buffer[5]);
 	if (y > s->yd || !(s->options & JBG_VLENGTH))
 	  return JBG_EINVAL;
 	/* calculate again number of stripes that will be required */
-	s->stripes =
-	  ((s->yd >> s->d) + ((((1 << s->d) - 1) & s->xd) != 0) +
-	   s->l0 - 1) / s->l0;
+	s->stripes = 
+	  ((s->yd >> s->d) +
+	   ((((1UL << s->d) - 1) & s->xd) != 0) + s->l0 - 1) / s->l0;
 	break;
       case MARKER_ABORT:
 	return JBG_EABORT;
