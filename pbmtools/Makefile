@@ -1,5 +1,5 @@
 # Unix makefile for the JBIG-KIT PBM tools
-# $Id: Makefile,v 1.7 1996-02-05 12:55:23 mskuhn Exp $
+# $Id: Makefile,v 1.8 1998-04-11 01:24:42 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, e.g. GNU gcc is recommended
 CC = gcc
@@ -7,7 +7,9 @@ CC = gcc
 # Options for the compiler
 CFLAGS = -g -Wall -ansi -pedantic -I../libjbig
 
-all: pbmtojbg jbgtopbm pbmtojbg.txt jbgtopbm.txt pbm.txt
+.SUFFIXES: .1 .5 .txt $(SUFFIXES)
+
+all: pbmtojbg jbgtopbm pbmtojbg.txt jbgtopbm.txt pbm.txt pgm.txt
 
 pbmtojbg: pbmtojbg.o ../libjbig/libjbig.a
 	$(CC) $(CFLAGS) -o pbmtojbg pbmtojbg.o -L../libjbig -ljbig
@@ -21,14 +23,36 @@ pbmtojbg.o: pbmtojbg.c ../libjbig/jbig.h
 ../libjbig/libjbig.a:
 	cd ../libjbig ; make libjbig.a
 
-pbmtojbg.txt: pbmtojbg.1
-	gtroff -man -Tascii pbmtojbg.1 | grotty - -u -b >pbmtojbg.txt
+test: pbmtojbg jbgtopbm
+	make IMG=ccitt1  OPTIONSJ=      OPTIONSP=      dotest1
+	make IMG=ccitt2  OPTIONSJ=      OPTIONSP=      dotest1
+	make IMG=ccitt3  OPTIONSJ=      OPTIONSP=      dotest1
+	make IMG=xvlogo  OPTIONSJ=     "OPTIONSP=-d 3" dotest1
+	make IMG=sandra  OPTIONSP=      OPTIONSJ=      dotest2
+	make IMG=sandra  OPTIONSP=-b    OPTIONSJ=-b    dotest2
+	make IMG=sandra  OPTIONSP=-q    OPTIONSJ=      dotest2
+	make IMG=sandra "OPTIONSP=-o 0" OPTIONSJ=      dotest2
+	make IMG=sandra "OPTIONSP=-o 2" OPTIONSJ=      dotest2
+	rm -f test-*.jbg test-*.pbm test-*.pgm
+	@echo
+	@echo "The pbmtools have PASSED the functional tests. Good!"
+	@echo
 
-jbgtopbm.txt: jbgtopbm.1
-	gtroff -man -Tascii jbgtopbm.1 | grotty - -u -b >jbgtopbm.txt
+dotest1:
+	./jbgtopbm $(OPTIONSJ) ../examples/$(IMG).jbg test-$(IMG).pbm
+	./pbmtojbg $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg
+	cmp test-$(IMG).jbg ../examples/$(IMG).jbg
 
-pbm.txt: pbm.5
-	gtroff -man -Tascii pbm.5 | grotty - -u -b >pbm.txt
+dotest2:
+	./pbmtojbg $(OPTIONSP) ../examples/$(IMG).pgm test-$(IMG).jbg
+	./jbgtopbm $(OPTIONSJ) test-$(IMG).jbg test-$(IMG).pgm
+	cmp test-$(IMG).pgm ../examples/$(IMG).pgm
+
+.1.txt:
+	gtroff -man -Tascii $< | grotty - -u -b >$@
+
+.5.txt:
+	gtroff -man -Tascii $< | grotty - -u -b >$@
 
 clean:
 	rm -f *.o *~ core pbmtojbg jbgtopbm
