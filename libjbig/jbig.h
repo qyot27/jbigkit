@@ -1,13 +1,16 @@
 /*
  *  Header file for the portable free JBIG compression library
  *
- *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de -- 1995-05-13
+ *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
+ *
+ *  $Id: jbig.h,v 1.2 1995-06-08 16:43:07 mskuhn Exp $
  */
 
 #ifndef JBIG_H
 #define JBIG_H
 
 #include <stddef.h>
+
 
 /*
  * Buffer block for SDEs which are temporarily stored by encoder
@@ -28,7 +31,7 @@ struct jbuf {
  * Maximum number of allowed ATMOVEs per stripe
  */
 
-#define JBG_ATMOVES_MAX  4
+#define JBG_ATMOVES_MAX  64
 
 /*
  * Option and order flags
@@ -144,7 +147,6 @@ struct jbg_enc_state {
   int *tx;       /* array [plane] with x-offset of adaptive template pixel */
   char *dppriv;         /* optional private deterministic prediction table */
   char *res_tab;           /* table for the resolution reduction algorithm */
-  int preserve_input;      /* flag which avoids reusing input image buffer */
   struct jbuf ****sde;         /* array [stripe][layer][plane] pointers to *
 				* buffers for stored SDEs                  */
   struct enc_state *s;     /* array [planes] for arithmetic encoder status */

@@ -1,9 +1,9 @@
 /*
- *
  *  pbmtojbig - Portable Bitmap to JBIG converter
  *
- *  Markus Kuhn <mskuhn@cip.informatik.uni-erlangen.de> - 1995-05-07
+ *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
+ *  $Id: pbmtojbg.c,v 1.2 1995-06-08 16:44:30 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include "jbig.h"
 
-const char usage_msg[] = "PBMtoJBIG converter 0.1 -- "
+const char usage_msg[] = "PBMtoJBIG converter 0.6 -- "
 "creates bi-level image entity (BIE) as output file\n\n"
 "usage: %s [<options>] [<input-file> | -  [<output-file>]]\n\n"
 "options:\n\n"

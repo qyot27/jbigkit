@@ -1,14 +1,14 @@
 
-Version 0.5 of the JBIG-KIT lossless image compression library available
------------------------------------------------------------------------
+Version 0.6 of the JBIG-KIT lossless image compression library available
+------------------------------------------------------------------------
 
-Markus Kuhn -- 1995-05-28
+Markus Kuhn -- 1995-06-08
 
 
 The latest release of JBIG-KIT can be downloaded over the Internet
 with anonymous ftp from
 
-  ftp.uni-erlangen.de   /pub/doc/ISO/JBIG/jbigkit-0.5.tar.gz
+  ftp.uni-erlangen.de   /pub/doc/ISO/JBIG/jbigkit-0.6.tar.gz
 
 and from a number of other servers.
 
@@ -23,15 +23,21 @@ provides ready-to-use compression and decompression programs with a
 simple command line interface (similar to the converters found in Jef
 Poskanzer's PBM graphics file conversion package).
 
-JBIG-KIT conforms to International Standard ISO/IEC 11544 and ITU-T
-Recommendation T.82, both of which are commonly refered to as the
-"JBIG standard". JBIG (Joint Bi-level Image experts Group) is the
-committee which developed this international standard for the lossless
-compression of images using arithmetic coding. Like the well-known
-compression algorithms JPEG and MPEG, also JBIG has been developed and
-published by the International Organization for Standardization (ISO)
-and the International Telecommunication Union (ITU) (see also
-<http://www.iso.ch> and <http://www.itu.ch>).
+JBIG-KIT implements the specification
+
+  International Standard ISO/IEC 11544:1993 and ITU-T Recommendation
+  T.82(1993), "Information technology - Coded representation of picture
+  and audio information - progressive bi-level image compression",
+  <http://www.itu.ch/itudoc/metadocs/23822.html>,
+
+which is commonly refered to as the "JBIG standard". JBIG (Joint
+Bi-level Image experts Group) is the committee which developed this
+international standard for the lossless compression of images using
+arithmetic coding. Like the well-known compression algorithms JPEG and
+MPEG, also JBIG has been developed and published by the International
+Organization for Standardization (ISO) and the International
+Telecommunication Union (ITU) (see also <http://www.iso.ch> and
+<http://www.itu.ch>).
 
 The JBIG compression algorithm offers the following features:
 
@@ -121,6 +127,16 @@ Special features of the JBIG-KIT implementation are:
 
   - Ready-to-use pbmtojbig and jbigtopbm converters.
 
+Changes since version 0.5:
+
+  - memory leak fixed
+
+  - should now also work on systems were int is only 16-bit large
+
+  - changes of the JBIG "Technical Corrigendum 1" included (special
+    thanks to Dr. Sebestyen from Siemens AG for sending me a copy
+    of the draft)
+
 Please send all questions, problem reports, patches, suggestions,
 success stories, etc. to
 
@@ -137,3 +153,8 @@ text can be made available to the global village easily.
 Happy compressing ...
 
 Markus Kuhn
+
+--
+Markus Kuhn, Computer Science student -- University of Erlangen,
+Internet Mail: <mskuhn@cip.informatik.uni-erlangen.de> - Germany
+WWW Home: <http://wwwcip.informatik.uni-erlangen.de/user/mskuhn>

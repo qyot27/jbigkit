@@ -1,9 +1,9 @@
 /*
- *
  *  jbigtopbm - JBIG to Portable Bitmap converter
  *
- *  Markus Kuhn <mskuhn@cip.informatik.uni-erlangen.de> - 1995-05-10
+ *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
+ *  $Id: jbgtopbm.c,v 1.2 1995-06-08 16:44:30 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include "jbig.h"
 
-const char usage_msg[] = "JBIGtoPBM converter 0.1 -- "
+const char usage_msg[] = "JBIGtoPBM converter 0.6 -- "
 "reads bi-level image entity (BIE) as input file\n\n"
 "usage: %s [<options>] [<input-file> | -  [<output-file>]]\n\n"
 "options:\n\n"

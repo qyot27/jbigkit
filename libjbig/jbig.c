@@ -1,7 +1,9 @@
 /*
  *  Portable Free JBIG image compression library
  *
- *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de -- 1995-05-24
+ *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
+ *
+ *  $Id: jbig.c,v 1.2 1995-06-08 16:43:07 mskuhn Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -218,7 +220,7 @@ static void checked_free(void *ptr)
  */
 
 #ifdef DEBUG
-static int encoded_pixels = 0;
+static long encoded_pixels = 0;
 #endif
 
 ARITH void arith_encode_init(struct enc_state *s, int reuse_st)
@@ -242,7 +244,7 @@ ARITH void arith_encode_flush(struct enc_state *s)
   long temp;
 
 #ifdef DEBUG
-  printf("encoded pixels = %d, a = %05lx, c = %08lx\n",
+  printf("encoded pixels = %ld, a = %05lx, c = %08lx\n",
 	 encoded_pixels, s->a, s->c);
 #endif
 
@@ -292,8 +294,8 @@ ARITH void arith_encode_flush(struct enc_state *s)
 
 ARITH_INL void arith_encode(struct enc_state *s, int cx, int pix) 
 {
-  extern unsigned jbg_lsz[];
-  extern int jbg_nmps[], jbg_nlps[], jbg_swtch[];
+  extern short jbg_lsz[];
+  extern char jbg_nmps[], jbg_nlps[], jbg_swtch[];
   register int lsz, ss;
   register unsigned char *st;
   long temp;
@@ -406,8 +408,8 @@ ARITH void arith_decode_init(struct dec_state *s, int reuse_st)
 
 ARITH_INL int arith_decode(struct dec_state *s, int cx)
 {
-  extern unsigned jbg_lsz[];
-  extern int jbg_nmps[], jbg_nlps[], jbg_swtch[];
+  extern short jbg_lsz[];
+  extern char jbg_nmps[], jbg_nlps[], jbg_swtch[];
   register int lsz, ss;
   register unsigned char *st;
   int pix;
@@ -551,9 +553,9 @@ static void jbuf_free(struct jbuf **free_list)
   struct jbuf *tmp;
   
   while (*free_list) {
-    tmp = *free_list;
+    tmp = (*free_list)->next;
     checked_free(*free_list);
-    *free_list = tmp->next;
+    *free_list = tmp;
   }
   
   return;
@@ -688,8 +690,8 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
 				   void *file),
 		  void *file)
 {
-  int i, lx;
-  long bufsize;
+  unsigned long i, lx;
+  size_t bufsize;
 
   extern char resred[], dptable[];
 
@@ -825,15 +827,14 @@ void jbg_enc_options(struct jbg_enc_state *s, int order, int options,
  * for later output in the correct order.
  */
 static void encode_sde(struct jbg_enc_state *s,
-		       int stripe, int layer, int plane)
+		       long stripe, int layer, int plane)
 {
   unsigned char *hp, *lp1, *lp2, *p0, *p1, *q1, *q2;
   unsigned long hl, ll, hx, hy, lx, ly, hbpl, lbpl;
   unsigned long line_h0 = 0, line_h1 = 0;
   unsigned long line_h2, line_h3, line_l1, line_l2, line_l3;
-  unsigned long y;
   struct enc_state *se;
-  unsigned long i, j;
+  unsigned long i, j, y;
   int t, ltp, ltp_old, cx;
   unsigned long c_all, c[MX_MAX + 1], cmin, cmax, clmin, clmax;
   int tmax, at_determined;
@@ -841,8 +842,8 @@ static void encode_sde(struct jbg_enc_state *s,
   struct jbuf *new_jbuf;
 
 #ifdef DEBUG
-  static int tp_lines, tp_exceptions, tp_pixels, dp_pixels;
-  static int encoded_pixels;
+  static long tp_lines, tp_exceptions, tp_pixels, dp_pixels;
+  static long encoded_pixels;
 #endif
 
   /* return immediately if this stripe has already been encoded */
@@ -852,7 +853,7 @@ static void encode_sde(struct jbg_enc_state *s,
 #ifdef DEBUG
   if (stripe == 0)
     tp_lines = tp_exceptions = tp_pixels = dp_pixels = encoded_pixels = 0;
-  printf("encode_sde: s/d/p = %2d/%2d/%2d\n",
+  printf("encode_sde: s/d/p = %2ld/%2d/%2d\n",
 	 stripe, layer, plane);
 #endif
 
@@ -1002,6 +1003,9 @@ static void encode_sde(struct jbg_enc_state *s,
 	      arith_encode(se, (((line_h2 >> 10) & 0x3f0) |
 				((line_h1 >>  9) & 0x00f)),
 			   line_h1 >> 8 & 1);
+#ifdef DEBUG
+	    encoded_pixels++;
+#endif
 	    /* statistics for adaptive template changes */
 	    if (!at_determined && j >= s->mx && j < hx-2) {
 	      c[0] += !(((line_h2 >> 6) ^ line_h1) & 0x100);
@@ -1025,6 +1029,9 @@ static void encode_sde(struct jbg_enc_state *s,
 				((line_h2 >> 12) & 0x07c) |
 				((line_h1 >>  9) & 0x003)),
 			   line_h1 >> 8 & 1);
+#ifdef DEBUG
+	    encoded_pixels++;
+#endif
 	    /* statistics for adaptive template changes */
 	    if (!at_determined && j >= s->mx && j < hx-2) {
 	      c[0] += !(((line_h2 >> 6) ^ line_h1) & 0x100);
@@ -1349,8 +1356,8 @@ static void encode_sde(struct jbg_enc_state *s,
 
 #ifdef DEBUG
   if (stripe == s->stripes - 1)
-    printf("tp_lines = %d, tp_exceptions = %d, tp_pixels = %d, "
-	   "dp_pixels = %d, encoded_pixels = %d\n",
+    printf("tp_lines = %ld, tp_exceptions = %ld, tp_pixels = %ld, "
+	   "dp_pixels = %ld, encoded_pixels = %ld\n",
 	   tp_lines, tp_exceptions, tp_pixels, dp_pixels, encoded_pixels);
 #endif
 
@@ -1480,7 +1487,7 @@ static void output_sde(struct jbg_enc_state *s,
 		       long stripe, int layer, int plane)
 {
   int lfcl;     /* lowest fully coded layer */
-  int i, j;
+  long i, j;
   
   /* Determine the smallest resolution layer in this plane for which
    * not yet all stripes have been encoded into SDEs. This layer will
@@ -1614,11 +1621,13 @@ void jbg_dppriv2int(char *internal, const unsigned char *dptable)
  */
 void jbg_enc_out(struct jbg_enc_state *s)
 {
-  int i, j, k;
+  long i;
+  int j, k;
   unsigned char bih[20];
   unsigned long xd, yd, mask;
-  int ii[3], is[3], ie[3];      /* generic variables for the 3 nested loops */ 
-  int stripe, layer, plane;
+  long ii[3], is[3], ie[3];    /* generic variables for the 3 nested loops */ 
+  long stripe;
+  int layer, plane;
   int order;
   unsigned char dpbuf[1728];
   extern char dptable[];
@@ -1719,13 +1728,6 @@ void jbg_enc_out(struct jbg_enc_state *s)
 
       }
 
-  /*
-   * the next call to jbg_enc_out() will write the BIE with the
-   * remaining resolution layers
-   */
-  s->dl = s->dh + 1;
-  s->dh = s->d;
-
   return;
 }
 
@@ -1733,6 +1735,10 @@ void jbg_enc_out(struct jbg_enc_state *s)
 void jbg_enc_free(struct jbg_enc_state *s)
 {
   int i, j, k;
+
+#ifdef DEBUG
+  printf("jbg_enc_free(%p)\n", s);
+#endif
 
   /* clear buffers for SDEs */
   if (s->sde) {
@@ -1747,6 +1753,9 @@ void jbg_enc_free(struct jbg_enc_state *s)
     }
     checked_free(s->sde);
   }
+
+  /* clear free_list */
+  jbuf_free(&s->free_list);
 
   /* clear memory for arithmetic encoder states */
   checked_free(s->s);
@@ -1825,11 +1834,11 @@ void jbg_dec_maxsize(struct jbg_dec_state *s, unsigned long xmax,
  * part of the data or if the final byte was 0xff were this code
  * can not determine, whether we have a marker segment.
  */
-static int decode_pscd(struct jbg_dec_state *s, unsigned char *data,
-		       size_t len)
+static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
+			  size_t len)
 {
   unsigned long stripe;
-  unsigned layer, plane;
+  unsigned int layer, plane;
   unsigned long hl, ll, y, hx, hy, lx, ly, hbpl, lbpl;
   unsigned char *hp, *lp1, *lp2, *p1, *q1;
   register unsigned long line_h1, line_h2, line_h3;

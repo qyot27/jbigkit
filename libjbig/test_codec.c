@@ -1,9 +1,11 @@
 /*
- * A sequence of test procedures for this JBIG implementation
+ *  A sequence of test procedures for this JBIG implementation
  * 
- * Run this test sequence after each modification on the JBIG library.
+ *  Run this test sequence after each modification on the JBIG library.
  *
- * Markus Kuhn -- 1995-03-30
+ *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
+ *
+ *  $Id: tstcodec.c,v 1.2 1995-06-08 16:43:07 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -19,7 +21,7 @@ unsigned char testbuf1[TESTBUF1_SIZE];
 unsigned char testbuf2[TESTBUF1_SIZE];
 unsigned char testpic[477995];
 
-int testbuf1_len, testbuf2_len;
+long testbuf1_len, testbuf2_len;
 
 
 void testbuf1_write(int v, void *dummy)
@@ -46,7 +48,8 @@ void testbuf1_writel(unsigned char *start, size_t len, void *dummy)
  */ 
 void testimage(unsigned char *pic)
 {
-  unsigned i, j, sum, prsg, repeat[8];
+  unsigned long i, j, sum;
+  unsigned int prsg, repeat[8];
   unsigned char *p;
   
   memset(pic, 0, 477995);
@@ -79,7 +82,7 @@ void testimage(unsigned char *pic)
     for (j = 0; j < 8; j++)
       sum += (pic[i] >> j) & 1;
   if (sum != 861965)
-    printf("WARNING: Artificial test image has %d (not 861965) "
+    printf("WARNING: Artificial test image has %lu (not 861965) "
 	   "foreground pixels!\n", sum);
   
 #if 0
@@ -117,10 +120,12 @@ int test_cycle(unsigned char **orig_image, int width, int height, int options,
   struct jbg_enc_state sje;
   struct jbg_dec_state sjd;
   int trouble = 0;
-  int plane_size, i, result;
+  long l;
+  size_t plane_size;
+  int i, result;
   unsigned char **image;
 
-  plane_size = ((((width - 1) | 7) + 1) >> 3) * height;
+  plane_size = ((((width - 1L) | 7) + 1) >> 3) * height;
   image = malloc(planes * sizeof(unsigned char *));
   if (!image)
     printf("Sorry, not enough memory available!\n");
@@ -138,7 +143,7 @@ int test_cycle(unsigned char **orig_image, int width, int height, int options,
   jbg_enc_options(&sje, order, options, l0, mx, 0);
   jbg_enc_out(&sje);
   jbg_enc_free(&sje);
-  printf("Encoded BIE has %6d bytes: ", testbuf1_len);
+  printf("Encoded BIE has %6ld bytes: ", testbuf1_len);
   if (testbuf1_len == correct_length)
     puts("PASSED");
   else {
@@ -149,51 +154,60 @@ int test_cycle(unsigned char **orig_image, int width, int height, int options,
   puts("Testing decoder with whole chunk ...");
   jbg_dec_init(&sjd);
   result = jbg_dec_in(&sjd, testbuf1, testbuf1_len, NULL);
-  if (result != JBG_EOK)
-    printf("Decoder complained with return value %d: FAILED\n", result);
-  printf("Image comparison: ");
-  result = 1;
-  for (i = 0; i < planes && result; i++) {
-    if (memcmp(orig_image[i], sjd.lhp[layers & 1][i],
-	       ((((width - 1) | 7) + 1) >> 3) * height)) {
-      result = 0;
-      trouble++;
-      printf("FAILED for plane %d\n", i);
-    }
+  if (result != JBG_EOK) {
+    printf("Decoder complained with return value %d: FAILED\n"
+	   "Cause: '%s'\n", result, jbg_strerror(result, JBG_EN));
+    trouble++;
   }
-  if (result)
-    puts("PASSED");
+  if (result == JBG_EOK) {
+    printf("Image comparison: ");
+    result = 1;
+    for (i = 0; i < planes && result; i++) {
+      if (memcmp(orig_image[i], sjd.lhp[layers & 1][i],
+		 ((((width - 1L) | 7) + 1) >> 3) * height)) {
+	result = 0;
+	trouble++;
+	printf("FAILED for plane %d\n", i);
+      }
+    }
+    if (result)
+      puts("PASSED");
+  }
   jbg_dec_free(&sjd);
 
   puts("Testing decoder with single byte feed ...");
   jbg_dec_init(&sjd);
   result = JBG_EAGAIN;
-  for (i = 0; i < testbuf1_len; i++) {
-    result = jbg_dec_in(&sjd, testbuf1 + i, 1, NULL);
-    if (i < testbuf1_len - 1 && result != JBG_EAGAIN) {
-      printf("Decoder complained with return value %d at byte %d: FAILED\n",
-	     result, i);
+  for (l = 0; l < testbuf1_len; l++) {
+    result = jbg_dec_in(&sjd, testbuf1 + l, 1, NULL);
+    if (l < testbuf1_len - 1 && result != JBG_EAGAIN) {
+      printf("Decoder complained with return value %d at byte %ld: FAILED\n"
+	     "Cause: '%s'\n", result, l, jbg_strerror(result, JBG_EN));
       trouble++;
       break;
     }
   }
-  if (i == testbuf1_len && result != JBG_EOK) {
-    printf("Decoder complained with return value %d at final byte: FAILED\n",
-	   result);
+  if (l == testbuf1_len && result != JBG_EOK) {
+    printf("Decoder complained with return value %d at final byte: FAILED\n"
+	   "Cause: '%s'\n", result, jbg_strerror(result, JBG_EN));
     trouble++;
   }
-  printf("Image comparison: ");
-  result = 1;
-  for (i = 0; i < planes && result; i++) {
-    if (memcmp(orig_image[i], sjd.lhp[layers & 1][i],
-	       ((((width - 1) | 7) + 1) >> 3) * height)) {
-      result = 0;
-      trouble++;
-      printf("FAILED for plane %d\n", i);
+
+  if (result == JBG_EOK) {
+    printf("Image comparison: ");
+    result = 1;
+    for (i = 0; i < planes && result; i++) {
+      if (memcmp(orig_image[i], sjd.lhp[layers & 1][i],
+		 ((((width - 1L) | 7) + 1) >> 3) * height)) {
+	result = 0;
+	trouble++;
+	printf("FAILED for plane %d\n", i);
+      }
     }
+    if (result)
+      puts("PASSED");
   }
-  if (result)
-    puts("PASSED");
+
   jbg_dec_free(&sjd);
   puts("");
 
@@ -206,7 +220,9 @@ int main()
   int trouble, problems = 0;
   struct enc_state se;
   struct dec_state sd;
-  int i, pix;
+  long i;
+  int pix;
+  size_t st;
   unsigned char *pp;
 
   int t82pix[16] = {
@@ -228,6 +244,24 @@ int main()
   printf("Automatic JBIG Compatibility Test Suite\n"
 	 "---------------------------------------\n\n"
 	 "This test will take a few minutes.\n\n");
+  
+#if 1
+  /* test a few properties of the machine architecture */
+  testbuf1[0] = 42;
+  testbuf1[0x10000L] = 0x42;
+  st = 1 << 16;
+  testbuf1[st]++;
+  pp = testbuf1 + 0x4000;
+  pp += 0x4000;
+  pp += 0x4000;
+  pp += 0x4000;
+  if (testbuf1[0] == 43 || *pp != 0x43)
+    printf("WARNING: (char *) x + (size_t) (1 << 16) == (char *) x !!!\n\n"
+	   "Pointer arithmetic with this compiler is not at least 32-bit.\n"
+	   "Are you sure, you have not compiled this program on a 8-bit\n"
+	   "or 16-bit architecture? This compiler mode can obviously not\n"
+           "handle arrays with a size of more than 65536 bytes. :-(\n\n");
+#endif
 
 #if 1
   puts("1) Arithmetic encoder test sequence from ITU-T T.82, clause 7.1\n"
@@ -264,12 +298,12 @@ int main()
   for (i = 0; i < 16 * 16 && !trouble; i++) {
     pix = arith_decode(&sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
     if (pix < 0) {
-      printf("Problem at Pixel %d, result code %d.\n\n", i+1, sd.result);
+      printf("Problem at Pixel %ld, result code %d.\n\n", i+1, sd.result);
       trouble++;
       break;
     }
     if (pix != ((t82pix[i >> 4] >> ((15 - i) & 15)) & 1)) {
-      printf("Wrong PIX answer at Pixel %d.\n\n", i+1);
+      printf("Wrong PIX answer at Pixel %ld.\n\n", i+1);
       trouble++;
       break;
     }
@@ -305,12 +339,12 @@ int main()
       pix = arith_decode(&sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
     }
     if (pix < 0) {
-      printf("Problem at Pixel %d, result code %d.\n\n", i+1, sd.result);
+      printf("Problem at Pixel %ld, result code %d.\n\n", i+1, sd.result);
       trouble++;
       break;
     }
     if (pix != ((t82pix[i >> 4] >> ((15 - i) & 15)) & 1)) {
-      printf("Wrong PIX answer at Pixel %d.\n\n", i+1);
+      printf("Wrong PIX answer at Pixel %ld.\n\n", i+1);
       trouble++;
       break;
     }
