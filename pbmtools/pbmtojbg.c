@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
- *  $Id: pbmtojbg.c,v 1.10 2003-06-11 16:56:19 mgk25 Exp $
+ *  $Id: pbmtojbg.c,v 1.11 2004-06-10 20:58:40 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -117,8 +117,8 @@ int main (int argc, char **argv)
   struct jbg_enc_state s;
   int verbose = 0, delay_at = 0, use_graycode = 1;
   long mwidth = 640, mheight = 480;
-  int dl = -1, dh = -1, d = -1, l0 = -1, mx = -1;
-  unsigned long y1 = 0;
+  int dl = -1, dh = -1, d = -1, mx = -1;
+  unsigned long l0 = 0, y1 = 0;
   int options = JBG_TPDON | JBG_TPBON | JBG_DPON;
   int order = JBG_ILEAVE | JBG_SMID;
 
@@ -193,7 +193,7 @@ int main (int argc, char **argv)
 	  case 's':
 	    if (++i >= argc) usage();
 	    j = -1;
-	    l0 = atoi(argv[i]);
+	    l0 = atol(argv[i]);
 	    break;
 	  case 't':
 	    if (++i >= argc) usage();
@@ -359,14 +359,14 @@ int main (int argc, char **argv)
   if (verbose) {
     fprintf(stderr, "Information about the created JBIG bi-level image entity "
 	    "(BIE):\n\n");
-    fprintf(stderr, "              input image size: %ld x %ld pixel\n",
+    fprintf(stderr, "              input image size: %lu x %lu pixel\n",
 	    s.xd, s.yd);
     fprintf(stderr, "                    bit planes: %d\n", s.planes);
     if (s.planes > 1)
       fprintf(stderr, "                      encoding: %s code, MSB first\n",
 	      use_graycode ? "Gray" : "binary");
-    fprintf(stderr, "                       stripes: %ld\n", s.stripes);
-    fprintf(stderr, "   lines per stripe in layer 0: %ld\n", s.l0);
+    fprintf(stderr, "                       stripes: %lu\n", s.stripes);
+    fprintf(stderr, "   lines per stripe in layer 0: %lu\n", s.l0);
     fprintf(stderr, "  total number of diff. layers: %d\n", s.d);
     fprintf(stderr, "           lowest layer in BIE: %d\n", s.dl);
     fprintf(stderr, "          highest layer in BIE: %d\n", s.dh);
