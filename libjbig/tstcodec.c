@@ -3,9 +3,9 @@
  * 
  *  Run this test sequence after each modification on the JBIG library.
  *
- *  Markus Kuhn -- mkuhn@acm.org
+ *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: tstcodec.c,v 1.9 2002-03-22 22:58:59 mgk25 Exp $
+ *  $Id: tstcodec.c,v 1.10 2003-06-06 21:03:17 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -510,7 +510,7 @@ int main(void)
     puts("This is bad. If you cannot identify the problem yourself, please "
 	 "send\nthis output plus a detailed description of your "
 	 "compile environment\n(OS, compiler, version, options, etc.) to "
-	 "Markus Kuhn <mkuhn@acm.org>.");
+	 "Markus Kuhn <http://www.cl.cam.ac.uk/~mgk25/>.");
   else
     puts("Congratulations, everything is fine.\n");
 
