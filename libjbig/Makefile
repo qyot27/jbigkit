@@ -1,5 +1,5 @@
 # Unix makefile for the JBIG-KIT library
-# $Id: Makefile,v 1.3 1995-06-10 18:46:39 mskuhn Exp $
+# $Id: Makefile,v 1.4 1995-09-20 19:47:45 mskuhn Exp $
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
 CC = gcc
@@ -7,21 +7,21 @@ CC = gcc
 # Options for the compiler: A high optimization level is suggested
 CFLAGS = -O -g -Wall -ansi -pedantic
 
-all: libjbig.a test_codec
+all: libjbig.a tstcodec
 
-test_codec: test_codec.c jbig.c jbig.h jbig_tables.o
-	$(CC) $(CFLAGS) -o test_codec -DTEST_CODEC test_codec.c jbig.c \
-	jbig_tables.o
+tstcodec: tstcodec.c jbig.c jbig.h jbig_tab.o
+	$(CC) $(CFLAGS) -o tstcodec -DTEST_CODEC tstcodec.c jbig.c \
+	jbig_tab.o
 
-libjbig.a: jbig.o jbig_tables.o
+libjbig.a: jbig.o jbig_tab.o
 	rm -f libjbig.a
-	ar rc libjbig.a jbig.o jbig_tables.o
+	ar rc libjbig.a jbig.o jbig_tab.o
 	ranlib libjbig.a
 
 jbig.o: jbig.c jbig.h
 
-test: test_codec
-	./test_codec
+test: tstcodec
+	./tstcodec
 
 clean:
-	rm -f *.o *~ core gmon.out dbg_d=??.pbm test_codec
+	rm -f *.o *~ core gmon.out dbg_d=??.pbm tstcodec
