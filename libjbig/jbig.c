@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: jbig.c,v 1.13 2000-08-02 23:03:31 mgk25 Exp $
+ *  $Id: jbig.c,v 1.14 2002-03-23 01:36:08 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -94,7 +94,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.13 2000-08-02 23:03:31 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.14 2002-03-23 01:36:08 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -1786,7 +1786,7 @@ void jbg_enc_free(struct jbg_enc_state *s)
   int layer, plane;
 
 #ifdef DEBUG
-  fprintf(stderr, "jbg_enc_free(%p)\n", s);
+  fprintf(stderr, "jbg_enc_free(%p)\n", (void *) s);
 #endif
 
   /* clear buffers for SDEs */
@@ -1950,7 +1950,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 #ifdef DEBUG
   if (s->x == 0 && s->i == 0 && s->pseudo)
     fprintf(stderr, "decode_pscd(%p, %p, %ld): s/d/p = %2lu/%2u/%2u\n",
-	    s, data, (long) len, stripe, layer, plane);
+	    (void *) s, (void *) data, (long) len, stripe, layer, plane);
 #endif
 
   if (layer == 0) {
@@ -2823,7 +2823,7 @@ void jbg_split_planes(unsigned long x, unsigned long y, int has_planes,
 	  bits = (prev | *src) >> bitno;
 	  /* go to next *src byte, but keep old */
 	  if (bitno == 0)
-	    prev = *src++;
+	    prev = *src++ << 8;
 	  /* make space for inserting new bit */
 	  dest[p][bpl * line + i] <<= 1;
 	  /* insert bit, if requested apply Gray encoding */
@@ -2836,7 +2836,7 @@ void jbg_split_planes(unsigned long x, unsigned long y, int has_planes,
 	}
 	/* skip unused *src bytes */
 	for (;p < has_planes; p++)
-	  if (((has_planes - 1 - p) & 7) == 0)
+	  if (((msb - p) & 7) == 0)
 	    src++;
       }
     }
@@ -2859,7 +2859,7 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
   int bpp, bpl;
   unsigned long line;
   unsigned i, k = 8;
-  int p, q;
+  int p;
   unsigned char buf[BUFLEN];
   unsigned char *bp = buf;
   unsigned char **src;
@@ -2887,12 +2887,13 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
   for (line = 0; line < y; line++) {                    /* lines loop */
     for (i = 0; i * 8 < x; i++) {                       /* src bytes loop */
       for (k = 0; k < 8 && i * 8 + k < x; k++) {        /* pixel loop */
-	for (p = (s->planes-1) & ~7; p >= 0; p -= 8) {  /* dest bytes loop */
-	  v = 0;
-	  for (q = 0; q < 8 && p+q < s->planes; q++)    /* pixel bit loop */
+	v = 0;
+	for (p = 0; p < s->planes;) {                   /* dest bytes loop */
+	  do {
 	    v = (v << 1) |
-	      (((src[p+q][bpl * line + i] >> (7 - k)) & 1) ^
+	      (((src[p][bpl * line + i] >> (7 - k)) & 1) ^
 	       (use_graycode & v));
+	  } while ((s->planes - ++p) & 7);
 	  *bp++ = v;
 	  if (bp - buf == BUFLEN) {
 	    data_out(buf, BUFLEN, file);
