@@ -5,7 +5,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: tstcodec.c,v 1.4 1995-09-20 19:43:07 mskuhn Exp $
+ *  $Id: tstcodec.c,v 1.5 1996-01-09 15:18:00 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -14,8 +14,8 @@
 
 #include "jbig.h"
 
-#define TESTBUF_SIZE 400000
-#define TESTPIC_SIZE 477995
+#define TESTBUF_SIZE 400000L
+#define TESTPIC_SIZE 477995L
 
 unsigned char *testbuf;
 unsigned char *testpic;
@@ -23,7 +23,7 @@ unsigned char *testpic;
 long testbuf_len;
 
 
-void testbuf_write(int v, void *dummy)
+static void testbuf_write(int v, void *dummy)
 {
   if (testbuf_len < TESTBUF_SIZE)
     testbuf[testbuf_len++] = v;
@@ -31,15 +31,15 @@ void testbuf_write(int v, void *dummy)
 }
 
 
-void testbuf_writel(unsigned char *start, size_t len, void *dummy)
+static void testbuf_writel(unsigned char *start, size_t len, void *dummy)
 {
   if (testbuf_len < TESTBUF_SIZE)
     if (testbuf_len + len < TESTBUF_SIZE)
       memcpy(testbuf + testbuf_len, start, len);
-    else 
+    else
       memcpy(testbuf + testbuf_len, start, TESTBUF_SIZE - testbuf_len);
   testbuf_len += len;
-  
+
   return;
 }
 
@@ -49,7 +49,7 @@ void testbuf_writel(unsigned char *start, size_t len, void *dummy)
  * pic. The image requires 477995 bytes of memory, is 1960 x 1951 pixels
  * large and has one plane.
  */ 
-void testimage(unsigned char *pic)
+static void testimage(unsigned char *pic)
 {
   unsigned long i, j, sum;
   unsigned int prsg, repeat[8];
@@ -84,7 +84,7 @@ void testimage(unsigned char *pic)
   for (i = 0; i < TESTPIC_SIZE; i++)
     for (j = 0; j < 8; j++)
       sum += (pic[i] >> j) & 1;
-  if (sum != 861965)
+  if (sum != 861965L)
     printf("WARNING: Artificial test image has %lu (not 861965) "
 	   "foreground pixels!\n", sum);
   
@@ -116,9 +116,10 @@ void testimage(unsigned char *pic)
  * the image again both in one single chunk or byte by byte and compare
  * the results with the original input image.
  */
-int test_cycle(unsigned char **orig_image, int width, int height, int options,
-	       int order, int layers, int planes, int l0, int mx,
-	       long correct_length, char *test_id)
+static int test_cycle(unsigned char **orig_image, int width, int height,
+		      int options, int order, int layers, int planes,
+		      int l0, int mx, long correct_length,
+		      const char *test_id)
 {
   struct jbg_enc_state sje;
   struct jbg_dec_state sjd;
@@ -225,11 +226,11 @@ int test_cycle(unsigned char **orig_image, int width, int height, int options,
 }
 
 
-int main()
+int main(void)
 {
   int trouble, problems = 0;
-  struct jbg_arenc_state se;
-  struct jbg_ardec_state sd;
+  struct jbg_arenc_state *se;
+  struct jbg_ardec_state *sd;
   long i;
   int pix;
   size_t st;
@@ -249,8 +250,8 @@ int main()
     0x00, 0xff, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x3f,
     0xff, 0x00, 0x2d, 0x20, 0x82, 0x91, 0xff, 0x02
   };
-  
-  
+
+
   printf("\nAutomatic JBIG Compatibility Test Suite\n"
 	 "---------------------------------------\n\n"
 	 "JBIG-KIT Version " JBG_VERSION
@@ -259,12 +260,13 @@ int main()
   /* allocate test buffer memory */
   testbuf = malloc(TESTBUF_SIZE);
   testpic = malloc(TESTPIC_SIZE);
-  if (!testbuf || !testpic) {
+  se = malloc(sizeof(struct jbg_arenc_state));
+  sd = malloc(sizeof(struct jbg_ardec_state));
+  if (!testbuf || !testpic || !se || !sd) {
     printf("Sorry, not enough memory available!\n");
     exit(1);
   }
 
-#if 1
   /* test a few properties of the machine architecture */
   testbuf[0] = 42;
   testbuf[0x10000L] = 0x42;
@@ -274,24 +276,27 @@ int main()
   pp += 0x4000;
   pp += 0x4000;
   pp += 0x4000;
-  if (testbuf[0] == 43 || *pp != 0x43)
-    printf("WARNING: (char *) x + (size_t) (1 << 16) == (char *) x !!!\n\n"
-	   "Pointer arithmetic with this compiler is not at least 32-bit.\n"
-	   "Are you sure, you have not compiled this program on a 8-bit\n"
+  if (testbuf[0] != 42 || *pp != 0x43) {
+    printf("Porting error detected:\n\n"
+	   "Pointer arithmetic with this compiler has not at least 32 bits!\n"
+	   "Are you sure, you have not compiled this program on an 8-bit\n"
 	   "or 16-bit architecture? This compiler mode can obviously not\n"
-           "handle arrays with a size of more than 65536 bytes. :-(\n\n");
-#endif
+           "handle arrays with a size of more than 65536 bytes. With this\n"
+           "memory model, JBIG-KIT can only handle very small images and\n"
+           "not even this compatibility test suite will run. :-(\n\n");
+    exit(1);
+  }
 
 #if 1
   puts("1) Arithmetic encoder test sequence from ITU-T T.82, clause 7.1\n"
        "---------------------------------------------------------------\n");
-  arith_encode_init(&se, 0);
+  arith_encode_init(se, 0);
   testbuf_len = 0;
-  se.byte_out = testbuf_write;
+  se->byte_out = testbuf_write;
   for (i = 0; i < 16 * 16; i++)
-    arith_encode(&se, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1,
+    arith_encode(se, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1,
 		 (t82pix[i >> 4] >> ((15 - i) & 15)) & 1);
-  arith_encode_flush(&se);
+  arith_encode_flush(se);
   printf("result of encoder:\n  ");
   for (i = 0; i < testbuf_len && i < TESTBUF_SIZE; i++)
     printf("%02x", testbuf[i]);
@@ -310,14 +315,14 @@ int main()
   puts("2) Arithmetic decoder test sequence from ITU-T T.82, clause 7.1\n"
        "---------------------------------------------------------------\n");
   printf("Test 2.1: Decoding whole chunk ...\n");
-  arith_decode_init(&sd, 0);
-  sd.pscd_ptr = t82sde;
-  sd.pscd_end = t82sde + 32;
+  arith_decode_init(sd, 0);
+  sd->pscd_ptr = t82sde;
+  sd->pscd_end = t82sde + 32;
   trouble = 0;
   for (i = 0; i < 16 * 16 && !trouble; i++) {
-    pix = arith_decode(&sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
+    pix = arith_decode(sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
     if (pix < 0) {
-      printf("Problem at Pixel %ld, result code %d.\n\n", i+1, sd.result);
+      printf("Problem at Pixel %ld, result code %d.\n\n", i+1, sd->result);
       trouble++;
       break;
     }
@@ -327,8 +332,8 @@ int main()
       break;
     }
   }
-  if (!trouble && sd.result != JBG_READY) {
-    printf("Result is %d instead of JBG_READY.\n\n", sd.result);
+  if (!trouble && sd->result != JBG_READY) {
+    printf("Result is %d instead of JBG_READY.\n\n", sd->result);
     trouble++;
   }
   printf("Test result: ");
@@ -340,25 +345,25 @@ int main()
   printf("\n");
 
   printf("Test 2.2: Decoding with single byte feed ...\n");
-  arith_decode_init(&sd, 0);
+  arith_decode_init(sd, 0);
   pp = t82sde;
-  sd.pscd_ptr = pp;
-  sd.pscd_end = pp + 1;
+  sd->pscd_ptr = pp;
+  sd->pscd_end = pp + 1;
   trouble = 0;
   for (i = 0; i < 16 * 16 && !trouble; i++) {
-    pix = arith_decode(&sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
-    while ((sd.result == JBG_MORE || sd.result == JBG_MARKER) &&
-	   sd.pscd_end < t82sde + 32) {
+    pix = arith_decode(sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
+    while ((sd->result == JBG_MORE || sd->result == JBG_MARKER) &&
+	   sd->pscd_end < t82sde + 32) {
       pp++;
-      sd.pscd_end = pp + 1;
-      if (sd.result == JBG_MARKER)
-	sd.pscd_ptr = pp - 1;
+      sd->pscd_end = pp + 1;
+      if (sd->result == JBG_MARKER)
+	sd->pscd_ptr = pp - 1;
       else
-	sd.pscd_ptr = pp;
-      pix = arith_decode(&sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
+	sd->pscd_ptr = pp;
+      pix = arith_decode(sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
     }
     if (pix < 0) {
-      printf("Problem at Pixel %ld, result code %d.\n\n", i+1, sd.result);
+      printf("Problem at Pixel %ld, result code %d.\n\n", i+1, sd->result);
       trouble++;
       break;
     }
@@ -368,8 +373,8 @@ int main()
       break;
     }
   }
-  if (!trouble && sd.result != JBG_READY) {
-    printf("Result is %d instead of JBG_READY.\n\n", sd.result);
+  if (!trouble && sd->result != JBG_READY) {
+    printf("Result is %d instead of JBG_READY.\n\n", sd->result);
     trouble++;
   }
   printf("Test result: ");
@@ -390,22 +395,22 @@ int main()
 
   puts("Test 3.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951");
   problems += test_cycle(&pp, 1960, 1951, JBG_DELAY_AT,
-			 0, 0, 1, 1951, 0, 317384, "3.1");
+			 0, 0, 1, 1951, 0, 317384L, "3.1");
   puts("Test 3.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951");
   problems += test_cycle(&pp, 1960, 1951, JBG_DELAY_AT | JBG_LRLTWO,
-			 0, 0, 1, 1951, 0, 317132, "3.2");
+			 0, 0, 1, 1951, 0, 317132L, "3.2");
   puts("Test 3.3: TPBON=1, DPON=1, TPDON=1, Mx=8, LRLTWO=0, L0=128");
   problems += test_cycle(&pp, 1960, 1951, JBG_DELAY_AT | JBG_TPBON,
-			 0, 0, 1, 128, 8, 253653, "3.3");
+			 0, 0, 1, 128, 8, 253653L, "3.3");
   puts("Test 3.4: TPBON=1, DPON=1, TPDON=1, Mx=8, LRLTWO=0, L0=2, 6 layers");
   problems += test_cycle(&pp, 1960, 1951,
 			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON,
-			 0, 6, 1, 2, 8, 279314, "3.4");
+			 0, 6, 1, 2, 8, 279314L, "3.4");
 #if 0
   puts("Test 3.5: as TEST 4 but with order bit SEQ set");
   problems += test_cycle(&pp, 1960, 1951,
 			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON,
-			 JBG_SEQ, 6, 1, 2, 8, 279314, "3.5");
+			 JBG_SEQ, 6, 1, 2, 8, 279314L, "3.5");
 #endif
 
   printf("\nTest result summary: the library has %s the test suite.\n",
