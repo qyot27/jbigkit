@@ -5,7 +5,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: tstcodec.c,v 1.10 2003-06-06 21:03:17 mgk25 Exp $
+ *  $Id: tstcodec.c,v 1.11 2004-06-08 14:34:53 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -117,25 +117,7 @@ static void testimage(unsigned char *pic)
   if (sum != 861965L)
     printf("WARNING: Artificial test image has %lu (not 861965) "
 	   "foreground pixels!\n", sum);
-  
-#if 0
-  {
-    FILE *f;
 
-
-    for (i = 0; i < TESTPIC_SIZE; i++) {
-      sum = 0;
-      for (j = 0; j < 8; j++)
-	sum |= ((pic[i] >> j) & 1) << (7-j);
-      pic[i] = sum;
-    }
-
-    f = fopen("t82demo.lit", "wb");
-    fwrite(pic, 1, TESTPIC_SIZE, f);
-    fclose(f);
-  }
-#endif
-  
   return;
 }
   
@@ -250,7 +232,7 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
 }
 
 
-int main(void)
+int main(int argc, char **argv)
 {
   int trouble, problems = 0;
   struct jbg_arenc_state *se;
@@ -358,6 +340,26 @@ int main(void)
            "memory model, JBIG-KIT can only handle very small images and\n"
            "not even this compatibility test suite will run. :-(\n\n");
     exit(1);
+  }
+
+  /* only supported command line option:
+   * output file name for exporting test image */
+  if (argc > 0) {
+    FILE *f;
+
+    puts("Generating test image ...");
+    testimage(testpic);
+    printf("Storing in '%s' ...\n", argv[1]);
+    
+    /* write out test image as PBM file */
+    f = fopen(argv[1], "wb");
+    if (!f) abort();
+    fprintf(f, "P4\n");
+    fprintf(f, "# Test image as defined in ITU-T T.82, clause 7.2.1\n");
+    fprintf(f, "1960 1951\n");
+    fwrite(testpic, 1, TESTPIC_SIZE, f);
+    fclose(f);
+    return 0;
   }
 
 #if 1
