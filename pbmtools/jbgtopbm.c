@@ -1,9 +1,9 @@
 /*
- *  jbigtopbm - JBIG to Portable Bitmap converter
+ *  jbgtopbm - JBIG to Portable Bitmap converter
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: jbgtopbm.c,v 1.3 1995-06-10 18:46:55 mskuhn Exp $
+ *  $Id: jbgtopbm.c,v 1.4 1995-09-20 20:43:09 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -129,7 +129,7 @@ int main (int argc, char **argv)
 	    jbg_dec_getplanes(&s), jbg_dec_getplanes(&s) - 1);
   
   /* write PBM output file */
-  fprintf(fout, "P4\n%ld %ld\n", jbg_dec_getwidth(&s), jbg_dec_gethight(&s));
+  fprintf(fout, "P4\n%ld %ld\n", jbg_dec_getwidth(&s), jbg_dec_getheight(&s));
   fwrite(jbg_dec_getimage(&s, 0), 1,
 	 jbg_dec_getsize(&s), fout);
 

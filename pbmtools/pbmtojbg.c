@@ -1,9 +1,9 @@
 /*
- *  pbmtojbig - Portable Bitmap to JBIG converter
+ *  pbmtojbg - Portable Bitmap to JBIG converter
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: pbmtojbg.c,v 1.3 1995-06-10 18:46:55 mskuhn Exp $
+ *  $Id: pbmtojbg.c,v 1.4 1995-09-20 20:43:09 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -217,7 +217,7 @@ int main (int argc, char **argv)
   case '1':
     /* PBM text format */
     for (i = 0; i < height; i++)
-      for (j = 0; j < width | 7; j++) {
+      for (j = 0; j <= ((width-1) | 7); j++) {
 	*p <<= 1;
 	if (j < width)
 	  *p |= getint(fin) & 1;
@@ -287,9 +287,9 @@ int main (int argc, char **argv)
     fprintf(stderr, "           lowest layer in BIE: %d\n", s.dl);
     fprintf(stderr, "          highest layer in BIE: %d\n", s.dh);
     fprintf(stderr, "             lowest layer size: %lu x %lu pixel\n",
-	    ceil_half(s.xd, s.d - s.dl), ceil_half(s.yd, s.d - s.dl));
+	    jbg_ceil_half(s.xd, s.d - s.dl), jbg_ceil_half(s.yd, s.d - s.dl));
     fprintf(stderr, "            highest layer size: %lu x %lu pixel\n",
-	    ceil_half(s.xd, s.d - s.dh), ceil_half(s.yd, s.d - s.dh));
+	    jbg_ceil_half(s.xd, s.d - s.dh), jbg_ceil_half(s.yd, s.d - s.dh));
     fprintf(stderr, "                   option bits:%s%s%s%s%s%s%s\n",
 	    s.options & JBG_LRLTWO  ? " LRLTWO" : "",
 	    s.options & JBG_VLENGTH ? " VLENGTH" : "",
