@@ -1,5 +1,5 @@
 # Unix makefile for the JBIG-KIT PBM tools
-# $Id: Makefile,v 1.9 1998-11-04 10:00:44 mgk25 Exp $
+# $Id: Makefile,v 1.10 2002-03-23 01:38:51 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, e.g. GNU gcc is recommended
 CC = gcc
@@ -20,7 +20,7 @@ jbgtopbm: jbgtopbm.o ../libjbig/libjbig.a
 jbgtopbm.o: jbgtopbm.c ../libjbig/jbig.h
 pbmtojbg.o: pbmtojbg.c ../libjbig/jbig.h
 
-../libjbig/libjbig.a:
+../libjbig/libjbig.a: ../libjbig/jbig.c ../libjbig/jbig.h
 	cd ../libjbig ; make libjbig.a
 
 test: pbmtojbg jbgtopbm
@@ -33,6 +33,8 @@ test: pbmtojbg jbgtopbm
 	make IMG=sandra  OPTIONSP=-q    OPTIONSJ=      dotest2
 	make IMG=sandra "OPTIONSP=-o 0" OPTIONSJ=      dotest2
 	make IMG=sandra "OPTIONSP=-o 2" OPTIONSJ=      dotest2
+	make IMG=multi   OPTIONSP=      OPTIONSJ=      dotest2
+	make IMG=multi   OPTIONSP=-b    OPTIONSJ=-b    dotest2
 	rm -f test-*.jbg test-*.pbm test-*.pgm
 	@echo
 	@echo "The pbmtools have PASSED the functional tests. Good!"
