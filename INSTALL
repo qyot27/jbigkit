@@ -130,7 +130,7 @@ in the second file test-high.bie. No problem, just call
   pbmtojbig -d 2 -l 0 -h 0 ccitt1.pbm test-low.bie
   pbmtojbig -d 2 -l 1 -h 2 ccitt1.pbm test-high.bie
 
-were -d specifies the total number of layers and -l/-h select the
+where -d specifies the total number of layers and -l/-h select the
 range of layers written to the output file. You will see that the low
 and high resolution file together are only 1.6 kb larger than if you
 would have stored only the high-res version directly without

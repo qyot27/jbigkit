@@ -1,5 +1,5 @@
 # Unix makefile for the JBIG-KIT PBM tools
-# $Id: Makefile,v 1.4 1995-09-20 20:43:09 mskuhn Exp $
+# $Id: Makefile,v 1.5 1996-01-09 15:23:21 mskuhn Exp $
 
 # Select an ANSI/ISO C compiler here, e.g. GNU gcc is recommended
 CC = gcc

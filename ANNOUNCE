@@ -1,14 +1,14 @@
 
-Version 0.7 of the JBIG-KIT lossless image compression library available
+Version 0.9 of the JBIG-KIT lossless image compression library available
 ------------------------------------------------------------------------
 
-Markus Kuhn -- 1995-09-20
+Markus Kuhn -- 1996-01-09
 
 
 The latest release of JBIG-KIT can be downloaded over the Internet
 with anonymous ftp from
 
-  ftp.uni-erlangen.de   /pub/doc/ISO/JBIG/jbigkit-0.8.tar.gz
+  ftp.informatik.uni-erlangen.de   /pub/doc/ISO/JBIG/jbigkit-0.8.tar.gz
 
 and from a number of other servers.
 
@@ -28,7 +28,7 @@ JBIG-KIT implements the specification
   International Standard ISO/IEC 11544:1993 and ITU-T Recommendation
   T.82(1993), "Information technology - Coded representation of picture
   and audio information - progressive bi-level image compression",
-  <http://www.itu.ch/itudoc/metadocs/23822.html>,
+  <http://www.itu.ch/itudoc/itu-t/rec/t/t82_23822.html>,
 
 which is commonly referred to as the "JBIG standard". JBIG (Joint
 Bi-level Image experts Group) is the committee which developed this
@@ -36,8 +36,8 @@ international standard for the lossless compression of images using
 arithmetic coding. Like the well-known compression algorithms JPEG and
 MPEG, also JBIG has been developed and published by the International
 Organization for Standardization (ISO) and the International
-Telecommunication Union (ITU) (see also <http://www.iso.ch> and
-<http://www.itu.ch>).
+Telecommunication Union (ITU) (see also <http://www.iso.ch/> and
+<http://www.itu.ch/>).
 
 The JBIG compression algorithm offers the following features:
 
@@ -87,13 +87,14 @@ The JBIG compression algorithm offers the following features:
     mode.
 
 The JBIG-KIT is free software under the GNU General Public License and
-provides a portable library implemented in ANSI C for encoding and
+provides a portable library implemented in ANSI/ISO C for encoding and
 decoding JBIG data streams together with documentation. The library is
-not intended for 8- or 16-bit machine architectures (e.g. MS-DOS,
-Atari ST, etc.) on which a number of very efficient optimization
+not intended for 8-bit or 16-bit machine architectures (e.g. old
+MS-DOS C compilers) on which a number of very efficient optimization
 techniques used in this software are not possible. For maximum
 performance, a 32-bit processor is required (64-bit systems work too,
-of course).
+of course). On architectures with only 16-bit pointer arithmetic, only
+very small images can be processed.
 
 Special features of the JBIG-KIT implementation are:
 
@@ -128,6 +129,20 @@ Special features of the JBIG-KIT implementation are:
   - Ready-to-use pbmtojbg and jbgtopbm converters.
 
 
+Changes in version 0.9 (1996-01-09):
+
+  - encoder won't break any more on input bitmap data with incorrect
+    zero padding
+
+  - pbmtojbg displays a warning if input file has incorrect zero
+    padding
+
+  - various minor improvements suggested by Stefan Willer
+    <Stefan.Willer@unnet.wupper.DE>
+
+  - many minor changes in order to avoid warnings from paranoid
+    compilers
+
 Changes in version 0.8 (1995-09-20):
 
   - namespace cleared up, all names externally visible from the library
@@ -153,7 +168,7 @@ Changes in version 0.6 (1995-06-08):
 
   - memory leak fixed
 
-  - should now also work on systems were int is only 16-bit large
+  - should now also work on systems where int is only 16-bit large
 
   - changes of the JBIG "Technical Corrigendum 1" included (special
     thanks to Dr. Sebestyen from Siemens AG for sending me a copy

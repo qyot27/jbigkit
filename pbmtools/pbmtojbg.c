@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: pbmtojbg.c,v 1.5 1995-12-10 22:51:35 mskuhn Exp $
+ *  $Id: pbmtojbg.c,v 1.6 1996-01-09 15:23:21 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -39,7 +39,7 @@ unsigned long total_length = 0;  /* used for determining output file length */
  * Read an ASCII integer number from file f and skip any PBM
  * comments which are encountered.
  */
-unsigned long getint(FILE *f)
+static unsigned long getint(FILE *f)
 {
   int c;
   unsigned long i;
@@ -60,7 +60,7 @@ unsigned long getint(FILE *f)
  * Callback procedure which is used by JBIG encoder to deliver the
  * encoded data. It simply sends the bytes to the output file.
  */
-void data_out(unsigned char *start, size_t len, void *file)
+static void data_out(unsigned char *start, size_t len, void *file)
 {
   fwrite(start, len, 1, (FILE *) file);
   total_length += len;
@@ -71,7 +71,7 @@ void data_out(unsigned char *start, size_t len, void *file)
 /*
  * Print usage message and abort
  */
-void usage(void)
+static void usage(void)
 {
   fprintf(stderr, usage_msg, progname);
   exit(1);
@@ -81,7 +81,7 @@ void usage(void)
 int main (int argc, char **argv)
 {
   FILE *fin = stdin, *fout = stdout;
-  char *fnin = "<stdin>", *fnout = "<stdout>";
+  const char *fnin = "<stdin>", *fnout = "<stdout>";
   int c, i, j;
   int all_args = 0, files = 0;
   unsigned long width, height;
@@ -204,7 +204,7 @@ int main (int argc, char **argv)
   type = getc(fin);
   width = getint(fin);
   height = getint(fin);
-  getc(fin);    /* skip line feed */
+  fgetc(fin);    /* skip line feed */
 
   /* read PBM image data */
   bpl = (((width - 1) | 7) + 1) >> 3;     /* bytes per line */
