@@ -1,9 +1,9 @@
 /*
  *  pbmtojbg - Portable Bitmap to JBIG converter
  *
- *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
+ *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: pbmtojbg.c,v 1.7 1998-04-05 17:28:43 mgk25 Exp $
+ *  $Id: pbmtojbg.c,v 1.8 1998-04-11 01:24:42 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -20,9 +20,11 @@ const char usage_msg[] = "PBMtoJBIG converter " JBG_VERSION " -- "
 "  -y number\tmaximum height of lowest resolution layer (default 480)\n"
 "  -l number\tlowest layer written to output file (default 0)\n"
 "  -h number\thighest layer written to output file (default max)\n"
+"  -b\t\tuse binary code for multiple bitplanes (default: Gray code)\n"
 "  -d number\ttotal number of differential layers (overrides -x and -y)\n"
 "  -s number\theight of a stripe in layer 0\n"
 "  -m number\tmaximum adaptive template pixel horizontal offset (default 8)\n"
+"  -t number\tencode only that many most significant planes\n"
 "  -o number\torder byte value: add 1=SMID, 2=ILEAVE, 4=SEQ, 8=HITOLO\n"
 "\t\t(default 3 = ILEAVE+SMID)\n"
 "  -p number\toptions byte value: add DPON=4, TPBON=8, TPDON=16, LRLTWO=64\n"
@@ -33,6 +35,22 @@ const char usage_msg[] = "PBMtoJBIG converter " JBG_VERSION " -- "
 
 char *progname;                  /* global pointer to argv[0] */
 unsigned long total_length = 0;  /* used for determining output file length */
+
+
+/*
+ * malloc() with exception handler
+ */
+void *checkedmalloc(size_t n)
+{
+  void *p;
+  
+  if ((p = malloc(n)) == NULL) {
+    fprintf(stderr, "Sorry, not enough memory available!\n");
+    exit(1);
+  }
+  
+  return p;
+}
 
 
 /* 
@@ -82,15 +100,17 @@ int main (int argc, char **argv)
 {
   FILE *fin = stdin, *fout = stdout;
   const char *fnin = "<stdin>", *fnout = "<stdout>";
-  int c, i, j;
+  int i, j, c;
   int all_args = 0, files = 0;
-  unsigned long width, height;
+  unsigned long x, y;
+  unsigned long width, height, max, v;
   unsigned long bpl;
+  int bpp, planes, encode_planes = -1;
   size_t bitmap_size;
   char type;
-  unsigned char *bitmap, *p;
+  unsigned char **bitmap, *p, *image;
   struct jbg_enc_state s;
-  int verbose = 0, delay_at = 0;
+  int verbose = 0, delay_at = 0, use_graycode = 1;
   long mwidth = 640, mheight = 480;
   int dl = -1, dh = -1, d = -1, l0 = -1, mx = -1;
   int options = JBG_TPDON | JBG_TPBON | JBG_DPON;
@@ -104,7 +124,7 @@ int main (int argc, char **argv)
       if (argv[i][1] == '\0' && files == 0)
 	++files;
       else
-	for (j = 1; j < 10000 && argv[i][j]; j++)
+	for (j = 1; j > 0 && argv[i][j]; j++)
 	  switch(tolower(argv[i][j])) {
 	  case '-' :
 	    all_args = 1;
@@ -112,37 +132,40 @@ int main (int argc, char **argv)
 	  case 'v':
 	    verbose = 1;
 	    break;
+	  case 'b':
+	    use_graycode = 0;
+	    break;
 	  case 'c':
 	    delay_at = 1;
 	    break;
 	  case 'x':
 	    if (++i >= argc) usage();
-	    j = 10000;
+	    j = -1;
 	    mwidth = atol(argv[i]);
 	    break;
 	  case 'y':
 	    if (++i >= argc) usage();
-	    j = 10000;
+	    j = -1;
 	    mheight = atol(argv[i]);
 	    break;
 	  case 'o':
 	    if (++i >= argc) usage();
-	    j = 10000;
+	    j = -1;
 	    order = atoi(argv[i]);
 	    break;
 	  case 'p':
 	    if (++i >= argc) usage();
-	    j = 10000;
+	    j = -1;
 	    options = atoi(argv[i]);
 	    break;
 	  case 'l':
 	    if (++i >= argc) usage();
-	    j = 10000;
+	    j = -1;
 	    dl = atoi(argv[i]);
 	    break;
 	  case 'h':
 	    if (++i >= argc) usage();
-	    j = 10000;
+	    j = -1;
 	    dh = atoi(argv[i]);
 	    break;
 	  case 'q':
@@ -150,17 +173,22 @@ int main (int argc, char **argv)
 	    break;
 	  case 'd':
 	    if (++i >= argc) usage();
-	    j = 10000;
+	    j = -1;
 	    d = atoi(argv[i]);
 	    break;
 	  case 's':
 	    if (++i >= argc) usage();
-	    j = 10000;
+	    j = -1;
 	    l0 = atoi(argv[i]);
+	    break;
+	  case 't':
+	    if (++i >= argc) usage();
+	    j = -1;
+	    encode_planes = atoi(argv[i]);
 	    break;
 	  case 'm':
 	    if (++i >= argc) usage();
-	    j = 10000;
+	    j = -1;
 	    mx = atoi(argv[i]);
 	    break;
 	  default:
@@ -204,32 +232,56 @@ int main (int argc, char **argv)
   type = getc(fin);
   width = getint(fin);
   height = getint(fin);
+  if (type == '2' || type == '5' ||
+      type == '3' || type == '6')
+    max = getint(fin);
+  else
+    max = 1;
+  for (planes = 0; 1UL << planes <= max; planes++);
+  bpp = (planes + 7) / 8;
+  if (encode_planes < 0 || encode_planes > planes)
+    encode_planes = planes;
   fgetc(fin);    /* skip line feed */
 
   /* read PBM image data */
-  bpl = (((width - 1) | 7) + 1) >> 3;     /* bytes per line */
+  bpl = (width + 7) / 8;     /* bytes per line */
   bitmap_size = bpl * (size_t) height;
-  bitmap = malloc(sizeof(unsigned char) * bitmap_size);
-  if (!bitmap) {
-    fprintf(stderr, "Sorry, not enough memory available!\n");
-    exit(1);
-  }
-  p = bitmap;
+  bitmap = (unsigned char **) checkedmalloc(sizeof(unsigned char *) *
+					    encode_planes);
+  for (i = 0; i < encode_planes; i++)
+    bitmap[i] = (unsigned char *) checkedmalloc(bitmap_size);
   switch (type) {
   case '1':
     /* PBM text format */
-    for (i = 0; i < height; i++)
-      for (j = 0; j <= ((width-1) | 7); j++) {
+    p = bitmap[0];
+    for (y = 0; y < height; y++)
+      for (x = 0; x <= ((width-1) | 7); x++) {
 	*p <<= 1;
-	if (j < width)
+	if (x < width)
 	  *p |= getint(fin) & 1;
-	if ((j & 7) == 7)
+	if ((x & 7) == 7)
 	  ++p;
       }
     break;
   case '4':
     /* PBM raw binary format */
-    fread(bitmap, bitmap_size, 1, fin);
+    fread(bitmap[0], bitmap_size, 1, fin);
+    break;
+  case '2':
+  case '5':
+    /* PGM */
+    image = checkedmalloc(width * height * bpp);
+    if (type == '2') {
+      for (x = 0; x < width * height; x++) {
+	v = getint(fin);
+	for (j = 0; j < bpp; j++)
+	  image[x * bpp + (bpp - 1) - j] = v >> (j * 8);
+      }
+    } else
+      fread(image, width * height, bpp, fin);
+    jbg_split_planes(width, height, planes, encode_planes, image, bitmap,
+		     use_graycode);
+    free(image);
     break;
   default:
     fprintf(stderr, "Unsupported PBM type P%c!\n", type);
@@ -246,11 +298,11 @@ int main (int argc, char **argv)
   }
 
   /* Test the final byte in each image line for correct zero padding */
-  if (width & 7) {
-    for (i = 0; i < height; i++)
-      if (bitmap[i * bpl + bpl - 1] & ((1 << (8 - (width & 7))) - 1)) {
+  if ((width & 7) && type == '4') {
+    for (y = 0; y < height; y++)
+      if (bitmap[0][y * bpl + bpl - 1] & ((1 << (8 - (width & 7))) - 1)) {
 	fprintf(stderr, "Warning: No zero padding in last byte (0x%02x) of "
-		"line %d!\n", bitmap[i * bpl + bpl - 1], i + 1);
+		"line %lu!\n", bitmap[0][y * bpl + bpl - 1], y + 1);
 	break;
       }
   }
@@ -258,7 +310,7 @@ int main (int argc, char **argv)
   /* Apply JBIG algorithm and write BIE to output file */
 
   /* initialize parameter struct for JBIG encoder*/
-  jbg_enc_init(&s, width, height, 1, &bitmap, data_out, fout);
+  jbg_enc_init(&s, width, height, encode_planes, bitmap, data_out, fout);
 
   /* Select number of resolution layers either directly or based
    * on a given maximum size for the lowest resolution layer */
@@ -293,6 +345,9 @@ int main (int argc, char **argv)
     fprintf(stderr, "              input image size: %ld x %ld pixel\n",
 	    s.xd, s.yd);
     fprintf(stderr, "                    bit planes: %d\n", s.planes);
+    if (s.planes > 1)
+      fprintf(stderr, "                      encoding: %s code, MSB first\n",
+	      use_graycode ? "Gray" : "binary");
     fprintf(stderr, "                       stripes: %ld\n", s.stripes);
     fprintf(stderr, "   lines per stripe in layer 0: %ld\n", s.l0);
     fprintf(stderr, "  total number of diff. layers: %d\n", s.d);
@@ -320,5 +375,6 @@ int main (int argc, char **argv)
     fprintf(stderr, "         length of output file: %lu byte\n\n",
 	    total_length);
   }
+
   return 0;
 }
