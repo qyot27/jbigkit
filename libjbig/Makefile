@@ -1,5 +1,5 @@
 # Unix makefile for the JBIG-KIT library
-# $Id: Makefile,v 1.8 2001-02-13 18:09:24 mgk25 Exp $
+# $Id: Makefile,v 1.9 2004-06-08 14:40:06 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
 CC = gcc
@@ -23,5 +23,8 @@ jbig.o: jbig.c jbig.h
 test: tstcodec
 	./tstcodec
 
+t82test.pbm: tstcodec
+	./tstcodec $@
+
 clean:
-	rm -f *.o *~ core gmon.out dbg_d\=??.pbm tstcodec
+	rm -f *.o *~ core gmon.out dbg_d\=??.pbm tstcodec t82test.pbm
