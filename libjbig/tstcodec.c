@@ -5,7 +5,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: tstcodec.c,v 1.3 1995-06-10 18:46:39 mskuhn Exp $
+ *  $Id: tstcodec.c,v 1.4 1995-09-20 19:43:07 mskuhn Exp $
  */
 
 #include <stdio.h>
@@ -228,8 +228,8 @@ int test_cycle(unsigned char **orig_image, int width, int height, int options,
 int main()
 {
   int trouble, problems = 0;
-  struct enc_state se;
-  struct dec_state sd;
+  struct jbg_arenc_state se;
+  struct jbg_ardec_state sd;
   long i;
   int pix;
   size_t st;
