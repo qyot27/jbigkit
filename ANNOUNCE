@@ -1,17 +1,15 @@
 
-Version 1.2 of the JBIG-KIT lossless image compression library available
+Version 1.3 of the JBIG-KIT lossless image compression library available
 ------------------------------------------------------------------------
 
-Markus Kuhn -- 2000-04-08
+Markus Kuhn -- 2002-03-23
 
 
-The latest release of JBIG-KIT can be downloaded over the Internet
-with anonymous ftp from
+The latest release of JBIG-KIT can be downloaded from
 
-  ftp://ftp.informatik.uni-erlangen.de/pub/doc/ISO/JBIG/jbigkit-1.2.tar.gz
-  http://www.cl.cam.ac.uk/~mgk25/download/jbigkit-1.2.tar.gz
+  http://www.cl.cam.ac.uk/~mgk25/download/jbigkit-1.3.tar.gz
 
-and from a number of other servers.
+and a number of other servers.
 
 JBIG-KIT implements a highly effective data compression algorithm for
 bi-level high-resolution images such as fax pages or scanned
@@ -29,9 +27,9 @@ JBIG-KIT implements the specification
   International Standard ISO/IEC 11544:1993 and ITU-T Recommendation
   T.82(1993), "Information technology - Coded representation of picture
   and audio information - progressive bi-level image compression",
-  <http://www.itu.ch/itudoc/itu-t/rec/t/t82_23822.html>,
+  <http://www.itu.int/rec/recommendation.asp?type=folders&parent=T-REC-T.82>,
 
-which is commonly referred to as the "JBIG standard". JBIG (Joint
+which is commonly referred to as the "JBIG1 standard". JBIG (Joint
 Bi-level Image experts Group) is the committee which developed this
 international standard for the lossless compression of images using
 arithmetic coding. Like the well-known compression algorithms JPEG and
@@ -39,9 +37,9 @@ MPEG, also JBIG has been developed and published by the International
 Organization for Standardization (ISO) and the International
 Telecommunication Union (ITU). See also
 
-  http://www.jpeg.org/public/jbighomepage.htm
+  http://www.jbig.org/public/jbighomepage.htm
   http://www.iso.ch/
-  http://www.itu.ch/
+  http://www.itu.int/
 
 The JBIG compression algorithm offers the following features:
 
@@ -84,9 +82,9 @@ The JBIG compression algorithm offers the following features:
     well as the integrity of thin lines and dithered images.
 
   - JBIG supports multiple bit planes and can this way also be used
-    for greyscale and color images, although the main field of
+    for grayscale and color images, although the main field of
     application is compression of bi-level images, i.e. images with
-    only two different pixel values. For greyscale images with up to
+    only two different pixel values. For grayscale images with up to
     6 bit per pixel, JBIG performs superior to JPEG's lossless
     mode.
 
@@ -132,10 +130,17 @@ Special features of the JBIG-KIT implementation are:
   - Very easy to use documented C library interface.
 
   - Included Gray code conversion routines for efficient encoding
-    of greyscale images.
+    of grayscale images.
 
   - Ready-to-use pbmtojbg and jbgtopbm converters.
 
+Changes in version 1.3 (2002-03-23):
+
+  - bugs fixed in jbg_split_planes(), jbg_dec_merge_planes() that
+    caused a failure for more than eight planes per pixel
+
+  - example converters now can handle PGM files with up to 32 bits
+    per pixel
 
 Changes in version 1.2 (2000-04-08):
 
@@ -161,10 +166,10 @@ Changes in version 1.0 (1998-04-11):
     under certain modes of operation with several bit planes
 
   - added new functions jbg_split_planes(), jbg_dec_merge_planes(),
-    and jbg_dec_getsize_merged() for easy handling of greyscale
+    and jbg_dec_getsize_merged() for easy handling of grayscale
     images
 
-  - added support for compressing greyscale PGM files to pbmtojbg
+  - added support for compressing grayscale PGM files to pbmtojbg
     and jbgtopbm
 
   - more changes to avoid paranoid compiler warnings
@@ -223,21 +228,12 @@ success stories, comments, etc. to
   mkuhn at acm.org
 
 I will try to provide free support and maintenance for this software
-at least for the next few months depending on my available time.
-
-Y2K statement: JBIG-KIT does not handle any date and time related
-data, therefore if JBIG-KIT causes you any problems related to date
-and time overflows, this would indeed be most surprising.
-
-This library has been published in the hope that it will encourage the
-development of good freely available scanned document handling and
-transmission systems for the Internet so that large amounts of scanned
-text can be made available to the global village easily.
+for the foreseeable future depending on my available time.
 
 Happy compressing ...
 
 Markus Kuhn
 
 --
-Markus G. Kuhn, Security Group, Computer Lab, Cambridge University, UK
-email: mkuhn at acm.org,  home page: <http://www.cl.cam.ac.uk/~mgk25/>
+Markus G. Kuhn, Computer Laboratory, University of Cambridge, UK
+Email: mkuhn at acm.org,  WWW: <http://www.cl.cam.ac.uk/~mgk25/>
