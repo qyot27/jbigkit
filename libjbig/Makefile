@@ -1,11 +1,11 @@
 # Unix makefile for the JBIG-KIT library
-# $Id: Makefile,v 1.4 1995-09-20 19:47:45 mskuhn Exp $
+# $Id: Makefile,v 1.5 1996-01-09 15:18:00 mskuhn Exp $
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
 CC = gcc
 
 # Options for the compiler: A high optimization level is suggested
-CFLAGS = -O -g -Wall -ansi -pedantic
+CFLAGS = -O -Wall -ansi -pedantic
 
 all: libjbig.a tstcodec
 

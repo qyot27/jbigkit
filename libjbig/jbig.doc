@@ -246,7 +246,7 @@ The parameters have the following meaning:
 
   pl            the number of bitmap planes you want to encode.
 
-  p             A pointer to an array of pl pointers, were each is again
+  p             A pointer to an array of pl pointers, where each is again
                 pointing to the first byte of a bitmap as described in
                 section 2.1.
 
@@ -420,7 +420,7 @@ the SDEs are stored in the BIE. The bits have the following meaning:
                received. When this bit is set however, the BIE will
                contain the higher layers before the lower layers. This
                avoids additional buffer memory in the encoder and is
-               intended for applications were the encoder is connected
+               intended for applications where the encoder is connected
                to a database which can easily reorder the SDEs before
                sending them to a decoder. Warning: JBIG decoders are
                not expected to support the HITOLO option (e.g. the

@@ -2,7 +2,7 @@
  *  Probability estimation tables for the arithmetic encoder/decoder
  *  given by ITU T.82 Table 24.
  *
- *  $Id: jbig_tab.c,v 1.4 1996-01-06 16:19:14 mskuhn Exp $
+ *  $Id: jbig_tab.c,v 1.5 1996-01-09 15:18:00 mskuhn Exp $
  */
 
 short jbg_lsz[113] = {
@@ -23,7 +23,7 @@ short jbg_lsz[113] = {
   0x59eb
 };
 
-char jbg_nmps[113] = {
+unsigned char jbg_nmps[113] = {
     1,   2,   3,   4,   5,   6,   7,   8,
     9,  10,  11,  12,  13,  13,  15,  16,
    17,  18,  19,  20,  21,  22,  23,  24,
@@ -45,7 +45,7 @@ char jbg_nmps[113] = {
  * least significant 7 bits (mask 0x7f) of jbg_nlps[] contain NLPS value,
  * most significant bit (mask 0x80) contains SWTCH bit
  */
-char jbg_nlps[113] = {
+unsigned char jbg_nlps[113] = {
   129,  14,  16,  18,  20,  23,  25,  28,
    30,  33,  35,   9,  10,  12, 143,  36,
    38,  39,  40,  42,  43,  45,  46,  48,
