@@ -3,13 +3,15 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: jbgtopbm.c,v 1.4 1995-09-20 20:43:09 mskuhn Exp $
+ *  $Id: jbgtopbm.c,v 1.5 1996-01-09 15:23:21 mskuhn Exp $
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include "jbig.h"
+
+#define BUFSIZE 8192
 
 const char usage_msg[] = "JBIGtoPBM converter " JBG_VERSION " -- "
 "reads bi-level image entity (BIE) as input file\n\n"
@@ -26,7 +28,7 @@ char *progname;                  /* global pointer to argv[0] */
 /*
  * Print usage message and abort
  */
-void usage(void)
+static void usage(void)
 {
   fprintf(stderr, usage_msg, progname);
   exit(1);
@@ -36,15 +38,20 @@ void usage(void)
 int main (int argc, char **argv)
 {
   FILE *fin = stdin, *fout = stdout;
-  char *fnin = "<stdin>", *fnout = "<stdout>";
+  const char *fnin = "<stdin>", *fnout = "<stdout>";
   int i, j, result;
   int all_args = 0, files = 0;
   struct jbg_dec_state s;
-#define BUFSIZE 8192
-  char buffer[BUFSIZE];
+  char *buffer;
   unsigned char *p;
   size_t len, cnt;
-  unsigned long xmax = 4294967295U, ymax = 4294967295U;
+  unsigned long xmax = 4294967295UL, ymax = 4294967295UL;
+
+  buffer = malloc(BUFSIZE);
+  if (!buffer) {
+    printf("Sorry, not enough memory available!\n");
+    exit(1);
+  }
 
   /* parse command line arguments */
   progname = argv[0];
@@ -127,7 +134,7 @@ int main (int argc, char **argv)
     fprintf(stderr, "Warning: storing only first of %d bit planes, ignoring "
 	    "remaining %d planes.\n",
 	    jbg_dec_getplanes(&s), jbg_dec_getplanes(&s) - 1);
-  
+
   /* write PBM output file */
   fprintf(fout, "P4\n%ld %ld\n", jbg_dec_getwidth(&s), jbg_dec_getheight(&s));
   fwrite(jbg_dec_getimage(&s, 0), 1,
@@ -141,6 +148,6 @@ int main (int argc, char **argv)
   }
 
   jbg_dec_free(&s);
-  
+
   return 0;
 }
