@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: jbig.c,v 1.14 2002-03-23 01:36:08 mgk25 Exp $
+ *  $Id: jbig.c,v 1.15 2002-04-09 10:13:03 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -94,7 +94,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.14 2002-03-23 01:36:08 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.15 2002-04-09 10:13:03 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -1682,7 +1682,7 @@ void jbg_enc_out(struct jbg_enc_state *s)
 
   /* calculate number of stripes that will be required */
   s->stripes = ((s->yd >> s->d) + 
-		((((1UL << s->d) - 1) & s->xd) != 0) + s->l0 - 1) / s->l0;
+		((((1UL << s->d) - 1) & s->yd) != 0) + s->l0 - 1) / s->l0;
 
   /* allocate buffers for SDE pointers */
   if (s->sde == NULL) {
@@ -2403,7 +2403,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 
     /* calculate number of stripes that will be required */
     s->stripes = ((s->yd >> s->d) +
-		  ((((1UL << s->d) - 1) & s->xd) != 0) + s->l0 - 1) / s->l0;
+		  ((((1UL << s->d) - 1) & s->yd) != 0) + s->l0 - 1) / s->l0;
 
     /* some initialization */
     s->ii[index[s->order & 7][STRIPE]] = 0;
@@ -2550,7 +2550,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	/* calculate again number of stripes that will be required */
 	s->stripes = 
 	  ((s->yd >> s->d) +
-	   ((((1UL << s->d) - 1) & s->xd) != 0) + s->l0 - 1) / s->l0;
+	   ((((1UL << s->d) - 1) & s->yd) != 0) + s->l0 - 1) / s->l0;
 	break;
       case MARKER_ABORT:
 	return JBG_EABORT;
