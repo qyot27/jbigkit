@@ -1,9 +1,9 @@
 /*
  *  Header file for the portable free JBIG compression library
  *
- *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
+ *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: jbig.h,v 1.6 1998-04-05 17:36:19 mgk25 Exp $
+ *  $Id: jbig.h,v 1.7 1998-04-10 17:33:05 mgk25 Exp $
  */
 
 #ifndef JBG_H
@@ -15,7 +15,7 @@
  * JBIG-KIT version number
  */
 
-#define JBG_VERSION    "0.9"
+#define JBG_VERSION    "1.0"
 
 /*
  * Buffer block for SDEs which are temporarily stored by encoder
@@ -146,7 +146,7 @@ struct jbg_enc_state {
                                     * resolution layer 0                   */
   unsigned long stripes;    /* number of stripes required  (determ. by l0) */
   unsigned char **lhp[2];    /* pointers to lower/higher resolution images */
-  int highres;                          /* index of highres image in lhp[] */
+  int *highres;                 /* index [plane] of highres image in lhp[] */
   int order;                                    /* SDE ordering parameters */
   int options;                                      /* encoding parameters */
   int mx, my;                                /* maximum ATMOVE window size */
@@ -211,7 +211,7 @@ struct jbg_dec_state {
   unsigned long line_h1, line_h2, line_h3;     /* variables of decode_pscd */
   unsigned long line_l1, line_l2, line_l3;
   int pseudo;         /* flag for TPBON/TPDON:  next pixel is pseudo pixel */
-  int lntp;                            /* flag for TP: line is not typical */ 
+  int **lntp;        /* flag [plane][layer-dl] for TP: line is not typical */
 
   unsigned long xmax, ymax;         /* if possible abort before image gets *
 				     * larger than this size */
@@ -245,15 +245,23 @@ void jbg_dec_maxsize(struct jbg_dec_state *s, unsigned long xmax,
 		     unsigned long ymax);
 int  jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 		size_t *cnt);
-long jbg_dec_getwidth(struct jbg_dec_state *s);
-long jbg_dec_getheight(struct jbg_dec_state *s);
-unsigned char *jbg_dec_getimage(struct jbg_dec_state *s, int plane);
-long jbg_dec_getsize(struct jbg_dec_state *s);
+long jbg_dec_getwidth(const struct jbg_dec_state *s);
+long jbg_dec_getheight(const struct jbg_dec_state *s);
+unsigned char *jbg_dec_getimage(const struct jbg_dec_state *s, int plane);
+long jbg_dec_getsize(const struct jbg_dec_state *s);
+void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
+			  void (*data_out)(unsigned char *start, size_t len,
+					   void *file), void *file);
+long jbg_dec_getsize_merged(const struct jbg_dec_state *s);
 void jbg_dec_free(struct jbg_dec_state *s);
 
 const char *jbg_strerror(int errnum, int language);
 void jbg_int2dppriv(unsigned char *dptable, const char *internal);
 void jbg_dppriv2int(char *internal, const unsigned char *dptable);
 unsigned long jbg_ceil_half(unsigned long x, int n);
+void jbg_split_planes(unsigned long x, unsigned long y, int has_planes,
+		      int encode_planes,
+		      const unsigned char *src, unsigned char **dest,
+		      int use_graycode);
 
 #endif /* JBG_H */
