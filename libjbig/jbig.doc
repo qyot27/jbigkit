@@ -706,6 +706,16 @@ limitations:
 
   - HITOLO and SEQ bits must not be set in the order value.
 
+A more detailed description of the JBIG-KIT implementation is
+
+  Markus Kuhn: Effiziente Kompression von bi-level Bilddaten durch
+  kontextsensitive arithmetische Codierung. Studienarbeit, Lehrstuhl
+  für Betriebssysteme, IMMD IV, Universität Erlangen-Nürnberg,
+  Erlangen, July 1995. (German, 62 pages)
+  <http://www.cl.cam.ac.uk/~mgk25/kuhn-sta.pdf>
+
+Please quote the above if you use JBIG-KIT in your research project.
+
 *** Happy compressing ***
 
 [end]
