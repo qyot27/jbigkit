@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.c,v 1.17 2003-06-04 20:21:52 mgk25 Exp $
+ *  $Id: jbig.c,v 1.18 2003-06-06 21:00:07 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -38,7 +38,6 @@
  *  yourself.
  */
 
-#define DEBUG 1
 #ifdef DEBUG
 #include <stdio.h>
 #else
@@ -64,7 +63,7 @@
 #endif
 #endif
 
-#define MX_MAX  23     /* maximal supported mx offset for
+#define MX_MAX  127    /* maximal supported mx offset for
 			* adaptive template in the encoder */
 
 #define TPB2CX  0x195  /* contexts for TP special pixels */
@@ -95,7 +94,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.17 2003-06-04 20:21:52 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.18 2003-06-06 21:00:07 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -842,7 +841,8 @@ static void encode_sde(struct jbg_enc_state *s,
   unsigned long line_h2, line_h3, line_l1, line_l2, line_l3;
   struct jbg_arenc_state *se;
   unsigned long i, j, y;
-  unsigned t;
+  long o;
+  unsigned a, p, t;
   int ltp, ltp_old, cx;
   unsigned long c_all, c[MX_MAX + 1], cmin, cmax, clmin, clmax;
   int tmax, at_determined;
@@ -959,6 +959,7 @@ static void encode_sde(struct jbg_enc_state *s,
 	}
 	at_determined = 1;
       }
+      assert(s->tx[plane] >= 0); /* i.e., tx can safely be cast to unsigned */
       
       /* typical prediction */
       if (s->options & JBG_TPBON) {
@@ -1007,11 +1008,20 @@ static void encode_sde(struct jbg_enc_state *s,
 	  /* two line template */
 	  do {
 	    line_h1 <<= 1;  line_h2 <<= 1;  line_h3 <<= 1;
-	    if (s->tx[plane])
-	      arith_encode(se, (((line_h2 >> 10) & 0x3e0) |
-				((line_h1 >> (4 + s->tx[plane])) & 0x010) |
+	    if (s->tx[plane]) {
+	      if ((unsigned) s->tx[plane] > j)
+		a = 0;
+	      else {
+		o = (j - s->tx[plane]) - (j & ~7L);
+		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+		a <<= 4;
+	      }
+	      assert(s->tx[plane] > 23 ||
+		     a == ((line_h1 >> (4 + s->tx[plane])) & 0x010));
+	      arith_encode(se, (((line_h2 >> 10) & 0x3e0) | a |
 				((line_h1 >>  9) & 0x00f)),
 			   (line_h1 >> 8) & 1);
+	    }
 	    else
 	      arith_encode(se, (((line_h2 >> 10) & 0x3f0) |
 				((line_h1 >>  9) & 0x00f)),
@@ -1021,9 +1031,20 @@ static void encode_sde(struct jbg_enc_state *s,
 #endif
 	    /* statistics for adaptive template changes */
 	    if (!at_determined && j >= s->mx && j < hx-2) {
-	      c[0] += !(((line_h2 >> 6) ^ line_h1) & 0x100);
-	      for (t = 5; t <= s->mx; t++)
-		c[t] += !(((line_h1 >> t) ^ line_h1) & 0x100);
+	      p = (line_h1 & 0x100) != 0; /* current pixel value */
+	      c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
+	      assert(!(((line_h2 >> 6) ^ line_h1) & 0x100) ==
+		     (((line_h2 & 0x4000) != 0) == p));
+	      for (t = 5; t <= s->mx && t <= j; t++) {
+		o = (j - t) - (j & ~7L);
+		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+		assert(t > 23 ||
+		       (a == p) == !(((line_h1 >> t) ^ line_h1) & 0x100));
+		c[t] += a == p;
+	      }
+	      for (; t <= s->mx; t++) {
+		c[t] += 0 == p;
+	      }
 	      ++c_all;
 	    }
 	  } while (++j & 7 && j < hx);
@@ -1031,13 +1052,21 @@ static void encode_sde(struct jbg_enc_state *s,
 	  /* three line template */
 	  do {
 	    line_h1 <<= 1;  line_h2 <<= 1;  line_h3 <<= 1;
-	    if (s->tx[plane]) 
+	    if (s->tx[plane]) {
+	      if ((unsigned) s->tx[plane] > j)
+		a = 0;
+	      else {
+		o = (j - s->tx[plane]) - (j & ~7L);
+		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+		a <<= 2;
+	      }
+	      assert(s->tx[plane] > 23 ||
+		     a == ((line_h1 >> (6 + s->tx[plane])) & 0x004));
 	      arith_encode(se, (((line_h3 >>  8) & 0x380) |
-				((line_h2 >> 12) & 0x078) |
-				((line_h1 >> (6 + s->tx[plane])) & 0x004) |
+				((line_h2 >> 12) & 0x078) | a |
 				((line_h1 >>  9) & 0x003)),
 			   (line_h1 >> 8) & 1);
-	    else
+	    } else
 	      arith_encode(se, (((line_h3 >>  8) & 0x380) |
 				((line_h2 >> 12) & 0x07c) |
 				((line_h1 >>  9) & 0x003)),
@@ -1047,9 +1076,20 @@ static void encode_sde(struct jbg_enc_state *s,
 #endif
 	    /* statistics for adaptive template changes */
 	    if (!at_determined && j >= s->mx && j < hx-2) {
-	      c[0] += !(((line_h2 >> 6) ^ line_h1) & 0x100);
-	      for (t = 3; t <= s->mx; t++)
-		c[t] += !(((line_h1 >> t) ^ line_h1) & 0x100);
+	      p = (line_h1 & 0x100) != 0; /* current pixel value */
+	      c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
+	      assert(!(((line_h2 >> 6) ^ line_h1) & 0x100) ==
+		     (((line_h2 & 0x4000) != 0) == p));
+	      for (t = 3; t <= s->mx && t <= j; t++) {
+		o = (j - t) - (j & ~7L);
+		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+		assert(t > 23 ||
+		       (a == p) == !(((line_h1 >> t) ^ line_h1) & 0x100));
+		c[t] += a == p;
+	      }
+	      for (; t <= s->mx; t++) {
+		c[t] += 0 == p;
+	      }
 	      ++c_all;
 	    }
 	  } while (++j & 7 && j < hx);
@@ -1203,7 +1243,7 @@ static void encode_sde(struct jbg_enc_state *s,
 	  line_l2 |= *(lp2 + 1);
 	  line_l1 |= *(lp1 + 1);
 	}
-	do {
+	do { /* ... while (j & 15 && j < hx) */
 
 	  assert(hp - (s->lhp[s->highres[plane]][plane] +
 		       (stripe * hl + i) * hbpl)
@@ -1213,15 +1253,15 @@ static void encode_sde(struct jbg_enc_state *s,
 			(stripe * ll + (i>>1)) * lbpl)
 		 == (ptrdiff_t) j >> 4);
 
-	  line_h1 |= *(hp++);
+	  line_h1 |= *hp;
 	  if (j < hbpl * 8 - 8) {
 	    if (y > 0) {
-	      line_h2 |= *(hp - hbpl);
+	      line_h2 |= *(hp - hbpl + 1);
 	      if (y > 1)
-		line_h3 |= *(hp - hbpl - hbpl);
+		line_h3 |= *(hp - hbpl - hbpl + 1);
 	    }
 	  }
-	  do {
+	  do { /* ... while (j & 7 && j < hx) */
 	    line_l1 <<= 1;  line_l2 <<= 1;  line_l3 <<= 1;
 	    if (ltp && s->tp[j >> 1] < 2) {
 	      /* pixel are typical and have not to be encoded */
@@ -1234,7 +1274,7 @@ static void encode_sde(struct jbg_enc_state *s,
 	      j += 2;
 #endif
 	    } else
-	      do {
+	      do { /* ... while (++j & 1 && j < hx) */
 		line_h1 <<= 1;  line_h2 <<= 1;  line_h3 <<= 1;
 
 		/* deterministic prediction */
@@ -1293,12 +1333,20 @@ static void encode_sde(struct jbg_enc_state *s,
 		}
 
 		/* determine context */
-		if (s->tx[plane])
-		  cx = (((line_h1 >> 9)  & 0x003) |
-			((line_h1 >> (4 + s->tx[plane])) & 0x010) |
+		if (s->tx[plane]) {
+		  if ((unsigned) s->tx[plane] > j)
+		    a = 0;
+		  else {
+		    o = (j - s->tx[plane]) - (j & ~7L);
+		    a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+		    a <<= 4;
+		  }
+		  assert(s->tx[plane] > 23 ||
+			 a == ((line_h1 >> (4 + s->tx[plane])) & 0x010));
+		  cx = (((line_h1 >> 9)  & 0x003) | a |
 			((line_h2 >> 13) & 0x00c) |
 			((line_h3 >> 11) & 0x020));
-		else
+		} else
 		  cx = (((line_h1 >> 9)  & 0x003) |
 			((line_h2 >> 13) & 0x01c) |
 			((line_h3 >> 11) & 0x020));
@@ -1325,6 +1373,7 @@ static void encode_sde(struct jbg_enc_state *s,
 		
 	      } while (++j & 1 && j < hx);
 	  } while (j & 7 && j < hx);
+	  hp++;
 	} while (j & 15 && j < hx);
       } /* for (j = ...) */
 
@@ -1904,8 +1953,10 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
   register unsigned long line_l1, line_l2, line_l3;
   struct jbg_ardec_state *se;
   unsigned long x;
+  long o;
+  unsigned a;
   int n;
-  int pix, cx = 0, slntp, shift, tx;
+  int pix, cx = 0, slntp, tx;
 
   /* SDE loop variables */
   stripe = s->ii[index[s->order & 7][STRIPE]];
@@ -1981,7 +2032,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 #endif
 	  }
       tx = s->tx[plane][layer - s->dl];
-      shift =  tx - ((s->options & JBG_LRLTWO) ? 5 : 3);
+      assert(tx >= 0); /* i.e., tx can safely be cast to unsigned */
 
       /* typical prediction */
       if (s->options & JBG_TPBON && s->pseudo) {
@@ -2081,11 +2132,21 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 	if (s->options & JBG_LRLTWO) {
 	  /* two line template */
 	  do {
-	    if (tx)
-	      pix = arith_decode(se, (((line_h2 >> 9) & 0x3e0) |
-				      ((line_h1 >> shift) & 0x010) |
+	    if (tx) {
+	      if ((unsigned) tx > x)
+		a = 0;
+	      else if (tx < 8)
+		a = ((line_h1 >> (tx - 5)) & 0x010);
+	      else {
+		o = (x - tx) - (x & ~7L);
+		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+		a <<= 4;
+	      }
+	      assert(tx > 31 ||
+		     a == ((line_h1 >> (tx - 5)) & 0x010));
+	      pix = arith_decode(se, (((line_h2 >> 9) & 0x3e0) | a |
 				      (line_h1 & 0x00f)));
-	    else
+	    } else
 	      pix = arith_decode(se, (((line_h2 >> 9) & 0x3f0) |
 				      (line_h1 & 0x00f)));
 	    if (se->result == JBG_MORE || se->result == JBG_MARKER)
@@ -2096,12 +2157,22 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 	} else {
 	  /* three line template */
 	  do {
-	    if (tx) 
+	    if (tx) {
+	      if ((unsigned) tx > x)
+		a = 0;
+	      else if (tx < 8)
+		a = ((line_h1 >> (tx - 3)) & 0x004);
+	      else {
+		o = (x - tx) - (x & ~7L);
+		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+		a <<= 2;
+	      }
+	      assert(tx > 31 ||
+		     a == ((line_h1 >> (tx - 3)) & 0x004));
 	      pix = arith_decode(se, (((line_h3 >>  7) & 0x380) |
-				      ((line_h2 >> 11) & 0x078) |
-				      ((line_h1 >> shift) & 0x004) |
+				      ((line_h2 >> 11) & 0x078) | a |
 				      (line_h1 & 0x003)));
-	    else
+	    } else
 	      pix = arith_decode(se, (((line_h3 >>  7) & 0x380) |
 				      ((line_h2 >> 11) & 0x07c) |
 				      (line_h1 & 0x003)));
@@ -2140,7 +2211,6 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 #endif
 	  }
       tx = s->tx[plane][layer - s->dl];
-      shift = tx - 3;
 
       /* handle lower border of low-resolution image */
       if ((s->i >> 1) >= ll - 1 || (y >> 1) >= ly - 1)
@@ -2264,7 +2334,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 		if (pix & 2) {
 		  if (tx)
 		    cx = ((line_h1         & 0x003) |
-			  (((line_h1 << 2) >> shift) & 0x010) |
+			  (((line_h1 << 2) >> (tx - 3)) & 0x010) |
 			  ((line_h2 >> 12) & 0x00c) |
 			  ((line_h3 >> 10) & 0x020));
 		  else
@@ -2399,7 +2469,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     if (s->mx > 127)
       return JBG_EINVAL;
     s->my = s->buffer[17];
-    if (s->mx > 32 || s->my > 0) 
+    if (s->my > 0) 
       return JBG_EIMPL;
     s->order = s->buffer[18];
     if (index[s->order & 7][0] < 0)
