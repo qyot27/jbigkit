@@ -1,12 +1,12 @@
 # Unix makefile for JBIG-KIT
-# $Id: Makefile,v 1.4 1998-04-11 01:23:51 mgk25 Exp $
+# $Id: Makefile,v 1.5 1998-04-11 01:34:53 mgk25 Exp $
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
 CC = gcc
 
 # Options for the compiler: A high optimization level is suggested
-#CCFLAGS = -O2 -W
-CCFLAGS = -O -g -W -Wall -ansi -pedantic #-DDEBUG  # developer only
+CCFLAGS = -O2 -W
+#CCFLAGS = -O -g -W -Wall -ansi -pedantic #-DDEBUG  # developer only
 
 CFLAGS = $(CCFLAGS) -I../libjbig
 
