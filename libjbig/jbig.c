@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: jbig.c,v 1.15 2002-04-09 10:13:03 mgk25 Exp $
+ *  $Id: jbig.c,v 1.16 2002-08-21 11:53:01 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -94,7 +94,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.15 2002-04-09 10:13:03 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.16 2002-08-21 11:53:01 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -1822,7 +1822,10 @@ void jbg_enc_free(struct jbg_enc_state *s)
       checked_free(s->lhp[1][plane]);
     checked_free(s->lhp[1]);
   }
-
+  
+  /* clear buffer for index of highres image in lhp */
+  checked_free(s->highres);
+  
   return;
 }
 
@@ -2753,6 +2756,7 @@ long jbg_dec_getsize_merged(const struct jbg_dec_state *s)
 void jbg_dec_free(struct jbg_dec_state *s)
 {
   int i;
+  extern char jbg_dptable[];
 
   if (s->d < 0 || s->s == NULL)
     return;
@@ -2775,6 +2779,8 @@ void jbg_dec_free(struct jbg_dec_state *s)
   checked_free(s->lntp);
   checked_free(s->lhp[0]);
   checked_free(s->lhp[1]);
+  if (s->dppriv && s->dppriv != jbg_dptable)
+    checked_free(s->dppriv);
 
   s->s = NULL;
 
