@@ -1,9 +1,9 @@
 /*
  *  Portable Free JBIG image compression library
  *
- *  Markus Kuhn -- mkuhn@acm.org
+ *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.c,v 1.16 2002-08-21 11:53:01 mgk25 Exp $
+ *  $Id: jbig.c,v 1.17 2003-06-04 20:21:52 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -38,6 +38,7 @@
  *  yourself.
  */
 
+#define DEBUG 1
 #ifdef DEBUG
 #include <stdio.h>
 #else
@@ -94,7 +95,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.16 2002-08-21 11:53:01 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.17 2003-06-04 20:21:52 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -940,7 +941,7 @@ static void encode_sde(struct jbg_enc_state *s,
 	if (c_all - cmax < (c_all >> 3) &&
 	    cmax - c[s->tx[plane]] > c_all - cmax &&
 	    cmax - c[s->tx[plane]] > (c_all >> 4) &&
-	    /*                     ^ T.82 says here < !!! Typo ? */
+	    /*                     ^ T.82 said < here, fixed in Cor.1/25 */
 	    cmax - (c_all - c[s->tx[plane]]) > c_all - cmax &&
 	    cmax - (c_all - c[s->tx[plane]]) > (c_all >> 4) &&
 	    cmax - cmin > (c_all >> 2) &&
@@ -951,6 +952,10 @@ static void encode_sde(struct jbg_enc_state *s,
 	    new_tx_line = i;
 	    s->tx[plane] = new_tx;
 	  }
+#ifdef DEBUG
+	  fprintf(stderr, "ATMOVE: line=%ld, tx=%d, c_all=%ld\n",
+		  i, new_tx, c_all);
+#endif
 	}
 	at_determined = 1;
       }
@@ -1075,7 +1080,7 @@ static void encode_sde(struct jbg_enc_state *s,
 	if (c_all - cmax < (c_all >> 3) &&
 	    cmax - c[s->tx[plane]] > c_all - cmax &&
 	    cmax - c[s->tx[plane]] > (c_all >> 4) &&
-	    /*                     ^ T.82 says here < !!! Typo ? */
+	    /*                     ^ T.82 said < here, fixed in Cor.1/25 */
 	    cmax - (c_all - c[s->tx[plane]]) > c_all - cmax &&
 	    cmax - (c_all - c[s->tx[plane]]) > (c_all >> 4) &&
 	    cmax - cmin > (c_all >> 2) &&
@@ -2542,7 +2547,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	    return JBG_EINVAL;
 	  s->at_moves++;
 	} else
-	  return JBG_EINVAL;
+	  return JBG_EIMPL;
 	break;
       case MARKER_NEWLEN:
 	y = (((long) s->buffer[2] << 24) | ((long) s->buffer[3] << 16) |
