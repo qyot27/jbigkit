@@ -1,14 +1,14 @@
 
-Version 0.9 of the JBIG-KIT lossless image compression library available
+Version 1.0 of the JBIG-KIT lossless image compression library available
 ------------------------------------------------------------------------
 
-Markus Kuhn -- 1996-01-09
+Markus Kuhn -- 1998-04-11
 
 
 The latest release of JBIG-KIT can be downloaded over the Internet
 with anonymous ftp from
 
-  <ftp://ftp.informatik.uni-erlangen.de/pub/doc/ISO/JBIG/jbigkit-0.9.tar.gz>
+  <ftp://ftp.informatik.uni-erlangen.de/pub/doc/ISO/JBIG/jbigkit-1.0.tar.gz>
 
 and from a number of other servers.
 
@@ -37,7 +37,7 @@ arithmetic coding. Like the well-known compression algorithms JPEG and
 MPEG, also JBIG has been developed and published by the International
 Organization for Standardization (ISO) and the International
 Telecommunication Union (ITU) (see also <http://www.iso.ch/> and
-<http://www.itu.ch/>).
+<http://www.itu.ch/>). See also <http://www.jbig.org/>.
 
 The JBIG compression algorithm offers the following features:
 
@@ -61,13 +61,13 @@ The JBIG compression algorithm offers the following features:
   - Even much better competitive compression results on computer
     generated images which are free of scanning distortions.
 
-  - JBIG supports hierarchical "progressive" encoding, i.e. it is
+  - JBIG supports hierarchical "progressive" encoding, that means it is
     possible to encode a low resolution image first, followed by
-    resolution enhancement data. This allows e.g. a document browser
-    to display already e.g. a good 75 dpi low resolution version of an
-    image, while the data necessary to reconstruct the full 300 dpi
-    version for laser printer reproduction is still arriving (e.g. over
-    a slow network link or mass storage medium).
+    resolution enhancement data. This allows for instance a document
+    browser to display already a good 75 dpi low resolution version of
+    an image, while the data necessary to reconstruct the full 300 dpi
+    version for laser printer reproduction is still arriving (say
+    over a slow network link or mass storage medium).
 
   - The various resolution layers of a JBIG image in progressive
     encoding mode together require not much more space than a
@@ -86,20 +86,21 @@ The JBIG compression algorithm offers the following features:
     6 bit per pixel, JBIG performs superior to JPEG's lossless
     mode.
 
-The JBIG-KIT is free software under the GNU General Public License and
-provides a portable library implemented in ANSI/ISO C for encoding and
-decoding JBIG data streams together with documentation. The library is
-not intended for 8-bit or 16-bit machine architectures (e.g. old
-MS-DOS C compilers) on which a number of very efficient optimization
-techniques used in this software are not possible. For maximum
-performance, a 32-bit processor is required (64-bit systems work too,
-of course). On architectures with 16-bit pointer arithmetic, only very
-small images can be processed.
+JBIG-KIT is free software under the GNU General Public License. For
+other license arrangements contact the author. JBIG-KIT provides a
+portable library implemented in ANSI/ISO C for encoding and decoding
+JBIG data streams together with documentation. The library is not
+intended for 8-bit or 16-bit machine architectures (e.g., old MS-DOS C
+compilers) on which a number of very efficient optimization techniques
+used in this software are not possible. For maximum performance, a
+32-bit processor is required (64-bit systems work too, of course). On
+architectures with 16-bit pointer arithmetic, only very small images
+can be processed.
 
 Special features of the JBIG-KIT implementation are:
 
-  - Fully multi-thread capable design (no global or static variables,
-    isolated malloc()/free() calls, etc.).
+  - Fully reentrant multithread-capable design (no global or static
+    variables, isolated malloc()/free() calls, etc.).
 
   - Capable of handling incomplete and growing JBIG data streams in
     order to allow earliest display of low resolution versions.
@@ -108,8 +109,8 @@ Special features of the JBIG-KIT implementation are:
     in one single process and task.
 
   - Especially designed with applications in mind that want to display
-    incoming data as early as possible (e.g. similar to the way in
-    which e.g. the Netscape WWW browser handles incoming GIF images).
+    incoming data as early as possible (e.g., similar to the way in
+    which Netscape Navigator handles incoming GIF images).
 
   - Implements all JBIG features and options including progressive and
     sequential encoding, multiple bit planes, user specified
@@ -118,16 +119,33 @@ Special features of the JBIG-KIT implementation are:
     deterministic prediction, typical prediction in lowest and
     differential layers, various stripe orderings, etc. Only the SEQ
     and HITOLO options are currently not supported by the decoder
-    (normally never required, but will probably be added later in case
-    of user requirements).
+    (they are normally never required, but could be added later in
+    case of user requirements).
 
   - Efficient code, optimized utilization of 32-bit processor
     registers.
 
   - Very easy to use documented C library interface.
 
+  - Included Gray code conversion routines for efficient encoding
+    of greyscale images.
+
   - Ready-to-use pbmtojbg and jbgtopbm converters.
 
+
+Changes in version 1.0 (1998-04-11):
+
+  - two bugs fixed that caused the encoder and decoder to fail
+    under certain modes of operation with several bit planes
+
+  - added new functions jbg_split_planes(), jbg_dec_merge_planes(),
+    and jbg_dec_getsize_merged() for easy handling of greyscale
+    images
+
+  - added support for compressing greyscale PGM files to pbmtojbg
+    and jbgtopbm
+
+  - more changes to avoid paranoid compiler warnings
 
 Changes in version 0.9 (1996-01-09):
 
@@ -180,7 +198,7 @@ First release: version 0.5 (1995-05-28)
 Please send all questions, problem reports, patches, suggestions,
 success stories, comments, etc. to
 
-  <mskuhn@cip.informatik.uni-erlangen.de>
+  mkuhn at acm.org
 
 I will try to provide free support and maintenance for this software
 at least for the next few months depending on my available time.
@@ -195,6 +213,5 @@ Happy compressing ...
 Markus Kuhn
 
 --
-Markus Kuhn, Computer Science student -- University of Erlangen,
-Internet Mail: <mskuhn@cip.informatik.uni-erlangen.de> - Germany
-WWW Home: <http://wwwcip.informatik.uni-erlangen.de/user/mskuhn>
+Markus G. Kuhn, Security Group, Computer Lab, Cambridge University, UK
+email: mkuhn at acm.org,  home page: <http://www.cl.cam.ac.uk/~mgk25/>

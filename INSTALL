@@ -2,7 +2,7 @@
 Installing and Using the JBIG-KIT Package
 -----------------------------------------
 
-Markus Kuhn -- 1995-06-10
+Markus Kuhn -- 1998-04-10
 
 
 This text will help you to compile the software and to get started by
@@ -19,7 +19,7 @@ compilers around and on some old Unix systems with ANSI C compilers,
 broken include files might cause a few warnings which you can ignore
 safely). In case you don't already have an ANSI compatible C compiler,
 you should seriously consider to install GNU gcc which is available
-with anonymous ftp from prep.ai.mit.edu.
+from <ftp://prep.ai.mit.edu/pub/gnu>.
 
 If libjbig.a has been produced correctly, then activate the automatic
 library test suite with "make test" or just start libjbig/test_codec.
