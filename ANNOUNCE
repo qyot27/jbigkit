@@ -8,7 +8,7 @@ Markus Kuhn -- 1996-01-09
 The latest release of JBIG-KIT can be downloaded over the Internet
 with anonymous ftp from
 
-  ftp.informatik.uni-erlangen.de   /pub/doc/ISO/JBIG/jbigkit-0.8.tar.gz
+  <ftp://ftp.informatik.uni-erlangen.de/pub/doc/ISO/JBIG/jbigkit-0.9.tar.gz>
 
 and from a number of other servers.
 
@@ -93,8 +93,8 @@ not intended for 8-bit or 16-bit machine architectures (e.g. old
 MS-DOS C compilers) on which a number of very efficient optimization
 techniques used in this software are not possible. For maximum
 performance, a 32-bit processor is required (64-bit systems work too,
-of course). On architectures with only 16-bit pointer arithmetic, only
-very small images can be processed.
+of course). On architectures with 16-bit pointer arithmetic, only very
+small images can be processed.
 
 Special features of the JBIG-KIT implementation are:
 
