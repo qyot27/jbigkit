@@ -3,12 +3,13 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
- *  $Id: pbmtojbg.c,v 1.12 2004-06-11 14:17:49 mgk25 Exp $
+ *  $Id: pbmtojbg.c,v 1.13 2004-06-24 16:10:36 mgk25 Exp $
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 #include "jbig.h"
 
 
@@ -41,9 +42,13 @@ static void usage(void)
      "  -o number\torder byte value: add 1=SMID, 2=ILEAVE, 4=SEQ, 8=HITOLO\n"
      "\t\t(default 3 = ILEAVE+SMID)\n"
      "  -p number\toptions byte value: add DPON=4, TPBON=8, TPDON=16, LRLTWO=64\n"
-     "\t\t(default 28 = DPON+TPBON+TPDON)\n"
+     "\t\t(default 28 = DPON+TPBON+TPDON)\n");
+  fprintf(stderr,
+     "  -C string\tadd the provided string as a comment marker segment"
      "  -c\t\tdelay adaptive template changes to first line of next stripe\n"
-	  "\t\t(only provided for a conformance test)\n");
+	  "\t\t(only provided for a conformance test)\n"
+     "  -r\t\tterminate each stripe with SDRST marker\n"
+	  "\t\t(only intended for decoder testing)" );
   fprintf(stderr,
      "  -Y number\t\tannounce in header initially this larger image height\n"
      "\t\t(only for generating test files with NEWLEN and VLENGTH=1)\n"
@@ -115,10 +120,11 @@ int main (int argc, char **argv)
   char type;
   unsigned char **bitmap, *p, *image;
   struct jbg_enc_state s;
-  int verbose = 0, delay_at = 0, use_graycode = 1;
+  int verbose = 0, delay_at = 0, reset = 0, use_graycode = 1;
   long mwidth = 640, mheight = 480;
   int dl = -1, dh = -1, d = -1, mx = -1;
   unsigned long l0 = 0, y1 = 0;
+  char *comment = NULL;
   int options = JBG_TPDON | JBG_TPBON | JBG_DPON;
   int order = JBG_ILEAVE | JBG_SMID;
 
@@ -146,6 +152,9 @@ int main (int argc, char **argv)
 	    break;
 	  case 'c':
 	    delay_at = 1;
+	    break;
+	  case 'r':
+	    reset = 1;
 	    break;
 	  case 'x':
 	    if (++i >= argc) usage();
@@ -204,6 +213,11 @@ int main (int argc, char **argv)
 	    if (++i >= argc) usage();
 	    j = -1;
 	    mx = atoi(argv[i]);
+	    break;
+	  case 'C':
+	    if (++i >= argc) usage();
+	    j = -1;
+	    comment = argv[i];
 	    break;
 	  default:
 	    usage();
@@ -337,6 +351,12 @@ int main (int argc, char **argv)
   /* Specify a few other options (each is ignored if negative) */
   if (delay_at)
     options |= JBG_DELAY_AT;
+  if (reset)
+    options |= JBG_SDRST;
+  if (comment) {
+    s.comment_len = strlen(comment);
+    s.comment = (unsigned char *) comment;
+  }
   if (y1)
     s.yd1 = y1;
   jbg_enc_lrange(&s, dl, dh);

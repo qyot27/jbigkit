@@ -194,6 +194,12 @@ subset implementations) and for debugging purposes you will normally
 not want to change anything here. The default is 28, which provides
 the best compression result.
 .TP
+.BI \-C " string"
+Add the
+.I string
+in a comment marker segment to the produced data stream. (There is no
+support at present for adding comments that contain the zero byte.)
+.TP
 .BI \-c
 Determine the adaptive template pixel movement as suggested in annex C
 of the standard. By default the template change takes place directly
@@ -202,6 +208,18 @@ test examples in the standard require the adaptive template change to
 be delayed until the first line of the next stripe. This option
 selects this special behavior, which is normally not required except
 in order to pass some conformance tests.
+.TP
+.BI \-r
+Use the SDRST marker instead of the normal SDNORM marker. The probably
+only useful application of this option is to generate test data for
+checking whether a
+.I JBIG1
+decoder has implemented SDRST correctly. In a normal
+.I JBIG1
+data stream, each stripe data entity (SDE) is terminated by an SDNORM
+marker, which preserves the state of the arithmetic encoder (and more)
+for the next stripe in the same layer. The alternative SDRST marker
+resets this state at the end of the stripe.
 .TP
 .BI \-Y " number"
 A long time ago, there were fax machines that couldn't even hold a
