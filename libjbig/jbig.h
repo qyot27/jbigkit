@@ -1,9 +1,9 @@
 /*
  *  Header file for the portable free JBIG compression library
  *
- *  Markus Kuhn -- mkuhn@acm.org
+ *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.h,v 1.12 2002-08-21 15:35:42 mgk25 Exp $
+ *  $Id: jbig.h,v 1.13 2003-06-06 20:57:30 mgk25 Exp $
  */
 
 #ifndef JBG_H
@@ -34,7 +34,7 @@ struct jbg_buf {
 };
 
 /*
- * Maximum number of allowed ATMOVEs per stripe
+ * Maximum number of ATMOVEs per stripe that decoder can handle
  */
 
 #define JBG_ATMOVES_MAX  64
