@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mskuhn@cip.informatik.uni-erlangen.de
  *
- *  $Id: jbig.c,v 1.5 1995-12-10 22:47:32 mskuhn Exp $
+ *  $Id: jbig.c,v 1.6 1996-01-06 16:18:23 mskuhn Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -93,7 +93,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.5 1995-12-10 22:47:32 mskuhn Exp $ ";
+"$Id: jbig.c,v 1.6 1996-01-06 16:18:23 mskuhn Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -301,7 +301,7 @@ ARITH void arith_encode_flush(struct jbg_arenc_state *s)
 ARITH_INL void arith_encode(struct jbg_arenc_state *s, int cx, int pix) 
 {
   extern short jbg_lsz[];
-  extern char jbg_nmps[], jbg_nlps[], jbg_swtch[];
+  extern char jbg_nmps[], jbg_nlps[];
   register int lsz, ss;
   register unsigned char *st;
   long temp;
@@ -332,12 +332,10 @@ ARITH_INL void arith_encode(struct jbg_arenc_state *s, int cx, int pix)
       s->c += s->a;
       s->a = lsz;
     }
-    /* Check whether MPS/LPS exchange is necessary */
-    if (jbg_swtch[ss])
-      *st ^= 0x80;
-    /* chose next probability estimator status */
+    /* Check whether MPS/LPS exchange is necessary
+     * and chose next probability estimator status */
     *st &= 0x80;
-    *st |= jbg_nlps[ss];
+    *st ^= jbg_nlps[ss];
   } else {
     /* encode the more probable symbol */
     if ((s->a -= lsz) & 0xffff8000)
@@ -415,7 +413,7 @@ ARITH void arith_decode_init(struct jbg_ardec_state *s, int reuse_st)
 ARITH_INL int arith_decode(struct jbg_ardec_state *s, int cx)
 {
   extern short jbg_lsz[];
-  extern char jbg_nmps[], jbg_nlps[], jbg_swtch[];
+  extern char jbg_nmps[], jbg_nlps[];
   register int lsz, ss;
   register unsigned char *st;
   int pix;
@@ -472,12 +470,10 @@ ARITH_INL int arith_decode(struct jbg_ardec_state *s, int cx)
       /* MPS_EXCHANGE */
       if (s->a < lsz) {
 	pix = 1 - (*st >> 7);
-	/* Check whether MPS/LPS exchange is necessary */
-	if (jbg_swtch[ss])
-	  *st ^= 0x80;
-	/* chose next probability estimator status */
+	/* Check whether MPS/LPS exchange is necessary
+	 * and chose next probability estimator status */
 	*st &= 0x80;
-	*st |= jbg_nlps[ss];
+	*st ^= jbg_nlps[ss];
       } else {
 	pix = *st >> 7;
 	*st &= 0x80;
@@ -496,12 +492,10 @@ ARITH_INL int arith_decode(struct jbg_ardec_state *s, int cx)
       s->c -= s->a << 16;
       s->a = lsz;
       pix = 1 - (*st >> 7);
-      /* Check whether MPS/LPS exchange is necessary */
-      if (jbg_swtch[ss])
-	*st ^= 0x80;
-      /* chose next probability estimator status */
+      /* Check whether MPS/LPS exchange is necessary
+       * and chose next probability estimator status */
       *st &= 0x80;
-      *st |= jbg_nlps[ss];
+      *st ^= jbg_nlps[ss];
     }
   }
 
@@ -844,7 +838,8 @@ static void encode_sde(struct jbg_enc_state *s,
   int t, ltp, ltp_old, cx;
   unsigned long c_all, c[MX_MAX + 1], cmin, cmax, clmin, clmax;
   int tmax, at_determined;
-  int new_tx, new_tx_line = -1;
+  int new_tx;
+  long new_tx_line = -1;
   struct jbg_buf *new_jbg_buf;
 
 #ifdef DEBUG
@@ -1100,7 +1095,7 @@ static void encode_sde(struct jbg_enc_state *s,
 	p0 = p1 = hp;
 	if (i < hl - 1 && y < hy - 1)
 	  p0 = hp + hbpl;
-	if ((y >> 1) > 0)
+	if (y > 1)
 	  line_l3 = (long)*(q2 - lbpl) << 8;
 	else
 	  line_l3 = 0;
@@ -1109,7 +1104,7 @@ static void encode_sde(struct jbg_enc_state *s,
 	ltp = 1;
 	for (j = 0; j < lx && ltp; q1++, q2++) {
 	  if (j < lbpl * 8 - 8) {
-	    if ((y >> 1) > 0)
+	    if (y > 1)
 	      line_l3 |= *(q2 - lbpl + 1);
 	    line_l2 |= *(q2 + 1);
 	    line_l1 |= *(q1 + 1);
@@ -1180,16 +1175,17 @@ static void encode_sde(struct jbg_enc_state *s,
 
       line_h1 = line_h2 = line_h3 = line_l1 = line_l2 = line_l3 = 0;
       if (y > 0) line_h2 = (long)*(hp - hbpl) << 8;
-      if (y > 1) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
-      if ((y >> 1) > 0)
+      if (y > 1) {
+	line_h3 = (long)*(hp - hbpl - hbpl) << 8;
 	line_l3 = (long)*(lp2 - lbpl) << 8;
+      }
       line_l2 = (long)*lp2 << 8;
       line_l1 = (long)*lp1 << 8;
       
       /* encode line */
       for (j = 0; j < hx; lp1++, lp2++) {
 	if ((j >> 1) < lbpl * 8 - 8) {
-	  if ((y >> 1) > 0)
+	  if (y > 1)
 	    line_l3 |= *(lp2 - lbpl + 1);
 	  line_l2 |= *(lp2 + 1);
 	  line_l1 |= *(lp1 + 1);
@@ -2135,7 +2131,7 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 	  if (s->i > 1 || (y > 1 && !s->reset[plane][layer - s->dl]))
 	    line_h3 = (long)*(hp - hbpl - hbpl) << 8;
 	}
-	if ((s->i >> 1) > 0 || ((y >> 1) > 0 && !s->reset[plane][layer-s->dl]))
+	if (s->i > 1 || (y > 1 && !s->reset[plane][layer-s->dl]))
 	  line_l3 = (long)*(lp2 - lbpl) << 8;
 	line_l2 = (long)*lp2 << 8;
 	line_l1 = (long)*lp1 << 8;
@@ -2147,8 +2143,8 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 	  if ((x >> 1) < lbpl * 8 - 8) {
 	    line_l1 |= *(lp1 + 1);
 	    line_l2 |= *(lp2 + 1);
-	    if ((s->i >> 1) > 0 || 
-		((y >> 1) > 0 && !s->reset[plane][layer - s->dl]))
+	    if (s->i > 1 || 
+		(y > 1 && !s->reset[plane][layer - s->dl]))
 	      line_l3 |= *(lp2 - lbpl + 1);
 	  }
 	do {
