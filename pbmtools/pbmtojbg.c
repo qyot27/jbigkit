@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
- *  $Id: pbmtojbg.c,v 1.11 2004-06-10 20:58:40 mgk25 Exp $
+ *  $Id: pbmtojbg.c,v 1.12 2004-06-11 14:17:49 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -285,7 +285,7 @@ int main (int argc, char **argv)
   case '2':
   case '5':
     /* PGM */
-    image = checkedmalloc(width * height * bpp);
+    image = (unsigned char *) checkedmalloc(width * height * bpp);
     if (type == '2') {
       for (x = 0; x < width * height; x++) {
 	v = getint(fin);

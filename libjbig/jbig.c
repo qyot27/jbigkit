@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.c,v 1.21 2004-06-10 20:56:13 mgk25 Exp $
+ *  $Id: jbig.c,v 1.22 2004-06-11 14:17:06 mgk25 Exp $
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG lossless bi-level image compression algorithm as
@@ -95,7 +95,7 @@
 
 const char jbg_version[] = 
 " JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id: jbig.c,v 1.21 2004-06-10 20:56:13 mgk25 Exp $ ";
+"$Id: jbig.c,v 1.22 2004-06-11 14:17:06 mgk25 Exp $ ";
 
 /*
  * the following array specifies for each combination of the 3
@@ -771,12 +771,14 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
   s->dppriv = jbg_dptable;
   s->res_tab = jbg_resred;
   
-  s->highres = checked_malloc(planes, sizeof(int));
+  s->highres = (int *) checked_malloc(planes, sizeof(int));
   s->lhp[0] = p;
-  s->lhp[1] = checked_malloc(planes, sizeof(unsigned char *));
+  s->lhp[1] = (unsigned char **)
+    checked_malloc(planes, sizeof(unsigned char *));
   for (i = 0; i < planes; i++) {
     s->highres[i] = 0;
-    s->lhp[1][i] = checked_malloc(jbg_ceil_half(y, 1), jbg_ceil_half(x, 1+3));
+    s->lhp[1][i] = (unsigned char *)
+      checked_malloc(jbg_ceil_half(y, 1), jbg_ceil_half(x, 1+3));
   }
   
   s->free_list = NULL;
@@ -2556,8 +2558,10 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     if (s->mx > 127)
       return JBG_EINVAL;
     s->my = s->buffer[17];
+#if 0
     if (s->my > 0) 
       return JBG_EIMPL;
+#endif
     s->order = s->buffer[18];
     if (iindex[s->order & 7][0] < 0)
       return JBG_EINVAL;
@@ -2574,41 +2578,47 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     s->ii[iindex[s->order & 7][LAYER]] = s->dl;
     s->ii[iindex[s->order & 7][PLANE]] = 0;
     if (s->dl == 0) {
-      s->s      = checked_malloc(s->planes, sizeof(struct jbg_ardec_state *));
-      s->tx     = checked_malloc(s->planes, sizeof(int *));
-      s->ty     = checked_malloc(s->planes, sizeof(int *));
-      s->reset  = checked_malloc(s->planes, sizeof(int *));
-      s->lntp   = checked_malloc(s->planes, sizeof(int *));
-      s->lhp[0] = checked_malloc(s->planes, sizeof(unsigned char *));
-      s->lhp[1] = checked_malloc(s->planes, sizeof(unsigned char *));
+      s->s      = (struct jbg_ardec_state **)
+	checked_malloc(s->planes, sizeof(struct jbg_ardec_state *));
+      s->tx     = (int **) checked_malloc(s->planes, sizeof(int *));
+      s->ty     = (int **) checked_malloc(s->planes, sizeof(int *));
+      s->reset  = (int **) checked_malloc(s->planes, sizeof(int *));
+      s->lntp   = (int **) checked_malloc(s->planes, sizeof(int *));
+      s->lhp[0] = (unsigned char **)
+	checked_malloc(s->planes, sizeof(unsigned char *));
+      s->lhp[1] = (unsigned char **)
+	checked_malloc(s->planes, sizeof(unsigned char *));
       for (i = 0; i < s->planes; i++) {
-	s->s[i]     = checked_malloc(s->d - s->dl + 1,
-				     sizeof(struct jbg_ardec_state));
-	s->tx[i]    = checked_malloc(s->d - s->dl + 1, sizeof(int));
-	s->ty[i]    = checked_malloc(s->d - s->dl + 1, sizeof(int));
-	s->reset[i] = checked_malloc(s->d - s->dl + 1, sizeof(int));
-	s->lntp[i]  = checked_malloc(s->d - s->dl + 1, sizeof(int));
-	s->lhp[ s->d    & 1][i] = checked_malloc(s->yd,
-						 jbg_ceil_half(s->xd, 3));
-	s->lhp[(s->d-1) & 1][i] = checked_malloc(jbg_ceil_half(s->yd, 1),
-						 jbg_ceil_half(s->xd, 1+3));
+	s->s[i]     = (struct jbg_ardec_state *)
+	  checked_malloc(s->d - s->dl + 1, sizeof(struct jbg_ardec_state));
+	s->tx[i]    = (int *) checked_malloc(s->d - s->dl + 1, sizeof(int));
+	s->ty[i]    = (int *) checked_malloc(s->d - s->dl + 1, sizeof(int));
+	s->reset[i] = (int *) checked_malloc(s->d - s->dl + 1, sizeof(int));
+	s->lntp[i]  = (int *) checked_malloc(s->d - s->dl + 1, sizeof(int));
+	s->lhp[ s->d    & 1][i] = (unsigned char *)
+	  checked_malloc(s->yd, jbg_ceil_half(s->xd, 3));
+	s->lhp[(s->d-1) & 1][i] = (unsigned char *)
+	  checked_malloc(jbg_ceil_half(s->yd, 1), jbg_ceil_half(s->xd, 1+3));
       }
     } else {
       for (i = 0; i < s->planes; i++) {
-	s->s[i]     = checked_realloc(s->s[i], s->d - s->dl + 1,
-				      sizeof(struct jbg_ardec_state));
-	s->tx[i]    = checked_realloc(s->tx[i], s->d - s->dl + 1, sizeof(int));
-	s->ty[i]    = checked_realloc(s->ty[i], s->d - s->dl + 1, sizeof(int));
-	s->reset[i] = checked_realloc(s->reset[i],
-				      s->d - s->dl + 1, sizeof(int));
-	s->lntp[i]  = checked_realloc(s->lntp[i],
-				      s->d - s->dl + 1, sizeof(int));
-	s->lhp[ s->d    & 1][i] = checked_realloc(s->lhp[s->d    & 1][i],
-						  s->yd,
-						  jbg_ceil_half(s->xd, 3));
-	s->lhp[(s->d-1) & 1][i] = checked_realloc(s->lhp[(s->d-1)&1][i],
-						  jbg_ceil_half(s->yd, 1),
-						  jbg_ceil_half(s->xd, 1+3));
+	s->s[i]     = (struct jbg_ardec_state *)
+	  checked_realloc(s->s[i], s->d - s->dl + 1,
+			  sizeof(struct jbg_ardec_state));
+	s->tx[i]    = (int *) checked_realloc(s->tx[i],
+					      s->d - s->dl + 1, sizeof(int));
+	s->ty[i]    = (int *) checked_realloc(s->ty[i],
+					      s->d - s->dl + 1, sizeof(int));
+	s->reset[i] = (int *) checked_realloc(s->reset[i],
+					      s->d - s->dl + 1, sizeof(int));
+	s->lntp[i]  = (int *) checked_realloc(s->lntp[i],
+					      s->d - s->dl + 1, sizeof(int));
+	s->lhp[ s->d    & 1][i] = (unsigned char *)
+	  checked_realloc(s->lhp[ s->d    & 1][i],
+			  s->yd, jbg_ceil_half(s->xd, 3));
+	s->lhp[(s->d-1) & 1][i] = (unsigned char *)
+	  checked_realloc(s->lhp[(s->d-1) & 1][i],
+			  jbg_ceil_half(s->yd, 1), jbg_ceil_half(s->xd, 1+3));
       }
     }
     for (i = 0; i < s->planes; i++)
@@ -2634,7 +2644,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     if (s->bie_len < 20 + 1728) 
       return JBG_EAGAIN;
     if (!s->dppriv || s->dppriv == jbg_dptable)
-      s->dppriv = checked_malloc(1728, sizeof(char));
+      s->dppriv = (char *) checked_malloc(1728, sizeof(char));
     jbg_dppriv2int(s->dppriv, s->buffer);
   }
 
@@ -2701,6 +2711,8 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	      s->at_ty[s->at_moves] >   (int) s->my ||
 	      (s->at_ty[s->at_moves] == 0 && s->at_tx[s->at_moves] < 0))
 	    return JBG_EINVAL;
+	  if (s->at_ty[s->at_moves] != 0)
+	    return JBG_EIMPL;
 	  s->at_moves++;
 	} else
 	  return JBG_EIMPL;
@@ -3102,7 +3114,7 @@ unsigned char *jbg_next_pscdms(unsigned char *p, size_t len)
 	len -= 2;
 	if (len < 2) return NULL;
       }
-      pp = memchr(p, MARKER_ESC, len - 1);
+      pp = (unsigned char *) memchr(p, MARKER_ESC, len - 1);
       if (!pp) return NULL;
       l = pp - p;
       assert(l < len);

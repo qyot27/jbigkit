@@ -5,7 +5,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: tstcodec.c,v 1.13 2004-06-10 20:50:29 mgk25 Exp $
+ *  $Id: tstcodec.c,v 1.14 2004-06-11 14:17:06 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -142,9 +142,9 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
   unsigned char **image;
 
   plane_size = ((width + 7) / 8) * height;
-  image = checkedmalloc(planes * sizeof(unsigned char *));
+  image = (unsigned char **) checkedmalloc(planes * sizeof(unsigned char *));
   for (i = 0; i < planes; i++) {
-    image[i] = checkedmalloc(plane_size);
+    image[i] = (unsigned char *) checkedmalloc(plane_size);
     memcpy(image[i], orig_image[i], plane_size);
   }
 
@@ -317,10 +317,10 @@ int main(int argc, char **argv)
 	 " -- This test will take a few minutes.\n\n\n");
 
   /* allocate test buffer memory */
-  testbuf = checkedmalloc(TESTBUF_SIZE);
-  testpic = checkedmalloc(TESTPIC_SIZE);
-  se = checkedmalloc(sizeof(struct jbg_arenc_state));
-  sd = checkedmalloc(sizeof(struct jbg_ardec_state));
+  testbuf = (unsigned char *) checkedmalloc(TESTBUF_SIZE);
+  testpic = (unsigned char *) checkedmalloc(TESTPIC_SIZE);
+  se = (struct jbg_arenc_state *) checkedmalloc(sizeof(struct jbg_arenc_state));
+  sd = (struct jbg_ardec_state *) checkedmalloc(sizeof(struct jbg_ardec_state));
 
   /* test a few properties of the machine architecture */
   testbuf[0] = 42;
