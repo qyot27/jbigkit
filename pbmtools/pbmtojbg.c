@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: pbmtojbg.c,v 1.8 1998-04-11 01:24:42 mgk25 Exp $
+ *  $Id: pbmtojbg.c,v 1.9 2002-03-23 01:07:10 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -237,7 +237,7 @@ int main (int argc, char **argv)
     max = getint(fin);
   else
     max = 1;
-  for (planes = 0; 1UL << planes <= max; planes++);
+  for (planes = 0, v = max; v; planes++, v >>= 1);
   bpp = (planes + 7) / 8;
   if (encode_planes < 0 || encode_planes > planes)
     encode_planes = planes;
