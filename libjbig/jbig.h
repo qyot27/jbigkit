@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: jbig.h,v 1.7 1998-04-10 17:33:05 mgk25 Exp $
+ *  $Id: jbig.h,v 1.8 1998-04-11 01:26:33 mgk25 Exp $
  */
 
 #ifndef JBG_H
@@ -92,7 +92,7 @@ struct jbg_arenc_state {
   unsigned char st[4096];    /* probability status for contexts, MSB = MPS */
   unsigned long c;                /* C register, base of coding intervall, *
                                    * layout as in Table 23                 */
-  long a;               /* A register, normalized size of coding intervall */
+  unsigned long a;      /* A register, normalized size of coding intervall */
   long sc;        /* counter for buffered 0xff values which might overflow */
   int ct;  /* bit shift counter, determines when next byte will be written */
   int buffer;                /* buffer for most recent output byte != 0xff */
@@ -109,7 +109,7 @@ struct jbg_ardec_state {
   unsigned char st[4096];    /* probability status for contexts, MSB = MPS */
   unsigned long c;                /* C register, base of coding intervall, *
                                    * layout as in Table 25                 */
-  long a;               /* A register, normalized size of coding intervall */
+  unsigned long a;      /* A register, normalized size of coding intervall */
   int ct;     /* bit shift counter, determines when next byte will be read */
   unsigned char *pscd_ptr;               /* pointer to next PSCD data byte */
   unsigned char *pscd_end;                   /* pointer to byte after PSCD */
@@ -149,7 +149,7 @@ struct jbg_enc_state {
   int *highres;                 /* index [plane] of highres image in lhp[] */
   int order;                                    /* SDE ordering parameters */
   int options;                                      /* encoding parameters */
-  int mx, my;                                /* maximum ATMOVE window size */
+  unsigned mx, my;                           /* maximum ATMOVE window size */
   int *tx;       /* array [plane] with x-offset of adaptive template pixel */
   char *dppriv;         /* optional private deterministic prediction table */
   char *res_tab;           /* table for the resolution reduction algorithm */
