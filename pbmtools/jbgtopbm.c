@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- mkuhn@acm.org
  *
- *  $Id: jbgtopbm.c,v 1.7 1998-04-11 01:24:42 mgk25 Exp $
+ *  $Id: jbgtopbm.c,v 1.8 1999-11-16 15:18:54 mgk25 Exp $
  */
 
 #include <stdio.h>
@@ -80,7 +80,7 @@ void diagnose_bie(FILE *f)
 	 bih[18] & JBG_ILEAVE ? " ILEAVE" : "",
 	 bih[18] & JBG_SMID ? " SMID" : "",
 	 bih[18] & 0xf0 ? " other" : "");
-  printf("  options = %d %s%s%s%s%s%s%s%s\n", bih[18],
+  printf("  options = %d %s%s%s%s%s%s%s%s\n", bih[19],
 	 bih[19] & JBG_LRLTWO ? " LRLTWO" : "",
 	 bih[19] & JBG_VLENGTH ? " VLENGTH" : "",
 	 bih[19] & JBG_TPDON ? " TPDON" : "",
