@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: jbig.h,v 1.16 2004-06-10 20:57:50 mgk25 Exp $
+ *  $Id: jbig.h,v 1.17 2004-06-11 14:18:21 mgk25 Exp $
  */
 
 #ifndef JBG_H
@@ -105,6 +105,14 @@ struct jbg_arenc_state {
  * Status description of an arithmetic decoder
  */
 
+enum jbg_ardec_result {
+  JBG_OK,                          /* symbol has been successfully decoded */
+  JBG_READY,               /* no more bytes of this PSCD required, marker  *
+			    * encountered, probably more symbols available */
+  JBG_MORE,            /* more PSCD data bytes required to decode a symbol */
+  JBG_MARKER     /* more PSCD data bytes required, ignored final 0xff byte */
+};
+
 struct jbg_ardec_state {
   unsigned char st[4096];    /* probability status for contexts, MSB = MPS */
   unsigned long c;                /* C register, base of coding intervall, *
@@ -113,13 +121,7 @@ struct jbg_ardec_state {
   int ct;     /* bit shift counter, determines when next byte will be read */
   unsigned char *pscd_ptr;               /* pointer to next PSCD data byte */
   unsigned char *pscd_end;                   /* pointer to byte after PSCD */
-  enum {
-    JBG_OK,                        /* symbol has been successfully decoded */
-    JBG_READY,             /* no more bytes of this PSCD required, marker  *
-		            * encountered, probably more symbols available */
-    JBG_MORE,          /* more PSCD data bytes required to decode a symbol */
-    JBG_MARKER   /* more PSCD data bytes required, ignored final 0xff byte */
-  } result;                              /* result of previous decode call */
+  enum jbg_ardec_result result;          /* result of previous decode call */
   int startup;                            /* controls initial fill of s->c */
 };
 
