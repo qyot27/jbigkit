@@ -1,0 +1,84 @@
+.TH JBIGTOPBM 1 "1995-05-28"
+.SH NAME
+jbigtopbm \- JBIG to portable bitmap file converter
+.SH SYNOPSIS
+.B jbigtopbm
+[
+.I options
+]
+[
+.I input-file
+| \-  [
+.I output-file
+]]
+.br
+.SH DESCRIPTION
+Reads in a 
+.I JBIG
+bi-level image entity (BIE) from a file or standard
+input, decompresses it and outputs a portable bitmap (PBM) file.
+
+.I JBIG
+is a highly effective lossless compression algorithm for
+bi-level images (one bit per pixel) which is particularly suitable
+for scanned document pages.
+
+A
+.I JBIG
+encoded image can be stored in several resolutions in one or several BIEs.
+All resolution layers except the lowest one are stored efficently as
+differences to the next lower resolution layer.
+Options
+.BI -x
+and
+.BI -y
+can be used to stop the decompression at a specified maximal output
+image size. The input file can consist several concatenated BIEs which
+contain different increasing resolution layers of the same image.
+
+If more than one bit per pixel is stored in the JBIG file, then only
+the first plane will be extracted and a warning message will be printed.
+.SH OPTIONS
+.TP 14
+.BI \-
+A single hyphen instead of an input file name will cause 
+.I jbigtopbm
+to read the data from standard input instead from a file.
+.TP
+.BI \-x " number"
+Decode only up to the largest resolution layer which is still not
+more than
+.I number
+pixels wide. If no such resolution layer exists, then use the smallest
+one available.
+.TP
+.BI \-y " number"
+Decode only up to the largest resolution layer which is still not
+more than
+.I number
+pixels high. If no such resolution layer exists, then use the smallest
+one available. Options
+.BI \-x
+and
+.BI \-y
+can also be used together in which case the largest layer that satisfies
+both limits is selected.
+.SH STANDARDS
+This program implements the
+.I JBIG
+image coding algorithm as specified in ISO/IEC 11544:1993 and
+ITU-T T.82(1993).
+.SH AUTHOR
+The
+.I jbigtopbm 
+program is part of the 
+.I JBIG-KIT
+package, which has beed developed by Markus Kuhn.
+The most recent version of this
+portable
+.I JBIG
+library and tools set is freely available on the Internet
+from anonymous ftp server ftp.uni-erlangen.de in directory pub/doc/ISO/JBIG/.
+Bug reports should be sent to <mskuhn@cip.informatik.uni-erlangen.de>. 
+.SH SEE ALSO
+pbm(5), pbmtojbig(1)
