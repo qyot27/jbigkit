@@ -2,6 +2,13 @@
 JBIG-KIT revision history
 -------------------------
 
+Changes in version 1.7 (yet to be released)
+
+  - encoder support for adding comment marker segment
+
+  - encoder support for SDRST marker (only useful to make
+    encoder able to generate a wider range of test data)
+
 Changes in version 1.6 (2004-06-11)
 
   - various small changes to reduce the risk of 32-bit unsigned
