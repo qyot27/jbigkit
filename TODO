@@ -12,3 +12,5 @@ hopefully have done before one of the next releases:
     into TIFF and implement it (see also RFC 2301)
 
   - eliminate warning messages from compilers other than GCC
+
+  - multichannel (e.g., RGB) support, PPM support
