@@ -74,11 +74,8 @@ dotest2g:
 	./jbgtopbm $(OPTIONSJ) test-$(IMG).jbg test-$(IMG).pgm
 	cmp test-$(IMG).pgm ../examples/$(IMG).pgm
 
-.1.txt:
-	gtroff -man -Tascii $< | grotty -u -b - >$@
-
-.5.txt:
-	gtroff -man -Tascii $< | grotty -u -b - >$@
+.1.txt .5.txt:
+	groff -man -Tascii -P -c -P -b -P -u $< >$@
 
 clean:
 	rm -f *.o *~ core pbmtojbg jbgtopbm

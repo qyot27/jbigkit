@@ -4,10 +4,14 @@ JBIG-KIT revision history
 
 Changes in version 1.7 (yet to be released)
 
-  - encoder support for adding comment marker segment
+  - added encoder support for adding comment marker segment
 
-  - encoder support for SDRST marker (only useful to make
-    encoder able to generate a wider range of test data)
+  - added encoder option for using SDRST marker instead of SDNORM
+    (only useful to make encoder able to generate a wider range
+    of test data)
+
+  - added pbmtojbg options -C and -r, which provide command-line
+    access to the previous two extensions
 
 Changes in version 1.6 (2004-06-11)
 

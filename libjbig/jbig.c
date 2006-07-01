@@ -948,7 +948,7 @@ static void encode_sde(struct jbg_enc_state *s,
   c_all = 0;
   for (t = 0; t <= s->mx; t++)
     c[t] = 0;
-  if (stripe == 0)    /* the SDRST case in handled at the end */
+  if (stripe == 0)    /* the SDRST case is handled at the end */
     s->tx[plane] = 0;
   new_tx = -1;
   at_determined = 0;  /* we haven't yet decided the template move */

@@ -10,7 +10,7 @@ CCFLAGS = -O2 -W
 
 CFLAGS = $(CCFLAGS) -I../libjbig
 
-VERSION=1.6
+VERSION=1.7
 
 all: lib pbm
 	@echo "Enter 'make test' in order to start some automatic tests."
@@ -32,7 +32,7 @@ clean:
 
 distribution: clean
 	rm -f libjbig/libjbig.a
-	(cd ..; tar -c -v --exclude RCS -f jbigkit-$(VERSION).tar jbigkit ; \
+	(cd ..; tar -c -v --exclude .svn -f jbigkit-$(VERSION).tar jbigkit ; \
 	  gzip -9f jbigkit-$(VERSION).tar )
 	mv ../jbigkit-$(VERSION).tar.gz $(HOME)/public_html/download/
 	cp CHANGES $(HOME)/public_html/jbigkit/

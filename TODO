@@ -1,9 +1,8 @@
-Things which have not yet been done for this release but which I will
-hopefully have done before one of the next releases:
+Ideas which I may implement in one of the next releases:
 
   - routine which prepares incompletely decoded images for Xlib
 
-  - call-back function which allows to implement a graphical progress meter
+  - call-back function for progress meter
 
   - use more efficient resolution reduction code suggested by
     Dr. Klaus Bartz <bartzkau@kou3.ina.de>
@@ -14,3 +13,16 @@ hopefully have done before one of the next releases:
   - eliminate warning messages from compilers other than GCC
 
   - multichannel (e.g., RGB) support, PPM support
+
+  - compile-time option to remove progressive encoding and
+    resolution-reduction support (in the interest of reducing code
+    size and attack surface for software patent lawyers)
+
+  - investigate how to best deal with broken BIEs that contain
+    multiple NEWLEN marker segments, which are not permitted by ITU-T
+    T.85, but which have been observed coming from some fax machines;
+    possible options for jbg_newlen(): use first, last, or minimum
+    value
+
+  - version of jbg_newlen() for dealing with BIEs that are split
+    into several blocks
