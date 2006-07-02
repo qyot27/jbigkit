@@ -13,6 +13,8 @@ Changes in version 1.7 (yet to be released)
   - added pbmtojbg options -C and -r, which provide command-line
     access to the previous two extensions
 
+  - slightly improved diagnostic output of jbgtopbm option -d
+
 Changes in version 1.6 (2004-06-11)
 
   - various small changes to reduce the risk of 32-bit unsigned

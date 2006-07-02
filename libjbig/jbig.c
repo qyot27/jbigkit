@@ -728,8 +728,8 @@ static void jbg_set_default_l0(struct jbg_enc_state *s)
 /*
  * Calculate the number of stripes, as defined in clause 6.2.3 of T.82.
  */
-static unsigned long jbg_stripes(unsigned long l0, unsigned long yd,
-				 unsigned long d)
+unsigned long jbg_stripes(unsigned long l0, unsigned long yd,
+			  unsigned long d)
 {
   unsigned long y0 = jbg_ceil_half(yd, d);
 
@@ -3127,7 +3127,12 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
  * PSCD, as well as the length len of the remaining data, return
  * either the pointer to the first byte of the next marker segment or
  * PSCD, or p+len if this was the last one, or NULL if some error was
- * encountered.
+ * encountered. Possible errors are:
+ *
+ *  - not enough bytes left for complete marker segment
+ *  - no marker segment terminates the PSCD
+ *  - unknown marker code encountered
+ *  
  */
 unsigned char *jbg_next_pscdms(unsigned char *p, size_t len)
 {
@@ -3135,17 +3140,20 @@ unsigned char *jbg_next_pscdms(unsigned char *p, size_t len)
   unsigned long l;
 
   if (len < 2)
-    return NULL;
+    return NULL; /* not enough bytes left for complete marker segment */
 
   if (p[0] != MARKER_ESC || p[1] == MARKER_STUFF) {
     do {
       while (p[0] == MARKER_ESC && p[1] == MARKER_STUFF) {
 	p += 2;
 	len -= 2;
-	if (len < 2) return NULL;
+	if (len < 2)
+	  return NULL; /* not enough bytes left for complete marker segment */
       }
+      assert(len >= 2);
       pp = (unsigned char *) memchr(p, MARKER_ESC, len - 1);
-      if (!pp) return NULL;
+      if (!pp)
+	return NULL; /* no marker segment terminates the PSCD */
       l = pp - p;
       assert(l < len);
       p += l;
@@ -3158,18 +3166,23 @@ unsigned char *jbg_next_pscdms(unsigned char *p, size_t len)
     case MARKER_ABORT:
       return p + 2;
     case MARKER_NEWLEN:
-      if (len < 6) return NULL;
+      if (len < 6)
+	return NULL; /* not enough bytes left for complete marker segment */
       return p + 6;
     case MARKER_ATMOVE:
-      if (len < 8) return NULL;
+      if (len < 8)
+	return NULL; /* not enough bytes left for complete marker segment */
       return p + 8;
     case MARKER_COMMENT:
-      if (len < 6) return NULL;
+      if (len < 6)
+	return NULL; /* not enough bytes left for complete marker segment */
       l = (((long) p[2] << 24) | ((long) p[3] << 16) |
 	   ((long) p[4] <<  8) |  (long) p[5]);
-      if (len - 6 < l) return NULL;
+      if (len - 6 < l)
+	return NULL; /* not enough bytes left for complete marker segment */
       return p + 6 + l;
     default:
+      /* unknown marker sequence encountered */
       return NULL;
     }
   }
