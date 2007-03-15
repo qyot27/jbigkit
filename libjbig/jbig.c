@@ -1884,7 +1884,7 @@ void jbg_enc_out(struct jbg_enc_state *s)
    * stripe depends on the option flags.
    */
 
-  /* start and end value vor each loop */
+  /* start and end value for each loop */
   is[iindex[order][STRIPE]] = 0;
   ie[iindex[order][STRIPE]] = s->stripes - 1;
   is[iindex[order][LAYER]] = s->dl;
