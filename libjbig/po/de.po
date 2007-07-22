@@ -1,0 +1,52 @@
+# German translations for jbigkit package
+# Copyright (C) 2007 Markus Kuhn
+# This file is distributed under the same license as the jbigkit package.
+# Markus Kuhn <http://www.cl.cam.ac.uk/~mgk25/>, 2007.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: jbigkit 1.7\n"
+"Report-Msgid-Bugs-To: http://www.cl.cam.ac.uk/~mgk25/jbigkit/\n"
+"POT-Creation-Date: 2007-07-22 14:58+0100\n"
+"PO-Revision-Date: 2007-07-22 15:13+0100\n"
+"Last-Translator: Markus Kuhn <http://www.cl.cam.ac.uk/~mgk25/>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: jbig.c:124
+msgid "Everything is OK"
+msgstr "Kein Problem aufgetreten"
+
+#: jbig.c:125
+msgid "Reached specified maximum image size"
+msgstr "Angegebene maximale Bildgröße erreicht"
+
+#: jbig.c:126
+msgid "Unexpected end of data"
+msgstr "Unerwartetes Ende der Daten"
+
+#: jbig.c:127
+msgid "Not enough memory available"
+msgstr "Nicht genügend Speicher vorhanden"
+
+#: jbig.c:128
+msgid "ABORT marker segment encountered"
+msgstr "Es wurde eine Abbruch-Sequenz gefunden"
+
+#: jbig.c:129
+msgid "Unknown marker segment encountered"
+msgstr "Eine unbekannte Markierungssequenz wurde gefunden"
+
+#: jbig.c:130
+msgid "Incremental BIE does not continue previous one"
+msgstr "Neue Daten passen nicht zu vorangegangenen Daten"
+
+#: jbig.c:131
+msgid "Invalid data encountered"
+msgstr "Es wurden ungültige Daten gefunden"
+
+#: jbig.c:132
+msgid "Unimplemented JBIG features are used"
+msgstr "Nicht implementierte JBIG Optionen wurden benutzt"

@@ -113,52 +113,24 @@ static const int iindex[8][3] = {
   { -1, -1, -1 }  /* SEQ + SMID + ILEAVE -> illegal combination */
 };
 
+#define _(String) String  /* keyword marking translatable string for GNU gettext */
 
 /*
- * Array [language][message] with text string error messages that correspond
+ * Array with English ASCII error messages that correspond
  * to return values from public functions in this library.
  */
-#define NEMSG         9  /* number of error codes */
-#define NEMSG_LANG    3  /* number of supported languages */
-static const char *errmsg[NEMSG_LANG][NEMSG] = {
+static const char *errmsg[] = {
   /* English (JBG_EN) */
-  {
-    "Everything is ok",                                     /* JBG_EOK */
-    "Reached specified maximum size",                       /* JBG_EOK_INTR */
-    "Unexpected end of data",                               /* JBG_EAGAIN */
-    "Not enough memory available",                          /* JBG_ENOMEM */
-    "ABORT marker found",                                   /* JBG_EABORT */
-    "Unknown marker segment encountered",                   /* JBG_EMARKER */
-    "Incremental BIE does not fit to previous one",         /* JBG_ENOCONT */
-    "Invalid data encountered",                             /* JBG_EINVAL */
-    "Unimplemented features used"                           /* JBG_EIMPL */
-  },
-  /* German (JBG_DE_8859_1) */
-  {
-    "Kein Problem aufgetreten",                             /* JBG_EOK */
-    "Angegebene maximale Bildgr\366\337e erreicht",         /* JBG_EOK_INTR */
-    "Unerwartetes Ende der Daten",                          /* JBG_EAGAIN */
-    "Nicht gen\374gend Speicher vorhanden",                 /* JBG_ENOMEM */
-    "Es wurde eine Abbruch-Sequenz gefunden",               /* JBG_EABORT */
-    "Eine unbekannte Markierungssequenz wurde gefunden",    /* JBG_EMARKER */
-    "Neue Daten passen nicht zu vorangegangenen Daten",     /* JBG_ENOCONT */
-    "Es wurden ung\374ltige Daten gefunden",                /* JBG_EINVAL */
-    "Noch nicht implementierte Optionen wurden benutzt"     /* JBG_EIMPL */
-  },
-  /* German (JBG_DE_UTF_8) */
-  {
-    "Kein Problem aufgetreten",                             /* JBG_EOK */
-    "Angegebene maximale Bildgr\303\266\303\237e erreicht", /* JBG_EOK_INTR */
-    "Unerwartetes Ende der Daten",                          /* JBG_EAGAIN */
-    "Nicht gen\303\274gend Speicher vorhanden",             /* JBG_ENOMEM */
-    "Es wurde eine Abbruch-Sequenz gefunden",               /* JBG_EABORT */
-    "Eine unbekannte Markierungssequenz wurde gefunden",    /* JBG_EMARKER */
-    "Neue Daten passen nicht zu vorangegangenen Daten",     /* JBG_ENOCONT */
-    "Es wurden ung\303\274ltige Daten gefunden",            /* JBG_EINVAL */
-    "Noch nicht implementierte Optionen wurden benutzt"     /* JBG_EIMPL */
-  }
+  _("Everything is OK"),                                     /* JBG_EOK */
+  _("Reached specified maximum image size"),                 /* JBG_EOK_INTR */
+  _("Unexpected end of data"),                               /* JBG_EAGAIN */
+  _("Not enough memory available"),                          /* JBG_ENOMEM */
+  _("ABORT marker segment encountered"),                     /* JBG_EABORT */
+  _("Unknown marker segment encountered"),                   /* JBG_EMARKER */
+  _("Incremental BIE does not continue previous one"),       /* JBG_ENOCONT */
+  _("Invalid data encountered"),                             /* JBG_EINVAL */
+  _("Unimplemented JBIG features are used")                  /* JBG_EIMPL */
 };
-
 
 
 /*
@@ -2003,17 +1975,14 @@ void jbg_enc_free(struct jbg_enc_state *s)
 
 
 /*
- * Convert the error codes used by jbg_dec_in() into a string
- * written in the selected language and character set.
+ * Convert the error codes used by jbg_dec_in() into an English ASCII string
  */
-const char *jbg_strerror(int errnum, int language)
+const char *jbg_strerror(int errnum)
 {
-  if (errnum < 0 || errnum >= NEMSG)
+  if (errnum < 0 || (unsigned) errnum >= sizeof(errmsg)/sizeof(errmsg[0]))
     return "Unknown error code passed to jbg_strerror()";
-  if (language < 0 || language >= NEMSG_LANG)
-    return "Unknown language code passed to jbg_strerror()";
 
-  return errmsg[language][errnum];
+  return errmsg[errnum];
 }
 
 

@@ -424,7 +424,7 @@ int main (int argc, char **argv)
   }
   if (result != JBG_EOK && result != JBG_EOK_INTR) {
     fprintf(stderr, "Problem with input file '%s': %s\n",
-	    fnin, jbg_strerror(result, JBG_EN));
+	    fnin, jbg_strerror(result));
     if (fout != stdout) {
       fclose(fout);
       remove(fnout);

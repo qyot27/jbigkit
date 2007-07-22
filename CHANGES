@@ -15,6 +15,11 @@ Changes in version 1.7 (yet to be released)
 
   - slightly improved diagnostic output of jbgtopbm option -d
 
+  - non-English translations of error messages are now provided
+    in a separate PO file (e.g., for use with GNU gettext),
+    jbg_strerror() no longer has a language attribute and the
+    JBG_EN, JBG_DE_8859_1, JBG_DE_UTF_8 constants no longer exist
+
 Changes in version 1.6 (2004-06-11)
 
   - various small changes to reduce the risk of 32-bit unsigned

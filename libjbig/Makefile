@@ -20,6 +20,11 @@ libjbig.a: jbig.o jbig_tab.o
 
 jbig.o: jbig.c jbig.h
 
+jbig.pot: jbig.c
+	xgettext -o$@ -k_ \
+	  --copyright-holder='Markus Kuhn' \
+	  --msgid-bugs-address='http://www.cl.cam.ac.uk/~mgk25/jbigkit/' $+
+
 test: tstcodec
 	./tstcodec
 

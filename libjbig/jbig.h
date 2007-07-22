@@ -81,15 +81,6 @@ struct jbg_buf {
 #define JBG_EIMPL      8
 
 /*
- * Language code for error message strings (based on ISO 639 2-letter
- * standard language name abbreviations).
- */ 
-
-#define JBG_EN         0        /* English */
-#define JBG_DE_8859_1  1        /* German in ISO Latin 1 character set */
-#define JBG_DE_UTF_8   2        /* German in Unicode UTF-8 encoding */
-
-/*
  * Status description of an arithmetic encoder
  */
 
@@ -268,7 +259,7 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
 long jbg_dec_getsize_merged(const struct jbg_dec_state *s);
 void jbg_dec_free(struct jbg_dec_state *s);
 
-const char *jbg_strerror(int errnum, int language);
+const char *jbg_strerror(int errnum);
 void jbg_int2dppriv(unsigned char *dptable, const char *internal);
 void jbg_dppriv2int(char *internal, const unsigned char *dptable);
 unsigned long jbg_ceil_half(unsigned long x, int n);

@@ -174,7 +174,7 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
   result = jbg_dec_in(&sjd, testbuf, testbuf_len, NULL);
   if (result != JBG_EOK) {
     printf("Decoder complained with return value %d: " FAILED "\n"
-	   "Cause: '%s'\n", result, jbg_strerror(result, JBG_EN));
+	   "Cause: '%s'\n", result, jbg_strerror(result));
     trouble++;
   } else {
     printf("Image comparison: ");
@@ -199,7 +199,7 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
     result = jbg_dec_in(&sjd, testbuf + l, 1, NULL);
     if (l < testbuf_len - 1 && result != JBG_EAGAIN) {
       printf("Decoder complained with return value %d at byte %ld: " FAILED
-	     "\nCause: '%s'\n", result, l, jbg_strerror(result, JBG_EN));
+	     "\nCause: '%s'\n", result, l, jbg_strerror(result));
       trouble++;
       break;
     }
@@ -207,7 +207,7 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
   if (l == testbuf_len) {
     if (result != JBG_EOK) {
       printf("Decoder complained with return value %d at final byte: " FAILED
-	     "\nCause: '%s'\n", result, jbg_strerror(result, JBG_EN));
+	     "\nCause: '%s'\n", result, jbg_strerror(result));
       trouble++;
     } else {
       printf("Image comparison: ");

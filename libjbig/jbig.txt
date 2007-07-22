@@ -2,7 +2,7 @@
 Using the JBIG-KIT library
 --------------------------
 
-Markus Kuhn -- 2004-06-10
+Markus Kuhn -- 2007-07-22
 
 
 This text explains how to use the functions provided by the JBIG-KIT
@@ -689,19 +689,14 @@ and the memory can be released.
 
 The function
 
-  const char *jbg_strerror(int errnum, int language);
+  const char *jbg_strerror(int errnum);
 
 returns a pointer to a short single line test message which explains
 the return value of jbg_dec_in(). This message can be used in order to
 provide the user a brief informative message about what when wrong
-while decompressing the JBIG image. The error messages are available
-in several languages and in several character sets. Currently
-supported are the following values for the language parameter:
-
-  JBG_EN              English messages in ASCII
-  JBG_DE_8859_1       German messages in ISO 8859-1 Latin 1 character set
-  JBG_DE_UTF_8        German messages in ISO 10646/Unicode UTF-8 encoding
-
+while decompressing a JBIG image. The po/ subdirectory contains *.po
+files that translate the English ASCII strings returned by
+jbg_strerror() into other langauges (e.g., for use with GNU gettext).
 
 The current implementation of the JBIG-KIT decoder has the following
 limitations:
