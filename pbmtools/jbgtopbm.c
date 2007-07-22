@@ -103,8 +103,8 @@ void read_file(unsigned char **buf, size_t *buflen, size_t *len, FILE *f)
  */
 void fprint_bytes(FILE *f, unsigned char *p, size_t len, int width)
 {
-  int i;
-  int max = width / 3;
+  size_t i;
+  size_t max = width / 3;
   if (len > max)
     max -= 7;
   for (i = 0; i < len && i < max; i++)
@@ -200,7 +200,7 @@ void diagnose_bie(FILE *fin)
     pnext = jbg_next_pscdms(p, len - (p - bie));
     if (p[0] != MARKER_ESC || p[1] == MARKER_STUFF) {
       fprintf(f, "%06x: PSCD: ", p - bie);
-      fprint_bytes(f, p, pnext ? pnext - p : len - (p - bie), 60);
+      fprint_bytes(f, p, pnext ? (size_t) (pnext - p) : len - (p - bie), 60);
       if (!pnext) {
 	fprintf(f, "Error: PSCD not terminated by SDNORM or SDRST marker\n");
 	return;
