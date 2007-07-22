@@ -20,6 +20,8 @@ Changes in version 1.7 (yet to be released)
     jbg_strerror() no longer has a language attribute and the
     JBG_EN, JBG_DE_8859_1, JBG_DE_UTF_8 constants no longer exist
 
+  - arithmetic codec routines in separate source file
+
 Changes in version 1.6 (2004-06-11)
 
   - various small changes to reduce the risk of 32-bit unsigned
