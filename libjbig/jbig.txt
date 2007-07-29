@@ -762,7 +762,7 @@ A more detailed description of the JBIG-KIT implementation is
 
   Markus Kuhn: Effiziente Kompression von bi-level Bilddaten durch
   kontextsensitive arithmetische Codierung. Studienarbeit, Lehrstuhl
-  für Betriebssysteme, IMMD IV, Universität Erlangen-Nürnberg,
+  fÃ¼r Betriebssysteme, IMMD IV, UniversitÃ¤t Erlangen-NÃ¼rnberg,
   Erlangen, July 1995. (German, 62 pages)
   <http://www.cl.cam.ac.uk/~mgk25/kuhn-sta.pdf>
 

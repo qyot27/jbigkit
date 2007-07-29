@@ -12,12 +12,16 @@ all: libjbig.a tstcodec
 tstcodec: tstcodec.o jbig.o jbig_ar.o
 	$(CC) $(CFLAGS) -o tstcodec $+
 
+tstcodec85: tstcodec85.o jbig85.o jbig_ar.o
+	$(CC) $(CFLAGS) -o tstcodec85 $+
+
 libjbig.a: jbig.o jbig_ar.o
 	rm -f libjbig.a
 	ar rc libjbig.a jbig.o jbig_ar.o
 	-ranlib libjbig.a
 
 jbig.o: jbig.c jbig.h jbig_ar.h
+jbig85.o: jbig85.c jbig85.h jbig_ar.h
 jbig_ar.o: jbig_ar.c jbig_ar.h
 
 jbig.pot: jbig.c
@@ -25,8 +29,9 @@ jbig.pot: jbig.c
 	  --copyright-holder='Markus Kuhn' \
 	  --msgid-bugs-address='http://www.cl.cam.ac.uk/~mgk25/jbigkit/' $+
 
-test: tstcodec
+test: tstcodec tstcodec85
 	./tstcodec
+	./tstcodec85
 
 t82test.pbm: tstcodec
 	./tstcodec $@

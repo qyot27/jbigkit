@@ -1,7 +1,7 @@
 /*
- *  Header file for the portable free JBIG compression library
+ *  Header file for the portable JBIG compression library
  *
- *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
+ *  Copyright 1995-2007 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
  *  $Id$
  */

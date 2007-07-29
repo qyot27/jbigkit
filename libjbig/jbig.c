@@ -1,7 +1,7 @@
 /*
  *  Portable JBIG image compression library
  *
- *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
+ *  Copyright 1995-2007 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
  *  $Id$
  *

@@ -7,7 +7,7 @@
  *  This module implements a portable standard C arithmetic encoder
  *  and decoder used by the JBIG lossless bi-level image compression
  *  algorithm as specified in International Standard ISO 11544:1993
- *  or equivalently as specified in ITU-T Recommendation T.82.
+ *  and ITU-T Recommendation T.82.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
