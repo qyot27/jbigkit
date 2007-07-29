@@ -9,16 +9,16 @@ CFLAGS = -O -Wall -ansi -pedantic
 
 all: libjbig.a tstcodec
 
-tstcodec: tstcodec.c jbig.c jbig.h jbig_ar.o
-	$(CC) $(CFLAGS) -o tstcodec -DTEST_CODEC tstcodec.c jbig.c \
-	jbig_ar.o
+tstcodec: tstcodec.o jbig.o jbig_ar.o
+	$(CC) $(CFLAGS) -o tstcodec $+
 
 libjbig.a: jbig.o jbig_ar.o
 	rm -f libjbig.a
 	ar rc libjbig.a jbig.o jbig_ar.o
 	-ranlib libjbig.a
 
-jbig.o: jbig.c jbig.h
+jbig.o: jbig.c jbig.h jbig_ar.h
+jbig_ar.o: jbig_ar.c jbig_ar.h
 
 jbig.pot: jbig.c
 	xgettext -o$@ -k_ \

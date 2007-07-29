@@ -6,10 +6,10 @@
  *  $Id$
  *
  *  This module implements a portable standard C encoder and decoder
- *  using the JBIG lossless bi-level image compression algorithm as
- *  specified in International Standard ISO 11544:1993 or equivalently
- *  as specified in ITU-T Recommendation T.82. See the file jbig.txt
- *  for usage instructions and application examples.
+ *  using the JBIG1 lossless bi-level image compression algorithm
+ *  specified in International Standard ISO 11544:1993 and
+ *  ITU-T Recommendation T.82. See the file jbig.txt for usage
+ *  instructions and application examples.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -99,23 +99,22 @@ static const int iindex[8][3] = {
   { -1, -1, -1 }  /* SEQ + SMID + ILEAVE -> illegal combination */
 };
 
-#define _(String) String  /* keyword marking translatable string for GNU gettext */
+#define _(String) String  /* to mark translatable string for GNU gettext */
 
 /*
  * Array with English ASCII error messages that correspond
  * to return values from public functions in this library.
  */
 static const char *errmsg[] = {
-  /* English (JBG_EN) */
   _("Everything is OK"),                                     /* JBG_EOK */
   _("Reached specified maximum image size"),                 /* JBG_EOK_INTR */
-  _("Unexpected end of data"),                               /* JBG_EAGAIN */
+  _("Unexpected end of input data stream"),                  /* JBG_EAGAIN */
   _("Not enough memory available"),                          /* JBG_ENOMEM */
   _("ABORT marker segment encountered"),                     /* JBG_EABORT */
   _("Unknown marker segment encountered"),                   /* JBG_EMARKER */
   _("Incremental BIE does not continue previous one"),       /* JBG_ENOCONT */
-  _("Invalid data encountered"),                             /* JBG_EINVAL */
-  _("Unimplemented JBIG features are used")                  /* JBG_EIMPL */
+  _("Input data stream contains invalid data"),              /* JBG_EINVAL */
+  _("Input data stream uses unimplemented JBIG features")    /* JBG_EIMPL */
 };
 
 
