@@ -5,7 +5,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id: tstcodec.c,v 1.15 2004-06-24 16:36:17+01 mgk25 Exp $
+ *  $Id$
  */
 
 #include <stdio.h>

@@ -4,7 +4,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
- *  $Id: jbig_ar.h $
+ *  $Id$
  */
 
 #ifndef JBG_AR_H

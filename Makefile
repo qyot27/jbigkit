@@ -1,5 +1,5 @@
 # Unix makefile for JBIG-KIT
-# $Id: Makefile,v 1.14 2004-06-10 22:00:30+01 mgk25 Exp $
+# $Id$
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
 CC = gcc

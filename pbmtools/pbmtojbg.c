@@ -3,7 +3,7 @@
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
- *  $Id: pbmtojbg.c,v 1.16 2004-06-24 20:36:11+01 mgk25 Exp $
+ *  $Id$
  */
 
 #include <stdio.h>
