@@ -91,10 +91,13 @@ struct jbg_enc_state {
   unsigned long y01;    /* BIH announced height of image; y01 != y0 can be
                                       caused by calling jbg85_enc_newlen() */
   unsigned long l0;                          /* number of lines per stripe */
-  unsigned char *p[3];      /* current (p[0]) and previous (p[1..2]) lines */
+  unsigned char *pline[2];                  /* point to previous two lines */
   int options;                                      /* encoding parameters */
   unsigned mx;                               /* maximum ATMOVE window size */
+  unsigned long y;                        /* line counter for entire image */
+  unsigned long i;                              /* line counter per stripe */
   int tx;                           /* x-offset of adaptive template pixel */
+  int ltp_old;                           /* true if line y-1 was "typical" */
   struct jbg_arenc_state s;                   /* arithmetic encoder status */
   void (*data_out)(unsigned char *start, size_t len, void *file);
                                                     /* data write callback */

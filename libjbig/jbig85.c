@@ -116,10 +116,22 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x0, unsigned long y0,
   s->l0 = s->y0 / 35;             /* 35 stripes/image */
   if (s->l0 > 128) s->l0 = 128;
   if (s->l0 < 2) s->l0 = 2;
+#if 1
+  s->l0 = 128; /* BASIC setting */
+#endif
   s->mx = 127;
   s->options = JBG_TPBON | JBG_VLENGTH;
   s->comment = NULL;
+  s->pline[0] = s->pline[1] = NULL;
+  s->y = 0;
+  s->i = 0;
+  s->ltp_old = 1;
   
+  /* initialize arithmetic encoder */
+  arith_encode_init(s->s, 0);
+  s->s->byte_out = s->data_out;
+  s->s->file = s->file;
+
   return;
 }
 
@@ -141,21 +153,96 @@ void jbg_enc_options(struct jbg_enc_state *s, int options,
 
 
 /*
- * This function actually does all the tricky work involved in producing
- * a SDE, which is stored in the appropriate s->sde[][][] element
- * for later output in the correct order.
+ * Encode one full BIE and pass the generated data to the specified
+ * call-back function
  */
-static void encode_sde(struct jbg_enc_state *s,
-		       long stripe, int layer, int plane)
+void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
 {
-  unsigned char *hp, *lp1, *lp2, *p0, *p1, *q1, *q2;
-  unsigned long hl, ll, hx, hy, lx, ly, hbpl, lbpl;
-  unsigned long line_h0 = 0, line_h1 = 0;
-  unsigned long line_h2, line_h3, line_l1, line_l2, line_l3;
-  struct jbg_arenc_state *se;
-  unsigned long y;  /* current line number in highres image */
-  unsigned long i;  /* current line number within highres stripe */
-  unsigned long j;  /* current column number in highres image */
+  unsigned long bpl;
+  unsigned char buf[20];
+  unsigned long xd, yd, y;
+
+  /* things that need to be done before the first line is encoded */
+  if (sd->y == 0) {
+    /* prepare BIH */
+    buf[0]  = 0;   /* DL = initial layer to be transmitted */
+    buf[1]  = 0;   /* D  = number of differential layers */
+    buf[2]  = 1;   /* P  = number of bit planes */
+    buf[3]  = 0;
+    buf[4]  =  s->x0 >> 24;
+    buf[5]  = (s->x0 >> 16) & 0xff;
+    buf[6]  = (s->x0 >>  8) & 0xff;
+    buf[7]  =  s->x0        & 0xff;
+    buf[8]  =  s->y0 >> 24;
+    buf[9]  = (s->y0 >> 16) & 0xff;
+    buf[10] = (s->y0 >>  8) & 0xff;
+    buf[11] =  s->y0 & 0xff;
+    buf[12] =  s->l0 >> 24;
+    buf[13] = (s->l0 >> 16) & 0xff;
+    buf[14] = (s->l0 >>  8) & 0xff;
+    buf[15] =  s->l0 & 0xff;
+    buf[16] = s->mx;
+    buf[17] = 0;   /* MX = maximum horizontal offset allowed for AT pixel */
+    buf[18] = 0;   /* order: HITOLO = SEQ = ILEAVE = SMID = 0 */
+    buf[19] = s->options & (JBG_LRLTWO | JBG_VLENGTH | TPBON);
+
+    /* output BIH */
+    s->data_out(buf, 20, s->file);
+  }
+
+  /* things that need to be done before the next SDE is encoded */
+  if (sd->i == 0) {
+
+    /* output comment marker segment if there is any pending */
+    if (s->comment) {
+      buf[0] = MARKER_ESC;
+      buf[1] = MARKER_COMMENT;
+      buf[2] =  s->comment_len >> 24;
+      buf[3] = (s->comment_len >> 16) & 0xff;
+      buf[4] = (s->comment_len >>  8) & 0xff;
+      buf[5] =  s->comment_len & 0xff;
+      s->data_out(buf, 6, s->file);
+      s->data_out(s->comment, s->comment_len, s->file);
+      s->comment = NULL;
+    }
+
+    /*
+     * When we generate a NEWLEN test case (s->yd1 > s->yd), output
+     * NEWLEN after last stripe if we have only a single
+     * resolution layer or plane (see ITU-T T.85 profile), otherwise
+     * output NEWLEN before last stripe.
+     */
+    if (s->yd1 > s->yd &&
+	(stripe == s->stripes - 1 ||
+	 (stripe == s->stripes - 2 && 
+	  (s->dl != s->dh || s->planes > 1)))) {
+      s->yd1 = s->yd;
+      yd = jbg_ceil_half(s->yd, s->d - s->dh);
+      buf[0] = MARKER_ESC;
+      buf[1] = MARKER_NEWLEN;
+      buf[2] = yd >> 24;
+      buf[3] = (yd >> 16) & 0xff;
+      buf[4] = (yd >> 8) & 0xff;
+      buf[5] = yd & 0xff;
+      s->data_out(buf, 6, s->file);
+#ifdef DEBUG
+      fprintf(stderr, "NEWLEN: yd=%lu\n", yd);
+#endif
+      if (stripe == s->stripes - 1) {
+	buf[1] = MARKER_SDNORM;
+	s->data_out(buf, 2, s->file);
+      }
+    }
+
+    /* restart arithmetic encoder */
+    arith_encode_init(s->s, 1);
+  }
+
+  unsigned char *hp, *p1, *q1;
+  unsigned long line_h1 = 0, line_h2, line_h3;
+  unsigned long y;  /* current line number in image */
+  unsigned long i;  /* current line number within stripe */
+  unsigned long j;  /* loop variable for pixel column */
   long o;
   unsigned a, p, t;
   int ltp, ltp_old, cx;
@@ -164,300 +251,225 @@ static void encode_sde(struct jbg_enc_state *s,
   int new_tx;
   long new_tx_line = -1;
   int reset;
-  struct jbg_buf *new_jbg_buf;
 
 #ifdef DEBUG
   static long tp_lines, tp_exceptions, tp_pixels, dp_pixels;
   static long encoded_pixels;
-#endif
-
-  /* return immediately if this stripe has already been encoded */
-  if (s->sde[stripe][layer][plane] != SDE_TODO)
-    return;
-
-#ifdef DEBUG
-  if (stripe == 0)
+  if (y == 0)
     tp_lines = tp_exceptions = tp_pixels = dp_pixels = encoded_pixels = 0;
-  fprintf(stderr, "encode_sde: s/d/p = %2ld/%2d/%2d\n",
-	  stripe, layer, plane);
+  fprintf(stderr, "encode line %ld/%2d\n", y, i);
 #endif
 
-  /* number of lines per stripe in highres image */
-  hl = s->l0 << layer;
-  /* number of lines per stripe in lowres image */
-  ll = hl >> 1;
-  /* current line number in highres image */
-  y = stripe * hl;
-  /* number of pixels in highres image */
-  hx = jbg_ceil_half(s->xd, s->d - layer);
-  hy = jbg_ceil_half(s->yd, s->d - layer);
-  /* number of pixels in lowres image */
-  lx = jbg_ceil_half(hx, 1);
-  ly = jbg_ceil_half(hy, 1);
-  /* bytes per line in highres and lowres image */
-  hbpl = jbg_ceil_half(hx, 3);
-  lbpl = jbg_ceil_half(lx, 3);
+  /* bytes per line */
+  bpl = (s->x0 + 7) >> 3;
+  /* ensure correct zero padding of bitmap at the final byte of each line */
+  if (s->x0 & 7) {
+    line[bpl - 1] &= ~((1 << (8 - (s->x0 & 7))) - 1);
+  }
+
   /* pointer to first image byte of highres stripe */
   hp = s->lhp[s->highres[plane]][plane] + stripe * hl * hbpl;
-  lp2 = s->lhp[1 - s->highres[plane]][plane] + stripe * ll * lbpl;
-  lp1 = lp2 + lbpl;
   
-  /* check whether we can refer to any state of a previous stripe */
-  reset = (stripe == 0) || (s->options & JBG_SDRST);
-
-  /* initialize arithmetic encoder */
-  se = s->s + plane;
-  arith_encode_init(se, !reset);
-  s->sde[stripe][layer][plane] = jbg_buf_init(&s->free_list);
-  se->byte_out = jbg_buf_write;
-  se->file = s->sde[stripe][layer][plane];
-
   /* initialize adaptive template movement algorithm */
   c_all = 0;
   for (t = 0; t <= s->mx; t++)
     c[t] = 0;
   if (stripe == 0)    /* the SDRST case is handled at the end */
-    s->tx[plane] = 0;
+    s->tx = 0;
   new_tx = -1;
   at_determined = 0;  /* we haven't yet decided the template move */
   if (s->mx == 0)
     at_determined = 1;
 
-  /* initialize typical prediction */
-  ltp = 0;
-  if (reset)
-    ltp_old = 0;
-  else {
-    ltp_old = 1;
-    p1 = hp - hbpl;
-    if (y > 1) {
-      q1 = p1 - hbpl;
-      while (p1 < hp && (ltp_old = (*p1++ == *q1++)) != 0);
-    } else
-      while (p1 < hp && (ltp_old = (*p1++ == 0)) != 0);
+  /* check whether it is worth to perform an ATMOVE */
+  if (!at_determined && c_all > 2048) {
+    cmin = clmin = 0xffffffffL;
+    cmax = clmax = 0;
+    tmax = 0;
+    for (t = (s->options & JBG_LRLTWO) ? 5 : 3; t <= s->mx; t++) {
+      if (c[t] > cmax) cmax = c[t];
+      if (c[t] < cmin) cmin = c[t];
+      if (c[t] > c[tmax]) tmax = t;
+    }
+    clmin = (c[0] < cmin) ? c[0] : cmin;
+    clmax = (c[0] > cmax) ? c[0] : cmax;
+    if (c_all - cmax < (c_all >> 3) &&
+	cmax - c[s->tx[plane]] > c_all - cmax &&
+	cmax - c[s->tx[plane]] > (c_all >> 4) &&
+	/*                     ^ T.82 said < here, fixed in Cor.1/25 */
+	cmax - (c_all - c[s->tx[plane]]) > c_all - cmax &&
+	cmax - (c_all - c[s->tx[plane]]) > (c_all >> 4) &&
+	cmax - cmin > (c_all >> 2) &&
+	(s->tx[plane] || clmax - clmin > (c_all >> 3))) {
+      /* we have decided to perform an ATMOVE */
+      new_tx = tmax;
+      if (!(s->options & JBG_DELAY_AT)) {
+	new_tx_line = i;
+	s->tx[plane] = new_tx;
+      }
+#ifdef DEBUG
+      fprintf(stderr, "ATMOVE: line=%ld, tx=%d, c_all=%ld\n",
+	      i, new_tx, c_all);
+#endif
+    }
+    at_determined = 1;
   }
-
-  if (layer == 0) {
-
-    /*
-     *  Encode lowest resolution layer
-     */
-
-    for (i = 0; i < hl && y < hy; i++, y++) {
-
-      /* check whether it is worth to perform an ATMOVE */
-      if (!at_determined && c_all > 2048) {
-	cmin = clmin = 0xffffffffL;
-	cmax = clmax = 0;
-	tmax = 0;
-	for (t = (s->options & JBG_LRLTWO) ? 5 : 3; t <= s->mx; t++) {
-	  if (c[t] > cmax) cmax = c[t];
-	  if (c[t] < cmin) cmin = c[t];
-	  if (c[t] > c[tmax]) tmax = t;
-	}
-	clmin = (c[0] < cmin) ? c[0] : cmin;
-	clmax = (c[0] > cmax) ? c[0] : cmax;
-	if (c_all - cmax < (c_all >> 3) &&
-	    cmax - c[s->tx[plane]] > c_all - cmax &&
-	    cmax - c[s->tx[plane]] > (c_all >> 4) &&
-	    /*                     ^ T.82 said < here, fixed in Cor.1/25 */
-	    cmax - (c_all - c[s->tx[plane]]) > c_all - cmax &&
-	    cmax - (c_all - c[s->tx[plane]]) > (c_all >> 4) &&
-	    cmax - cmin > (c_all >> 2) &&
-	    (s->tx[plane] || clmax - clmin > (c_all >> 3))) {
-	  /* we have decided to perform an ATMOVE */
-	  new_tx = tmax;
-	  if (!(s->options & JBG_DELAY_AT)) {
-	    new_tx_line = i;
-	    s->tx[plane] = new_tx;
-	  }
+  assert(s->tx[plane] >= 0); /* i.e., tx can safely be cast to unsigned */
+  
+  /* typical prediction */
+  ltp = 0;
+  if (s->options & JBG_TPBON) {
+    p1 = line;
+    q1 = s->pline[0];
+    ltp = 1;
+    if (q1)
+      while (p1 < line + bpl && (ltp = (*p1++ == *q1++)) != 0);
+    else
+      while (p1 < line + bpl && (ltp = (*p1++ == 0    )) != 0);
+    arith_encode(se, (s->options & JBG_LRLTWO) ? TPB2CX : TPB3CX,
+		 ltp == ltp_old);
 #ifdef DEBUG
-	  fprintf(stderr, "ATMOVE: line=%ld, tx=%d, c_all=%ld\n",
-		  i, new_tx, c_all);
+    tp_lines += ltp;
 #endif
-	}
-	at_determined = 1;
-      }
-      assert(s->tx[plane] >= 0); /* i.e., tx can safely be cast to unsigned */
-      
-      /* typical prediction */
-      if (s->options & JBG_TPBON) {
-	ltp = 1;
-	p1 = hp;
-	if (i > 0 || !reset) {
-	  q1 = hp - hbpl;
-	  while (q1 < hp && (ltp = (*p1++ == *q1++)) != 0);
-	} else
-	  while (p1 < hp + hbpl && (ltp = (*p1++ == 0)) != 0);
-	arith_encode(se, (s->options & JBG_LRLTWO) ? TPB2CX : TPB3CX,
-		     ltp == ltp_old);
-#ifdef DEBUG
-	tp_lines += ltp;
-#endif
-	ltp_old = ltp;
-	if (ltp) {
-	  /* skip next line */
-	  hp += hbpl;
-	  continue;
-	}
-      }
-
-      /*
-       * Layout of the variables line_h1, line_h2, line_h3, which contain
-       * as bits the neighbour pixels of the currently coded pixel X:
-       *
-       *          76543210765432107654321076543210     line_h3
-       *          76543210765432107654321076543210     line_h2
-       *  76543210765432107654321X76543210             line_h1
-       */
-      
-      line_h1 = line_h2 = line_h3 = 0;
-      if (i > 0 || !reset) line_h2 = (long)*(hp - hbpl) << 8;
-      if (i > 1 || !reset) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
-      
-      /* encode line */
-      for (j = 0; j < hx; hp++) {
-	line_h1 |= *hp;
-	if (j < hbpl * 8 - 8 && (i > 0 || !reset)) {
-	  line_h2 |= *(hp - hbpl + 1);
-	  if (i > 1 || !reset)
-	    line_h3 |= *(hp - hbpl - hbpl + 1);
-	}
-	if (s->options & JBG_LRLTWO) {
-	  /* two line template */
-	  do {
-	    line_h1 <<= 1;  line_h2 <<= 1;  line_h3 <<= 1;
-	    if (s->tx[plane]) {
-	      if ((unsigned) s->tx[plane] > j)
-		a = 0;
-	      else {
-		o = (j - s->tx[plane]) - (j & ~7L);
-		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
-		a <<= 4;
-	      }
-	      assert(s->tx[plane] > 23 ||
-		     a == ((line_h1 >> (4 + s->tx[plane])) & 0x010));
-	      arith_encode(se, (((line_h2 >> 10) & 0x3e0) | a |
-				((line_h1 >>  9) & 0x00f)),
-			   (line_h1 >> 8) & 1);
-	    }
-	    else
-	      arith_encode(se, (((line_h2 >> 10) & 0x3f0) |
-				((line_h1 >>  9) & 0x00f)),
-			   (line_h1 >> 8) & 1);
-#ifdef DEBUG
-	    encoded_pixels++;
-#endif
-	    /* statistics for adaptive template changes */
-	    if (!at_determined && j >= s->mx && j < hx-2) {
-	      p = (line_h1 & 0x100) != 0; /* current pixel value */
-	      c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
-	      assert(!(((line_h2 >> 6) ^ line_h1) & 0x100) ==
-		     (((line_h2 & 0x4000) != 0) == p));
-	      for (t = 5; t <= s->mx && t <= j; t++) {
-		o = (j - t) - (j & ~7L);
-		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
-		assert(t > 23 ||
-		       (a == p) == !(((line_h1 >> t) ^ line_h1) & 0x100));
-		c[t] += a == p;
-	      }
-	      for (; t <= s->mx; t++) {
-		c[t] += 0 == p;
-	      }
-	      ++c_all;
-	    }
-	  } while (++j & 7 && j < hx);
-	} else {
-	  /* three line template */
-	  do {
-	    line_h1 <<= 1;  line_h2 <<= 1;  line_h3 <<= 1;
-	    if (s->tx[plane]) {
-	      if ((unsigned) s->tx[plane] > j)
-		a = 0;
-	      else {
-		o = (j - s->tx[plane]) - (j & ~7L);
-		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
-		a <<= 2;
-	      }
-	      assert(s->tx[plane] > 23 ||
-		     a == ((line_h1 >> (6 + s->tx[plane])) & 0x004));
-	      arith_encode(se, (((line_h3 >>  8) & 0x380) |
-				((line_h2 >> 12) & 0x078) | a |
-				((line_h1 >>  9) & 0x003)),
-			   (line_h1 >> 8) & 1);
-	    } else
-	      arith_encode(se, (((line_h3 >>  8) & 0x380) |
-				((line_h2 >> 12) & 0x07c) |
-				((line_h1 >>  9) & 0x003)),
-			   (line_h1 >> 8) & 1);
-#ifdef DEBUG
-	    encoded_pixels++;
-#endif
-	    /* statistics for adaptive template changes */
-	    if (!at_determined && j >= s->mx && j < hx-2) {
-	      p = (line_h1 & 0x100) != 0; /* current pixel value */
-	      c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
-	      assert(!(((line_h2 >> 6) ^ line_h1) & 0x100) ==
-		     (((line_h2 & 0x4000) != 0) == p));
-	      for (t = 3; t <= s->mx && t <= j; t++) {
-		o = (j - t) - (j & ~7L);
-		a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
-		assert(t > 23 ||
-		       (a == p) == !(((line_h1 >> t) ^ line_h1) & 0x100));
-		c[t] += a == p;
-	      }
-	      for (; t <= s->mx; t++) {
-		c[t] += 0 == p;
-	      }
-	      ++c_all;
-	    }
-	  } while (++j & 7 && j < hx);
-	} /* if (s->options & JBG_LRLTWO) */
-      } /* for (j = ...) */
-    } /* for (i = ...) */
-
-  } else {
-
-    /*
-     *  Encode differential layer
-     */
-    
+    s->ltp_old = ltp;
   }
   
-  arith_encode_flush(se);
-  jbg_buf_remove_zeros(s->sde[stripe][layer][plane]);
-  jbg_buf_write(MARKER_ESC, s->sde[stripe][layer][plane]);
-  jbg_buf_write((s->options & JBG_SDRST) ? MARKER_SDRST : MARKER_SDNORM,
-		s->sde[stripe][layer][plane]);
-  if (s->options & JBG_SDRST)
-    s->tx[plane] = 0;
+  if (!ltp) {
 
-  /* add ATMOVE */
-  if (new_tx != -1) {
-    if (s->options & JBG_DELAY_AT) {
+    /*
+     * Layout of the variables line_h1, line_h2, line_h3, which contain
+     * as bits the neighbour pixels of the currently coded pixel X:
+     *
+     *          76543210765432107654321076543210     line_h3
+     *          76543210765432107654321076543210     line_h2
+     *  76543210765432107654321X76543210             line_h1
+     */
+  
+    line_h1 = line_h2 = line_h3 = 0;
+    if (i > 0 || !reset) line_h2 = (long)*(hp - hbpl) << 8;
+    if (i > 1 || !reset) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
+  
+    /* encode line */
+    for (j = 0; j < hx; hp++) {
+      line_h1 |= *hp;
+      if (j < hbpl * 8 - 8 && (i > 0 || !reset)) {
+	line_h2 |= *(hp - hbpl + 1);
+	if (i > 1 || !reset)
+	  line_h3 |= *(hp - hbpl - hbpl + 1);
+      }
+      if (s->options & JBG_LRLTWO) {
+	/* two line template */
+	do {
+	  line_h1 <<= 1;  line_h2 <<= 1;  line_h3 <<= 1;
+	  if (s->tx[plane]) {
+	    if ((unsigned) s->tx[plane] > j)
+	      a = 0;
+	    else {
+	      o = (j - s->tx[plane]) - (j & ~7L);
+	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      a <<= 4;
+	    }
+	    assert(s->tx[plane] > 23 ||
+		   a == ((line_h1 >> (4 + s->tx[plane])) & 0x010));
+	    arith_encode(se, (((line_h2 >> 10) & 0x3e0) | a |
+			      ((line_h1 >>  9) & 0x00f)),
+			 (line_h1 >> 8) & 1);
+	  }
+	  else
+	    arith_encode(se, (((line_h2 >> 10) & 0x3f0) |
+			      ((line_h1 >>  9) & 0x00f)),
+			 (line_h1 >> 8) & 1);
+#ifdef DEBUG
+	  encoded_pixels++;
+#endif
+	  /* statistics for adaptive template changes */
+	  if (!at_determined && j >= s->mx && j < hx-2) {
+	    p = (line_h1 & 0x100) != 0; /* current pixel value */
+	    c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
+	    assert(!(((line_h2 >> 6) ^ line_h1) & 0x100) ==
+		   (((line_h2 & 0x4000) != 0) == p));
+	    for (t = 5; t <= s->mx && t <= j; t++) {
+	      o = (j - t) - (j & ~7L);
+	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      assert(t > 23 ||
+		     (a == p) == !(((line_h1 >> t) ^ line_h1) & 0x100));
+	      c[t] += a == p;
+	    }
+	    for (; t <= s->mx; t++) {
+	      c[t] += 0 == p;
+	    }
+	    ++c_all;
+	  }
+	} while (++j & 7 && j < hx);
+      } else {
+	/* three line template */
+	do {
+	  line_h1 <<= 1;  line_h2 <<= 1;  line_h3 <<= 1;
+	  if (s->tx[plane]) {
+	    if ((unsigned) s->tx[plane] > j)
+	      a = 0;
+	    else {
+	      o = (j - s->tx[plane]) - (j & ~7L);
+	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      a <<= 2;
+	    }
+	    assert(s->tx[plane] > 23 ||
+		   a == ((line_h1 >> (6 + s->tx[plane])) & 0x004));
+	    arith_encode(se, (((line_h3 >>  8) & 0x380) |
+			      ((line_h2 >> 12) & 0x078) | a |
+			      ((line_h1 >>  9) & 0x003)),
+			 (line_h1 >> 8) & 1);
+	  } else
+	    arith_encode(se, (((line_h3 >>  8) & 0x380) |
+			      ((line_h2 >> 12) & 0x07c) |
+			      ((line_h1 >>  9) & 0x003)),
+			 (line_h1 >> 8) & 1);
+#ifdef DEBUG
+	  encoded_pixels++;
+#endif
+	  /* statistics for adaptive template changes */
+	  if (!at_determined && j >= s->mx && j < hx-2) {
+	    p = (line_h1 & 0x100) != 0; /* current pixel value */
+	    c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
+	    assert(!(((line_h2 >> 6) ^ line_h1) & 0x100) ==
+		   (((line_h2 & 0x4000) != 0) == p));
+	    for (t = 3; t <= s->mx && t <= j; t++) {
+	      o = (j - t) - (j & ~7L);
+	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      assert(t > 23 ||
+		     (a == p) == !(((line_h1 >> t) ^ line_h1) & 0x100));
+	      c[t] += a == p;
+	    }
+	    for (; t <= s->mx; t++) {
+	      c[t] += 0 == p;
+	    }
+	    ++c_all;
+	  }
+	} while (++j & 7 && j < hx);
+      } /* if (s->options & JBG_LRLTWO) */
+    } /* for (j = ...) */
+  } /* if (!ltp) */
+
+  i++; y++;
+  if (i == l0 || y == s->y0) {
+    /* end of stripe reached */
+    arith_encode_flush(s->s);
+    buf[0] = MARKER_ESC;
+    buf[1] = MARKER_SDNORM;
+    s->data_out(buf, 2, s->file);
+    /* add ATMOVE */
+    if (new_tx != -1) {
       /* ATMOVE will become active at the first line of the next stripe */
       s->tx[plane] = new_tx;
-      jbg_buf_write(MARKER_ESC, s->sde[stripe][layer][plane]);
-      jbg_buf_write(MARKER_ATMOVE, s->sde[stripe][layer][plane]);
-      jbg_buf_write(0, s->sde[stripe][layer][plane]);
-      jbg_buf_write(0, s->sde[stripe][layer][plane]);
-      jbg_buf_write(0, s->sde[stripe][layer][plane]);
-      jbg_buf_write(0, s->sde[stripe][layer][plane]);
-      jbg_buf_write(s->tx[plane], s->sde[stripe][layer][plane]);
-      jbg_buf_write(0, s->sde[stripe][layer][plane]);
-    } else {
-      /* ATMOVE has already become active during this stripe
-       * => we have to prefix the SDE data with an ATMOVE marker */
-      new_jbg_buf = jbg_buf_init(&s->free_list);
-      jbg_buf_write(MARKER_ESC, new_jbg_buf);
-      jbg_buf_write(MARKER_ATMOVE, new_jbg_buf);
-      jbg_buf_write((new_tx_line >> 24) & 0xff, new_jbg_buf);
-      jbg_buf_write((new_tx_line >> 16) & 0xff, new_jbg_buf);
-      jbg_buf_write((new_tx_line >> 8) & 0xff, new_jbg_buf);
-      jbg_buf_write(new_tx_line & 0xff, new_jbg_buf);
-      jbg_buf_write(new_tx, new_jbg_buf);
-      jbg_buf_write(0, new_jbg_buf);
-      jbg_buf_prefix(new_jbg_buf, &s->sde[stripe][layer][plane]);
+      buf[0] = MARKER_ESC;
+      buf[1] = MARKER_ATMOVE;
+      buf[2] = 0;
+      buf[3] = 0;
+      buf[4] = 0;
+      buf[5] = 0;
+      buf[6] = s->tx[plane];
+      buf[7] = 0;
+      s->data_out(buf, 8, s->file);
     }
   }
 
@@ -467,280 +479,6 @@ static void encode_sde(struct jbg_enc_state *s,
 	    "dp_pixels = %ld, encoded_pixels = %ld\n",
 	    tp_lines, tp_exceptions, tp_pixels, dp_pixels, encoded_pixels);
 #endif
-
-  return;
-}
-
-
-/* 
- * This function is called inside the three loops of jbg_enc_out() in
- * order to write the next SDE. It has first to generate the required
- * SDE and all SDEs which have to be encoded before this SDE can be
- * created. The problem here is that if we want to output a lower
- * resolution layer, we have to apply the resolution reduction
- * algorithm first to get it. As we try to safe as much memory as
- * possible, the resolution reduction will overwrite previous higher
- * resolution bitmaps. Consequently, we have to encode and buffer SDEs
- * which depend on higher resolution layers before we can start the
- * resolution reduction. All the logic about which SDE has to be
- * encoded before resolution reduction is allowed is handled
- * here. This approach may be a bit more complex than alternative ways
- * of doing it, but it minimizes the amount of temporary memory used.
- */
-static void output_sde(struct jbg_enc_state *s,
-		       unsigned long stripe, int layer, int plane)
-{
-  int lfcl;     /* lowest fully coded layer */
-  long i;
-  unsigned long u;
-  
-  assert(s->sde[stripe][layer][plane] != SDE_DONE);
-
-  if (s->sde[stripe][layer][plane] != SDE_TODO) {
-#ifdef DEBUG
-    fprintf(stderr, "writing SDE: s/d/p = %2lu/%2d/%2d\n",
-	    stripe, layer, plane);
-#endif
-    jbg_buf_output(&s->sde[stripe][layer][plane], s->data_out, s->file);
-    s->sde[stripe][layer][plane] = SDE_DONE;
-    return;
-  }
-
-  /* Determine the smallest resolution layer in this plane for which
-   * not yet all stripes have been encoded into SDEs. This layer will
-   * have to be completely coded, before we can apply the next
-   * resolution reduction step. */
-  lfcl = 0;
-  for (i = s->d; i >= 0; i--)
-    if (s->sde[s->stripes - 1][i][plane] == SDE_TODO) {
-      lfcl = i + 1;
-      break;
-    }
-  if (lfcl > s->d && s->d > 0 && stripe == 0) {
-    /* perform the first resolution reduction */
-    resolution_reduction(s, plane, s->d);
-  }
-  /* In case HITOLO is not used, we have to encode and store the higher
-   * resolution layers first, although we do not need them right now. */
-  while (lfcl - 1 > layer) {
-    for (u = 0; u < s->stripes; u++)
-      encode_sde(s, u, lfcl - 1, plane);
-    --lfcl;
-    s->highres[plane] ^= 1;
-    if (lfcl > 1)
-      resolution_reduction(s, plane, lfcl - 1);
-  }
-  
-  encode_sde(s, stripe, layer, plane);
-
-#ifdef DEBUG
-  fprintf(stderr, "writing SDE: s/d/p = %2lu/%2d/%2d\n", stripe, layer, plane);
-#endif
-  jbg_buf_output(&s->sde[stripe][layer][plane], s->data_out, s->file);
-  s->sde[stripe][layer][plane] = SDE_DONE;
-  
-  if (stripe == s->stripes - 1 && layer > 0 &&
-      s->sde[0][layer-1][plane] == SDE_TODO) {
-    s->highres[plane] ^= 1;
-    if (layer > 1)
-      resolution_reduction(s, plane, layer - 1);
-  }
-  
-  return;
-}
-
-
-
-
-/*
- * Encode one full BIE and pass the generated data to the specified
- * call-back function
- */
-void jbg_enc_out(struct jbg_enc_state *s)
-{
-  unsigned long bpl;
-  unsigned char buf[20];
-  unsigned long xd, yd, y;
-  long ii[3], is[3], ie[3];    /* generic variables for the 3 nested loops */ 
-  unsigned long stripe;
-  int layer, plane;
-  int order;
-  unsigned char dpbuf[1728];
-
-  /* some sanity checks */
-  s->order &= JBG_HITOLO | JBG_SEQ | JBG_ILEAVE | JBG_SMID;
-  order = s->order & (JBG_SEQ | JBG_ILEAVE | JBG_SMID);
-  if (iindex[order][0] < 0)
-    s->order = order = JBG_SMID | JBG_ILEAVE;
-  if (s->options & JBG_DPON && s->dppriv != jbg_dptable)
-    s->options |= JBG_DPPRIV;
-  if (s->mx > MX_MAX)
-    s->mx = MX_MAX;
-  s->my = 0;
-  if (s->mx && s->mx < ((s->options & JBG_LRLTWO) ? 5U : 3U))
-    s->mx = 0;
-  if (s->d > 255 || s->d < 0 || s->dh > s->d || s->dh < 0 ||
-      s->dl < 0 || s->dl > s->dh || s->planes < 0 || s->planes > 255)
-    return;
-  /* prevent uint32 overflow: s->l0 * 2 ^ s->d < 2 ^ 32 */
-  if (s->d > 31 || (s->d != 0 && s->l0 >= (1UL << (32 - s->d))))
-    return;
-  if (s->yd1 < s->yd)
-    s->yd1 = s->yd;
-  if (s->yd1 > s->yd)
-    s->options |= JBG_VLENGTH;
-
-  /* ensure correct zero padding of bitmap at the final byte of each line */
-  if (s->xd & 7) {
-    bpl = jbg_ceil_half(s->xd, 3);     /* bytes per line */
-    for (plane = 0; plane < s->planes; plane++)
-      for (y = 0; y < s->yd; y++)
-	s->lhp[0][plane][y * bpl + bpl - 1] &= ~((1 << (8 - (s->xd & 7))) - 1);
-  }
-
-  /* prepare BIH */
-  buf[0] = s->dl;
-  buf[1] = s->dh;
-  buf[2] = s->planes;
-  buf[3] = 0;
-  xd = jbg_ceil_half(s->xd, s->d - s->dh);
-  yd = jbg_ceil_half(s->yd1, s->d - s->dh);
-  buf[4] = xd >> 24;
-  buf[5] = (xd >> 16) & 0xff;
-  buf[6] = (xd >> 8) & 0xff;
-  buf[7] = xd & 0xff;
-  buf[8] = yd >> 24;
-  buf[9] = (yd >> 16) & 0xff;
-  buf[10] = (yd >> 8) & 0xff;
-  buf[11] = yd & 0xff;
-  buf[12] = s->l0 >> 24;
-  buf[13] = (s->l0 >> 16) & 0xff;
-  buf[14] = (s->l0 >> 8) & 0xff;
-  buf[15] = s->l0 & 0xff;
-  buf[16] = s->mx;
-  buf[17] = s->my;
-  buf[18] = s->order;
-  buf[19] = s->options & 0x7f;
-
-#if 0
-  /* sanitize L0 (if it was set to 0xffffffff for T.85-style NEWLEN tests) */
-  if (s->l0 > (s->yd >> s->d))
-    s->l0 = s->yd >> s->d;
-#endif
-
-  /* calculate number of stripes that will be required */
-  s->stripes = jbg_stripes(s->l0, s->yd, s->d);
-
-  /* allocate buffers for SDE pointers */
-  if (s->sde == NULL) {
-    s->sde = (struct jbg_buf ****)
-      checked_malloc(s->stripes, sizeof(struct jbg_buf ***));
-    for (stripe = 0; stripe < s->stripes; stripe++) {
-      s->sde[stripe] = (struct jbg_buf ***)
-	checked_malloc(s->d + 1, sizeof(struct jbg_buf **));
-      for (layer = 0; layer < s->d + 1; layer++) {
-	s->sde[stripe][layer] = (struct jbg_buf **)
-	  checked_malloc(s->planes, sizeof(struct jbg_buf *));
-	for (plane = 0; plane < s->planes; plane++)
-	  s->sde[stripe][layer][plane] = SDE_TODO;
-      }
-    }
-  }
-
-  /* output BIH */
-  s->data_out(buf, 20, s->file);
-  if ((s->options & (JBG_DPON | JBG_DPPRIV | JBG_DPLAST)) ==
-      (JBG_DPON | JBG_DPPRIV)) {
-    /* write private table */
-    jbg_int2dppriv(dpbuf, s->dppriv);
-    s->data_out(dpbuf, 1728, s->file);
-  }
-
-#if 0
-  /*
-   * Encode everything first. This is a simple-minded alternative to
-   * all the tricky on-demand encoding logic in output_sde() for
-   * debugging purposes.
-   */
-  for (layer = s->dh; layer >= s->dl; layer--) {
-    for (plane = 0; plane < s->planes; plane++) {
-      if (layer > 0)
-	resolution_reduction(s, plane, layer);
-      for (stripe = 0; stripe < s->stripes; stripe++)
-	encode_sde(s, stripe, layer, plane);
-      s->highres[plane] ^= 1;
-    }
-  }
-#endif
-
-  /*
-   * Generic loops over all SDEs. Which loop represents layer, plane and
-   * stripe depends on the option flags.
-   */
-
-  /* start and end value for each loop */
-  is[iindex[order][STRIPE]] = 0;
-  ie[iindex[order][STRIPE]] = s->stripes - 1;
-  is[iindex[order][LAYER]] = s->dl;
-  ie[iindex[order][LAYER]] = s->dh;
-  is[iindex[order][PLANE]] = 0;
-  ie[iindex[order][PLANE]] = s->planes - 1;
-
-  for (ii[0] = is[0]; ii[0] <= ie[0]; ii[0]++)
-    for (ii[1] = is[1]; ii[1] <= ie[1]; ii[1]++)
-      for (ii[2] = is[2]; ii[2] <= ie[2]; ii[2]++) {
-	
-	stripe = ii[iindex[order][STRIPE]];
-	if (s->order & JBG_HITOLO)
-	  layer = s->dh - (ii[iindex[order][LAYER]] - s->dl);
-	else
-	  layer = ii[iindex[order][LAYER]];
-	plane = ii[iindex[order][PLANE]];
-
-	/* output comment marker segment if there is any pending */
-	if (s->comment) {
-	  buf[0] = MARKER_ESC;
-	  buf[1] = MARKER_COMMENT;
-	  buf[2] = s->comment_len >> 24;
-	  buf[3] = (s->comment_len >> 16) & 0xff;
-	  buf[4] = (s->comment_len >> 8) & 0xff;
-	  buf[5] = s->comment_len & 0xff;
-	  s->data_out(buf, 6, s->file);
-	  s->data_out(s->comment, s->comment_len, s->file);
-	  s->comment = NULL;
-	}
-
-	output_sde(s, stripe, layer, plane);
-
-	/*
-	 * When we generate a NEWLEN test case (s->yd1 > s->yd), output
-	 * NEWLEN after last stripe if we have only a single
-	 * resolution layer or plane (see ITU-T T.85 profile), otherwise
-	 * output NEWLEN before last stripe.
-	 */
-	if (s->yd1 > s->yd &&
-	    (stripe == s->stripes - 1 ||
-	     (stripe == s->stripes - 2 && 
-	      (s->dl != s->dh || s->planes > 1)))) {
-	  s->yd1 = s->yd;
-	  yd = jbg_ceil_half(s->yd, s->d - s->dh);
-	  buf[0] = MARKER_ESC;
-	  buf[1] = MARKER_NEWLEN;
-	  buf[2] = yd >> 24;
-	  buf[3] = (yd >> 16) & 0xff;
-	  buf[4] = (yd >> 8) & 0xff;
-	  buf[5] = yd & 0xff;
-	  s->data_out(buf, 6, s->file);
-#ifdef DEBUG
-	  fprintf(stderr, "NEWLEN: yd=%lu\n", yd);
-#endif
-	  if (stripe == s->stripes - 1) {
-	    buf[1] = MARKER_SDNORM;
-	    s->data_out(buf, 2, s->file);
-	  }
-	}
-
-      }
 
   return;
 }
