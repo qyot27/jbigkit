@@ -94,6 +94,16 @@ static const char *errmsg[] = {
 
 
 /*
+ * Callback adapter function for arithmetic encoder
+ */
+static void jbg_enc_byte_out(int byte, void *s)
+{
+  unsigned char c = byte;
+  ((struct jbg_enc_state *) s)->data_out(&c, sizeof(unsigned char),
+					 ((struct jbg_enc_state *) s)->file);
+}
+
+/*
  * Initialize the status struct for the encoder.
  */
 void jbg_enc_init(struct jbg_enc_state *s, unsigned long x0, unsigned long y0,
@@ -101,37 +111,33 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x0, unsigned long y0,
 				   void *file),
 		  void *file)
 {
-  unsigned long l, lx;
-  int i;
-
   assert(x0 > 0 && y0 > 0);
   s->x0 = x0;
   s->y0 = y0;
-  s->y01 = y0; /* This is the hight initially announced in BIH. To provoke
-                  generation of NEWLEN for T.85 compatibility tests,
-                  overwrite with new value s->y01 > s->y0  */
+  s->newlen = 0;       /* no NEWLEN pending or output */
   s->data_out = data_out;
   s->file = file;
 
-  s->l0 = s->y0 / 35;             /* 35 stripes/image */
+  s->l0 = s->y0 / 35;             /* 35 stripes/image suggested default */
   if (s->l0 > 128) s->l0 = 128;
   if (s->l0 < 2) s->l0 = 2;
 #if 1
-  s->l0 = 128; /* BASIC setting */
+  s->l0 = 128; /* T.85 BASIC setting */
 #endif
   s->mx = 127;
+  s->new_tx = -1;                /* no ATMOVE pending */
   s->options = JBG_TPBON | JBG_VLENGTH;
-  s->comment = NULL;
+  s->comment = NULL;            /* no COMMENT pending */
   s->pline[0] = s->pline[1] = NULL;
   s->y = 0;
   s->i = 0;
   s->ltp_old = 1;
   
   /* initialize arithmetic encoder */
-  arith_encode_init(s->s, 0);
-  s->s->byte_out = s->data_out;
-  s->s->file = s->file;
-
+  arith_encode_init(&s->s, 0);
+  s->s.byte_out = &jbg_enc_byte_out;
+  s->s.file = s;
+  
   return;
 }
 
@@ -146,7 +152,7 @@ void jbg_enc_options(struct jbg_enc_state *s, int options,
 {
   if (options >= 0) s->options = options;
   if (l0 > 0) s->l0 = l0;
-  if (mx >= 0 && my < 128) s->mx = mx;
+  if (mx >= 0 && mx < 128) s->mx = mx;
 
   return;
 }
@@ -162,8 +168,13 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
   unsigned char buf[20];
   unsigned long xd, yd, y;
 
+  if (s->y >= s->y0) {
+    /* we have already output the full image, go away */
+    return;
+  }
+
   /* things that need to be done before the first line is encoded */
-  if (sd->y == 0) {
+  if (s->y == 0) {
     /* prepare BIH */
     buf[0]  = 0;   /* DL = initial layer to be transmitted */
     buf[1]  = 0;   /* D  = number of differential layers */
@@ -182,16 +193,28 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
     buf[14] = (s->l0 >>  8) & 0xff;
     buf[15] =  s->l0 & 0xff;
     buf[16] = s->mx;
-    buf[17] = 0;   /* MX = maximum horizontal offset allowed for AT pixel */
+    buf[17] = 0;   /* MY = maximum horizontal offset allowed for AT pixel */
     buf[18] = 0;   /* order: HITOLO = SEQ = ILEAVE = SMID = 0 */
-    buf[19] = s->options & (JBG_LRLTWO | JBG_VLENGTH | TPBON);
+    buf[19] = s->options & (JBG_LRLTWO | JBG_VLENGTH | JBG_TPBON);
 
     /* output BIH */
     s->data_out(buf, 20, s->file);
   }
 
   /* things that need to be done before the next SDE is encoded */
-  if (sd->i == 0) {
+  if (s->i == 0) {
+
+    /* output NEWLEN if there is any pending */
+    if (s->newlen == 1) {
+      buf[0] = MARKER_ESC;
+      buf[1] = MARKER_NEWLEN;
+      buf[2] =  s->y0 >> 24;
+      buf[3] = (s->y0 >> 16) & 0xff;
+      buf[4] = (s->y0 >>  8) & 0xff;
+      buf[5] =  s->y0        & 0xff;
+      s->data_out(buf, 6, s->file);
+      s->newlen = 2;
+    }
 
     /* output comment marker segment if there is any pending */
     if (s->comment) {
@@ -206,42 +229,27 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
       s->comment = NULL;
     }
 
-    /*
-     * When we generate a NEWLEN test case (s->yd1 > s->yd), output
-     * NEWLEN after last stripe if we have only a single
-     * resolution layer or plane (see ITU-T T.85 profile), otherwise
-     * output NEWLEN before last stripe.
-     */
-    if (s->yd1 > s->yd &&
-	(stripe == s->stripes - 1 ||
-	 (stripe == s->stripes - 2 && 
-	  (s->dl != s->dh || s->planes > 1)))) {
-      s->yd1 = s->yd;
-      yd = jbg_ceil_half(s->yd, s->d - s->dh);
+    /* output ATMOVE if there is any pending */
+    if (s->new_tx != -1) {
+      s->tx = s->new_tx;
+      s->new_tx = -1;
       buf[0] = MARKER_ESC;
-      buf[1] = MARKER_NEWLEN;
-      buf[2] = yd >> 24;
-      buf[3] = (yd >> 16) & 0xff;
-      buf[4] = (yd >> 8) & 0xff;
-      buf[5] = yd & 0xff;
-      s->data_out(buf, 6, s->file);
-#ifdef DEBUG
-      fprintf(stderr, "NEWLEN: yd=%lu\n", yd);
-#endif
-      if (stripe == s->stripes - 1) {
-	buf[1] = MARKER_SDNORM;
-	s->data_out(buf, 2, s->file);
-      }
+      buf[1] = MARKER_ATMOVE;
+      buf[2] = 0;
+      buf[3] = 0;
+      buf[4] = 0;
+      buf[5] = 0;
+      buf[6] = s->tx;
+      buf[7] = 0;
+      s->data_out(buf, 8, s->file);
     }
-
+    
     /* restart arithmetic encoder */
-    arith_encode_init(s->s, 1);
+    arith_encode_init(&s->s, 1);
   }
 
   unsigned char *hp, *p1, *q1;
   unsigned long line_h1 = 0, line_h2, line_h3;
-  unsigned long y;  /* current line number in image */
-  unsigned long i;  /* current line number within stripe */
   unsigned long j;  /* loop variable for pixel column */
   long o;
   unsigned a, p, t;
@@ -450,31 +458,19 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
     } /* for (j = ...) */
   } /* if (!ltp) */
 
-  i++; y++;
-  if (i == l0 || y == s->y0) {
+  /* line is complete now, deal with end of stripe */
+  s->i++; s->y++;
+  if (s->i == s->l0 || s->y == s->y0) {
     /* end of stripe reached */
-    arith_encode_flush(s->s);
+    arith_encode_flush(&s->s);
     buf[0] = MARKER_ESC;
     buf[1] = MARKER_SDNORM;
     s->data_out(buf, 2, s->file);
-    /* add ATMOVE */
-    if (new_tx != -1) {
-      /* ATMOVE will become active at the first line of the next stripe */
-      s->tx[plane] = new_tx;
-      buf[0] = MARKER_ESC;
-      buf[1] = MARKER_ATMOVE;
-      buf[2] = 0;
-      buf[3] = 0;
-      buf[4] = 0;
-      buf[5] = 0;
-      buf[6] = s->tx[plane];
-      buf[7] = 0;
-      s->data_out(buf, 8, s->file);
-    }
+    s->i = 0;
   }
 
 #if 0
-  if (stripe == s->stripes - 1)
+  if (s->y == s->y0)
     fprintf(stderr, "tp_lines = %ld, tp_exceptions = %ld, tp_pixels = %ld, "
 	    "dp_pixels = %ld, encoded_pixels = %ld\n",
 	    tp_lines, tp_exceptions, tp_pixels, dp_pixels, encoded_pixels);
@@ -483,6 +479,47 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
   return;
 }
 
+/*
+ * Inform encoder about new (reduced) height of image
+ */
+void jbg85_enc_newlen(struct jbg_enc_state *s, unsigned long newlen)
+{
+  unsigned char buf[6];
+
+  if (s->newlen == 2 || newlen >= s->y0 || newlen < 1 ||
+      !(s->options & JBG_VLENGTH)) {
+    /* invalid invocation or parameter */
+    return;
+  }
+  if (newlen < s->y) {
+    /* we are already beyond the new end, therefore move the new end */
+    newlen = s->y;
+  }
+  s->y0 = newlen;
+  s->newlen = 1;
+  if (s->y == s->y0) {
+    /* we are already at the end; abort the current stripe if necessary */
+    if (s->i > 0) {
+      arith_encode_flush(&s->s);
+      buf[0] = MARKER_ESC;
+      buf[1] = MARKER_SDNORM;
+      s->data_out(buf, 2, s->file);
+      s->i = 0;
+    }
+    buf[0] = MARKER_ESC;
+    buf[1] = MARKER_NEWLEN;
+    buf[2] =  s->y0 >> 24;
+    buf[3] = (s->y0 >> 16) & 0xff;
+    buf[4] = (s->y0 >>  8) & 0xff;
+    buf[5] =  s->y0        & 0xff;
+    s->data_out(buf, 6, s->file);
+    s->newlen = 2;
+    /* if newlen refers to a line in the preceeding stripe, ITU-T T.82
+     * section 6.2.6.2 requires us to append another SDNORM (no idea why!) */
+    buf[1] = MARKER_SDNORM;
+    s->data_out(buf, 2, s->file);
+  }
+}
 
 /*
  * Convert the error codes used by jbg_dec_in() into an English ASCII string

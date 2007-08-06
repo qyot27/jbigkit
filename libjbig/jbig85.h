@@ -20,22 +20,6 @@
 #define JBG_VERSION    "1.7"
 
 /*
- * Buffer block for SDEs which are temporarily stored by encoder
- */
-
-#define JBG_BUFSIZE 4000
-
-struct jbg_buf {
-  unsigned char d[JBG_BUFSIZE];              /* one block of a buffer list */
-  int len;                             /* length of the data in this block */
-  struct jbg_buf *next;                           /* pointer to next block */
-  struct jbg_buf *previous;                   /* pointer to previous block *
-					       * (unused in freelist)      */
-  struct jbg_buf *last;     /* only used in list head: final block of list */
-  struct jbg_buf **free_list;   /* pointer to pointer to head of free list */
-};
-
-/*
  * Maximum number of ATMOVEs per stripe that decoder can handle
  */
 
@@ -88,14 +72,16 @@ struct jbg_buf {
 
 struct jbg_enc_state {
   unsigned long x0, y0;                         /* size of the input image */
-  unsigned long y01;    /* BIH announced height of image; y01 != y0 can be
-                                      caused by calling jbg85_enc_newlen() */
   unsigned long l0;                          /* number of lines per stripe */
   unsigned char *pline[2];                  /* point to previous two lines */
   int options;                                      /* encoding parameters */
+  int newlen;       /* 0 = jbg_enc_newlen() has not yet been called
+                       1 = jbg_enc_newlen() has updated y0, NEWLEN pending
+                       2 = NEWLEN has already been output                  */
+  int new_tx;            /* -1 = no ATMOVE pending, otherwise new TX value */
   unsigned mx;                               /* maximum ATMOVE window size */
-  unsigned long y;                        /* line counter for entire image */
-  unsigned long i;                              /* line counter per stripe */
+  unsigned long y;                       /* next line number to be encoded */
+  unsigned long i;            /* next per-stripe line number to be encoded */
   int tx;                           /* x-offset of adaptive template pixel */
   int ltp_old;                           /* true if line y-1 was "typical" */
   struct jbg_arenc_state s;                   /* arithmetic encoder status */
