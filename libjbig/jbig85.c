@@ -50,9 +50,6 @@
 
 #include "jbig85.h"
 
-#define MX_MAX  127    /* maximal supported mx offset for
-			* adaptive template in the encoder */
-
 #define TPB2CX  0x195  /* contexts for TP special pixels */
 #define TPB3CX  0x0e5
 #define TPDCX   0xc3f
@@ -126,6 +123,7 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x0, unsigned long y0,
 #endif
   s->mx = 127;
   s->new_tx = -1;                /* no ATMOVE pending */
+  s->tx = 0;
   s->options = JBG_TPBON | JBG_VLENGTH;
   s->comment = NULL;            /* no COMMENT pending */
   s->pline[0] = s->pline[1] = NULL;
@@ -164,9 +162,18 @@ void jbg_enc_options(struct jbg_enc_state *s, int options,
  */
 void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
 {
-  unsigned long bpl;
   unsigned char buf[20];
-  unsigned long xd, yd, y;
+  unsigned long bpl;
+  unsigned char *hp, *p1, *q1;
+  unsigned long line_h1 = 0, line_h2, line_h3;
+  unsigned long j;  /* loop variable for pixel column */
+  long o;
+  unsigned a, p, t;
+  int ltp, ltp_old, cx;
+  unsigned long cmin, cmax, clmin, clmax;
+  int tmax;
+  long new_tx_line = -1;
+  int reset;
 
   if (s->y >= s->y0) {
     /* we have already output the full image, go away */
@@ -230,7 +237,7 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
     }
 
     /* output ATMOVE if there is any pending */
-    if (s->new_tx != -1) {
+    if (s->new_tx != -1 && s->new_tx != s->tx) {
       s->tx = s->new_tx;
       s->new_tx = -1;
       buf[0] = MARKER_ESC;
@@ -244,28 +251,26 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
       s->data_out(buf, 8, s->file);
     }
     
+    /* initialize adaptive template movement algorithm */
+    if (s->mx == 0) {
+      s->new_tx = 0;  /* ATMOVE has been disabled */
+    } else {
+      s->c_all = 0;
+      for (t = 0; t <= s->mx; t++)
+	c[t] = 0;
+      s->new_tx = -1; /* we have yet to determine ATMOVE ... */
+    }
+
     /* restart arithmetic encoder */
     arith_encode_init(&s->s, 1);
   }
 
-  unsigned char *hp, *p1, *q1;
-  unsigned long line_h1 = 0, line_h2, line_h3;
-  unsigned long j;  /* loop variable for pixel column */
-  long o;
-  unsigned a, p, t;
-  int ltp, ltp_old, cx;
-  unsigned long c_all, c[MX_MAX + 1], cmin, cmax, clmin, clmax;
-  int tmax, at_determined;
-  int new_tx;
-  long new_tx_line = -1;
-  int reset;
-
 #ifdef DEBUG
   static long tp_lines, tp_exceptions, tp_pixels, dp_pixels;
   static long encoded_pixels;
-  if (y == 0)
+  if (s->y == 0)
     tp_lines = tp_exceptions = tp_pixels = dp_pixels = encoded_pixels = 0;
-  fprintf(stderr, "encode line %ld/%2d\n", y, i);
+  fprintf(stderr, "encode line %ld (%2d of stripe)\n", s->y, s->i);
 #endif
 
   /* bytes per line */
@@ -275,55 +280,6 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
     line[bpl - 1] &= ~((1 << (8 - (s->x0 & 7))) - 1);
   }
 
-  /* pointer to first image byte of highres stripe */
-  hp = s->lhp[s->highres[plane]][plane] + stripe * hl * hbpl;
-  
-  /* initialize adaptive template movement algorithm */
-  c_all = 0;
-  for (t = 0; t <= s->mx; t++)
-    c[t] = 0;
-  if (stripe == 0)    /* the SDRST case is handled at the end */
-    s->tx = 0;
-  new_tx = -1;
-  at_determined = 0;  /* we haven't yet decided the template move */
-  if (s->mx == 0)
-    at_determined = 1;
-
-  /* check whether it is worth to perform an ATMOVE */
-  if (!at_determined && c_all > 2048) {
-    cmin = clmin = 0xffffffffL;
-    cmax = clmax = 0;
-    tmax = 0;
-    for (t = (s->options & JBG_LRLTWO) ? 5 : 3; t <= s->mx; t++) {
-      if (c[t] > cmax) cmax = c[t];
-      if (c[t] < cmin) cmin = c[t];
-      if (c[t] > c[tmax]) tmax = t;
-    }
-    clmin = (c[0] < cmin) ? c[0] : cmin;
-    clmax = (c[0] > cmax) ? c[0] : cmax;
-    if (c_all - cmax < (c_all >> 3) &&
-	cmax - c[s->tx[plane]] > c_all - cmax &&
-	cmax - c[s->tx[plane]] > (c_all >> 4) &&
-	/*                     ^ T.82 said < here, fixed in Cor.1/25 */
-	cmax - (c_all - c[s->tx[plane]]) > c_all - cmax &&
-	cmax - (c_all - c[s->tx[plane]]) > (c_all >> 4) &&
-	cmax - cmin > (c_all >> 2) &&
-	(s->tx[plane] || clmax - clmin > (c_all >> 3))) {
-      /* we have decided to perform an ATMOVE */
-      new_tx = tmax;
-      if (!(s->options & JBG_DELAY_AT)) {
-	new_tx_line = i;
-	s->tx[plane] = new_tx;
-      }
-#ifdef DEBUG
-      fprintf(stderr, "ATMOVE: line=%ld, tx=%d, c_all=%ld\n",
-	      i, new_tx, c_all);
-#endif
-    }
-    at_determined = 1;
-  }
-  assert(s->tx[plane] >= 0); /* i.e., tx can safely be cast to unsigned */
-  
   /* typical prediction */
   ltp = 0;
   if (s->options & JBG_TPBON) {
@@ -353,9 +309,14 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
      *  76543210765432107654321X76543210             line_h1
      */
   
+    /* pointer to first image byte of the three lines of interest */
+    hp3 = s->pline[1];
+    hp2 = s->pline[0];
+    hp1 = line;
+  
     line_h1 = line_h2 = line_h3 = 0;
-    if (i > 0 || !reset) line_h2 = (long)*(hp - hbpl) << 8;
-    if (i > 1 || !reset) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
+    if (s->i > 0 || !reset) line_h2 = (long)*(hp - hbpl) << 8;
+    if (s->i > 1 || !reset) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
   
     /* encode line */
     for (j = 0; j < hx; hp++) {
@@ -369,16 +330,16 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
 	/* two line template */
 	do {
 	  line_h1 <<= 1;  line_h2 <<= 1;  line_h3 <<= 1;
-	  if (s->tx[plane]) {
-	    if ((unsigned) s->tx[plane] > j)
+	  if (s->tx) {
+	    if ((unsigned) s->tx > j)
 	      a = 0;
 	    else {
-	      o = (j - s->tx[plane]) - (j & ~7L);
+	      o = (j - s->tx) - (j & ~7L);
 	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
 	      a <<= 4;
 	    }
-	    assert(s->tx[plane] > 23 ||
-		   a == ((line_h1 >> (4 + s->tx[plane])) & 0x010));
+	    assert(s->tx > 23 ||
+		   a == ((line_h1 >> (4 + s->tx)) & 0x010));
 	    arith_encode(se, (((line_h2 >> 10) & 0x3e0) | a |
 			      ((line_h1 >>  9) & 0x00f)),
 			 (line_h1 >> 8) & 1);
@@ -413,16 +374,16 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
 	/* three line template */
 	do {
 	  line_h1 <<= 1;  line_h2 <<= 1;  line_h3 <<= 1;
-	  if (s->tx[plane]) {
-	    if ((unsigned) s->tx[plane] > j)
+	  if (s->tx) {
+	    if ((unsigned) s->tx > j)
 	      a = 0;
 	    else {
-	      o = (j - s->tx[plane]) - (j & ~7L);
+	      o = (j - s->tx) - (j & ~7L);
 	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
 	      a <<= 2;
 	    }
-	    assert(s->tx[plane] > 23 ||
-		   a == ((line_h1 >> (6 + s->tx[plane])) & 0x004));
+	    assert(s->tx > 23 ||
+		   a == ((line_h1 >> (6 + s->tx)) & 0x004));
 	    arith_encode(se, (((line_h3 >>  8) & 0x380) |
 			      ((line_h2 >> 12) & 0x078) | a |
 			      ((line_h1 >>  9) & 0x003)),
@@ -460,6 +421,8 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
 
   /* line is complete now, deal with end of stripe */
   s->i++; s->y++;
+  s->pline[1] = s->pline[0];
+  s->pline[0] = line;
   if (s->i == s->l0 || s->y == s->y0) {
     /* end of stripe reached */
     arith_encode_flush(&s->s);
@@ -469,6 +432,38 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
     s->i = 0;
   }
 
+  /* check whether it is worth to perform an ATMOVE */
+  if (s->new_tx == -1 && s->c_all > 2048) {
+    cmin = clmin = 0xffffffffL;
+    cmax = clmax = 0;
+    tmax = 0;
+    for (t = (s->options & JBG_LRLTWO) ? 5 : 3; t <= s->mx; t++) {
+      if (c[t] > cmax) cmax = c[t];
+      if (c[t] < cmin) cmin = c[t];
+      if (c[t] > c[tmax]) tmax = t;
+    }
+    clmin = (c[0] < cmin) ? c[0] : cmin;
+    clmax = (c[0] > cmax) ? c[0] : cmax;
+    if (s->c_all - cmax < (s->c_all >> 3) &&
+	cmax - c[s->tx] > s->c_all - cmax &&
+	cmax - c[s->tx] > (s->c_all >> 4) &&
+	/*                     ^ T.82 said < here, fixed in Cor.1/25 */
+	cmax - (s->c_all - c[s->tx]) > s->c_all - cmax &&
+	cmax - (s->c_all - c[s->tx]) > (s->c_all >> 4) &&
+	cmax - cmin > (s->c_all >> 2) &&
+	(s->tx || clmax - clmin > (s->c_all >> 3))) {
+      /* we have decided to perform an ATMOVE */
+      s->new_tx = tmax;
+#ifdef DEBUG
+      fprintf(stderr, "ATMOVE: tx=%d, c_all=%d\n",
+	      s->new_tx, s->c_all);
+#endif
+    } else {
+      s->new_tx = s->tx;  /* we have decided not to perform an ATMOVE */
+    }
+  }
+  assert(s->tx >= 0); /* i.e., tx can safely be cast to unsigned */
+  
 #if 0
   if (s->y == s->y0)
     fprintf(stderr, "tp_lines = %ld, tp_exceptions = %ld, tp_pixels = %ld, "

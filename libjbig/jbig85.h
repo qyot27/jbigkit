@@ -78,11 +78,12 @@ struct jbg_enc_state {
   int newlen;       /* 0 = jbg_enc_newlen() has not yet been called
                        1 = jbg_enc_newlen() has updated y0, NEWLEN pending
                        2 = NEWLEN has already been output                  */
-  int new_tx;            /* -1 = no ATMOVE pending, otherwise new TX value */
   unsigned mx;                               /* maximum ATMOVE window size */
   unsigned long y;                       /* next line number to be encoded */
   unsigned long i;            /* next per-stripe line number to be encoded */
   int tx;                           /* x-offset of adaptive template pixel */
+  int c_all, c[128];              /* adaptive template algorithm variables */
+  int new_tx;            /* -1 = no ATMOVE pending, otherwise new TX value */
   int ltp_old;                           /* true if line y-1 was "typical" */
   struct jbg_arenc_state s;                   /* arithmetic encoder status */
   void (*data_out)(unsigned char *start, size_t len, void *file);
