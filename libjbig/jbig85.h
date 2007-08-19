@@ -108,6 +108,8 @@ struct jbg85_dec_state {
   int mx;                                    /* maximum ATMOVE window size */
   /* image data */
   unsigned char *p[3];      /* current (p[0]) and previous (p[1..2]) lines */
+  unsigned char *linebuf;              /* buffer region provided by caller */
+  size_t linebuf_len;
   /* status information */
   int tx;                                         /*  x-offset of AT pixel */
   struct jbg_ardec_state s;                   /* arithmetic decoder status */
@@ -118,6 +120,7 @@ struct jbg85_dec_state {
   unsigned long comment_skip;      /* remaining bytes of a COMMENT segment */
   unsigned long x;                             /* x position of next pixel */
   unsigned long stripe;                                  /* current stripe */
+  unsigned long y;                      /* line in image (first line is 0) */ 
   unsigned long i;   /* line in current stripe (first line of stripe is 0) */ 
   int at_moves;                /* number of AT moves in the current stripe */
   unsigned long at_line[JBG_ATMOVES_MAX];           /* lines at which an   *
@@ -126,8 +129,11 @@ struct jbg85_dec_state {
   unsigned long line_1, line_2, line_3;        /* variables of decode_pscd */
   int pseudo;         /* flag for TPBON/TPDON:  next pixel is pseudo pixel */
   int lntp;                            /* flag for TP: line is not typical */
-
+  unsigned long xmax;            /* maximum width supported by line buffer */
   unsigned long ymax;  /* if possible abort before image grows beyond this */
+  void (*line_out)(unsigned char *start, size_t len, void *file);
+                                                    /* data write callback */
+  void *file;                            /* parameter passed to data_out() */
 };
 
 

@@ -11,24 +11,24 @@
 #define JBG_AR_H
 
 /*
- * Status description of an arithmetic encoder
+ * Status of arithmetic encoder
  */
 
 struct jbg_arenc_state {
   unsigned char st[4096];    /* probability status for contexts, MSB = MPS */
-  unsigned long c;                /* C register, base of coding intervall, *
+  unsigned long c;                /* register C: base of coding intervall, *
                                    * layout as in Table 23                 */
-  unsigned long a;      /* A register, normalized size of coding intervall */
-  long sc;        /* counter for buffered 0xff values which might overflow */
+  unsigned long a;       /* register A: normalized size of coding interval */
+  long sc;     /* number of buffered 0xff values that might still overflow */
   int ct;  /* bit shift counter, determines when next byte will be written */
   int buffer;                /* buffer for most recent output byte != 0xff */
-  void (*byte_out)(int, void *); /* function which receives all PSCD bytes */
+  void (*byte_out)(int, void *);  /* function that receives all PSCD bytes */
   void *file;                              /* parameter passed to byte_out */
 };
 
 
 /*
- * Status description of an arithmetic decoder
+ * Status of arithmetic decoder
  */
 
 enum jbg_ardec_result {
@@ -41,10 +41,10 @@ enum jbg_ardec_result {
 
 struct jbg_ardec_state {
   unsigned char st[4096];    /* probability status for contexts, MSB = MPS */
-  unsigned long c;                /* C register, base of coding intervall, *
+  unsigned long c;                /* register C: base of coding intervall, *
                                    * layout as in Table 25                 */
-  unsigned long a;      /* A register, normalized size of coding intervall */
-  int ct;     /* bit shift counter, determines when next byte will be read */
+  unsigned long a;       /* register A: normalized size of coding interval */
+  int ct;     /* bit-shift counter, determines when next byte will be read */
   unsigned char *pscd_ptr;               /* pointer to next PSCD data byte */
   unsigned char *pscd_end;                   /* pointer to byte after PSCD */
   enum jbg_ardec_result result;          /* result of previous decode call */

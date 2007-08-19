@@ -37,4 +37,5 @@ t82test.pbm: tstcodec
 	./tstcodec $@
 
 clean:
-	rm -f *.o *~ core gmon.out dbg_d\=??.pbm tstcodec t82test.pbm
+	rm -f *.o *~ core gmon.out dbg_d\=??.pbm t82test.pbm
+	rm -f tstcodec tstcodec85
