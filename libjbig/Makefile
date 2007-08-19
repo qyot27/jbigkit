@@ -5,7 +5,7 @@
 CC = gcc
 
 # Options for the compiler: A high optimization level is suggested
-CFLAGS = -O -Wall -ansi -pedantic
+CFLAGS = -g -O -Wall -ansi -pedantic
 
 all: libjbig.a tstcodec
 

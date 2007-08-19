@@ -67,8 +67,8 @@
 
 /* object code version id */
 
-const char jbg_version[] = 
-" JBIG-KIT " JBG_VERSION " (T.85 version) -- Markus Kuhn -- "
+const char jbg85_version[] = 
+" JBIG-KIT " JBG85_VERSION " (T.85 version) -- Markus Kuhn -- "
 "$Id$ ";
 
 #define _(String) String  /* to mark translatable string for GNU gettext */
@@ -93,20 +93,21 @@ static const char *errmsg[] = {
 /*
  * Callback adapter function for arithmetic encoder
  */
-static void jbg_enc_byte_out(int byte, void *s)
+static void jbg85_enc_byte_out(int byte, void *s)
 {
   unsigned char c = byte;
-  ((struct jbg_enc_state *) s)->data_out(&c, sizeof(unsigned char),
-					 ((struct jbg_enc_state *) s)->file);
+  ((struct jbg85_enc_state *)s)->data_out(&c, sizeof(unsigned char),
+					  ((struct jbg85_enc_state *)s)->file);
 }
 
 /*
  * Initialize the status struct for the encoder.
  */
-void jbg_enc_init(struct jbg_enc_state *s, unsigned long x0, unsigned long y0,
-                  void (*data_out)(unsigned char *start, size_t len,
-				   void *file),
-		  void *file)
+void jbg85_enc_init(struct jbg85_enc_state *s,
+		    unsigned long x0, unsigned long y0,
+		    void (*data_out)(unsigned char *start, size_t len,
+				     void *file),
+		    void *file)
 {
   assert(x0 > 0 && y0 > 0);
   s->x0 = x0;
@@ -133,7 +134,7 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x0, unsigned long y0,
   
   /* initialize arithmetic encoder */
   arith_encode_init(&s->s, 0);
-  s->s.byte_out = &jbg_enc_byte_out;
+  s->s.byte_out = &jbg85_enc_byte_out;
   s->s.file = s;
   
   return;
@@ -145,7 +146,7 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x0, unsigned long y0,
  * options of the format as well as the maximum AT movement window and
  * the number of layer 0 lines per stripes.
  */
-void jbg_enc_options(struct jbg_enc_state *s, int options,
+void jbg85_enc_options(struct jbg85_enc_state *s, int options,
 		     unsigned long l0, int mx)
 {
   if (options >= 0) s->options = options;
@@ -160,20 +161,18 @@ void jbg_enc_options(struct jbg_enc_state *s, int options,
  * Encode one full BIE and pass the generated data to the specified
  * call-back function
  */
-void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
+void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
 {
   unsigned char buf[20];
   unsigned long bpl;
-  unsigned char *hp, *p1, *q1;
+  unsigned char *hp1, *hp2, *hp3, *p1, *q1;
   unsigned long line_h1 = 0, line_h2, line_h3;
   unsigned long j;  /* loop variable for pixel column */
   long o;
   unsigned a, p, t;
-  int ltp, ltp_old, cx;
+  int ltp;
   unsigned long cmin, cmax, clmin, clmax;
   int tmax;
-  long new_tx_line = -1;
-  int reset;
 
   if (s->y >= s->y0) {
     /* we have already output the full image, go away */
@@ -239,7 +238,6 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
     /* output ATMOVE if there is any pending */
     if (s->new_tx != -1 && s->new_tx != s->tx) {
       s->tx = s->new_tx;
-      s->new_tx = -1;
       buf[0] = MARKER_ESC;
       buf[1] = MARKER_ATMOVE;
       buf[2] = 0;
@@ -257,7 +255,7 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
     } else {
       s->c_all = 0;
       for (t = 0; t <= s->mx; t++)
-	c[t] = 0;
+	s->c[t] = 0;
       s->new_tx = -1; /* we have yet to determine ATMOVE ... */
     }
 
@@ -290,8 +288,8 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
       while (p1 < line + bpl && (ltp = (*p1++ == *q1++)) != 0);
     else
       while (p1 < line + bpl && (ltp = (*p1++ == 0    )) != 0);
-    arith_encode(se, (s->options & JBG_LRLTWO) ? TPB2CX : TPB3CX,
-		 ltp == ltp_old);
+    arith_encode(&s->s, (s->options & JBG_LRLTWO) ? TPB2CX : TPB3CX,
+		 ltp == s->ltp_old);
 #ifdef DEBUG
     tp_lines += ltp;
 #endif
@@ -315,16 +313,16 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
     hp1 = line;
   
     line_h1 = line_h2 = line_h3 = 0;
-    if (s->i > 0 || !reset) line_h2 = (long)*(hp - hbpl) << 8;
-    if (s->i > 1 || !reset) line_h3 = (long)*(hp - hbpl - hbpl) << 8;
+    if (hp2) line_h2 = (long)*hp2 << 8;
+    if (hp3) line_h3 = (long)*hp3 << 8;
   
     /* encode line */
-    for (j = 0; j < hx; hp++) {
-      line_h1 |= *hp;
-      if (j < hbpl * 8 - 8 && (i > 0 || !reset)) {
-	line_h2 |= *(hp - hbpl + 1);
-	if (i > 1 || !reset)
-	  line_h3 |= *(hp - hbpl - hbpl + 1);
+    for (j = 0; j < s->x0;) {
+      line_h1 |= *hp1;
+      if (j < bpl * 8 - 8 && hp2) {
+	line_h2 |= *(hp2 + 1);
+	if (hp3)
+	  line_h3 |= *(hp3 + 1);
       }
       if (s->options & JBG_LRLTWO) {
 	/* two line template */
@@ -335,41 +333,41 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
 	      a = 0;
 	    else {
 	      o = (j - s->tx) - (j & ~7L);
-	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      a = (hp1[o >> 3] >> (7 - (o & 7))) & 1;
 	      a <<= 4;
 	    }
 	    assert(s->tx > 23 ||
 		   a == ((line_h1 >> (4 + s->tx)) & 0x010));
-	    arith_encode(se, (((line_h2 >> 10) & 0x3e0) | a |
-			      ((line_h1 >>  9) & 0x00f)),
+	    arith_encode(&s->s, (((line_h2 >> 10) & 0x3e0) | a |
+				 ((line_h1 >>  9) & 0x00f)),
 			 (line_h1 >> 8) & 1);
 	  }
 	  else
-	    arith_encode(se, (((line_h2 >> 10) & 0x3f0) |
-			      ((line_h1 >>  9) & 0x00f)),
+	    arith_encode(&s->s, (((line_h2 >> 10) & 0x3f0) |
+				 ((line_h1 >>  9) & 0x00f)),
 			 (line_h1 >> 8) & 1);
 #ifdef DEBUG
 	  encoded_pixels++;
 #endif
 	  /* statistics for adaptive template changes */
-	  if (!at_determined && j >= s->mx && j < hx-2) {
+	  if (s->new_tx == -1 && j >= s->mx && j < s->x0 - 2) {
 	    p = (line_h1 & 0x100) != 0; /* current pixel value */
-	    c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
+	    s->c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
 	    assert(!(((line_h2 >> 6) ^ line_h1) & 0x100) ==
 		   (((line_h2 & 0x4000) != 0) == p));
 	    for (t = 5; t <= s->mx && t <= j; t++) {
 	      o = (j - t) - (j & ~7L);
-	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      a = (hp1[o >> 3] >> (7 - (o & 7))) & 1;
 	      assert(t > 23 ||
 		     (a == p) == !(((line_h1 >> t) ^ line_h1) & 0x100));
-	      c[t] += a == p;
+	      s->c[t] += a == p;
 	    }
 	    for (; t <= s->mx; t++) {
-	      c[t] += 0 == p;
+	      s->c[t] += 0 == p;
 	    }
-	    ++c_all;
+	    ++s->c_all;
 	  }
-	} while (++j & 7 && j < hx);
+	} while (++j & 7 && j < s->x0);
       } else {
 	/* three line template */
 	do {
@@ -379,43 +377,46 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
 	      a = 0;
 	    else {
 	      o = (j - s->tx) - (j & ~7L);
-	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      a = (hp1[o >> 3] >> (7 - (o & 7))) & 1;
 	      a <<= 2;
 	    }
 	    assert(s->tx > 23 ||
 		   a == ((line_h1 >> (6 + s->tx)) & 0x004));
-	    arith_encode(se, (((line_h3 >>  8) & 0x380) |
-			      ((line_h2 >> 12) & 0x078) | a |
-			      ((line_h1 >>  9) & 0x003)),
+	    arith_encode(&s->s, (((line_h3 >>  8) & 0x380) |
+				 ((line_h2 >> 12) & 0x078) | a |
+				 ((line_h1 >>  9) & 0x003)),
 			 (line_h1 >> 8) & 1);
 	  } else
-	    arith_encode(se, (((line_h3 >>  8) & 0x380) |
-			      ((line_h2 >> 12) & 0x07c) |
-			      ((line_h1 >>  9) & 0x003)),
+	    arith_encode(&s->s, (((line_h3 >>  8) & 0x380) |
+				 ((line_h2 >> 12) & 0x07c) |
+				 ((line_h1 >>  9) & 0x003)),
 			 (line_h1 >> 8) & 1);
 #ifdef DEBUG
 	  encoded_pixels++;
 #endif
 	  /* statistics for adaptive template changes */
-	  if (!at_determined && j >= s->mx && j < hx-2) {
+	  if (s->new_tx == -1 && j >= s->mx && j < s->x0 - 2) {
 	    p = (line_h1 & 0x100) != 0; /* current pixel value */
-	    c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
+	    s->c[0] += ((line_h2 & 0x4000) != 0) == p; /* default position */
 	    assert(!(((line_h2 >> 6) ^ line_h1) & 0x100) ==
 		   (((line_h2 & 0x4000) != 0) == p));
 	    for (t = 3; t <= s->mx && t <= j; t++) {
 	      o = (j - t) - (j & ~7L);
-	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      a = (hp1[o >> 3] >> (7 - (o & 7))) & 1;
 	      assert(t > 23 ||
 		     (a == p) == !(((line_h1 >> t) ^ line_h1) & 0x100));
-	      c[t] += a == p;
+	      s->c[t] += a == p;
 	    }
 	    for (; t <= s->mx; t++) {
-	      c[t] += 0 == p;
+	      s->c[t] += 0 == p;
 	    }
-	    ++c_all;
+	    ++s->c_all;
 	  }
-	} while (++j & 7 && j < hx);
+	} while (++j & 7 && j < s->x0);
       } /* if (s->options & JBG_LRLTWO) */
+      hp1++;
+      if (hp2) hp2++;
+      if (hp3) hp3++;
     } /* for (j = ...) */
   } /* if (!ltp) */
 
@@ -438,18 +439,18 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
     cmax = clmax = 0;
     tmax = 0;
     for (t = (s->options & JBG_LRLTWO) ? 5 : 3; t <= s->mx; t++) {
-      if (c[t] > cmax) cmax = c[t];
-      if (c[t] < cmin) cmin = c[t];
-      if (c[t] > c[tmax]) tmax = t;
+      if (s->c[t] > cmax) cmax = s->c[t];
+      if (s->c[t] < cmin) cmin = s->c[t];
+      if (s->c[t] > s->c[tmax]) tmax = t;
     }
-    clmin = (c[0] < cmin) ? c[0] : cmin;
-    clmax = (c[0] > cmax) ? c[0] : cmax;
+    clmin = (s->c[0] < cmin) ? s->c[0] : cmin;
+    clmax = (s->c[0] > cmax) ? s->c[0] : cmax;
     if (s->c_all - cmax < (s->c_all >> 3) &&
-	cmax - c[s->tx] > s->c_all - cmax &&
-	cmax - c[s->tx] > (s->c_all >> 4) &&
-	/*                     ^ T.82 said < here, fixed in Cor.1/25 */
-	cmax - (s->c_all - c[s->tx]) > s->c_all - cmax &&
-	cmax - (s->c_all - c[s->tx]) > (s->c_all >> 4) &&
+	cmax - s->c[s->tx] > s->c_all - cmax &&
+	cmax - s->c[s->tx] > (s->c_all >> 4) &&
+	/*                 ^ T.82 said < here, fixed in Cor.1/25 */
+	cmax - (s->c_all - s->c[s->tx]) > s->c_all - cmax &&
+	cmax - (s->c_all - s->c[s->tx]) > (s->c_all >> 4) &&
 	cmax - cmin > (s->c_all >> 2) &&
 	(s->tx || clmax - clmin > (s->c_all >> 3))) {
       /* we have decided to perform an ATMOVE */
@@ -477,7 +478,7 @@ void jbg_enc_lineout(struct jbg_enc_state *s, unsigned char *line)
 /*
  * Inform encoder about new (reduced) height of image
  */
-void jbg85_enc_newlen(struct jbg_enc_state *s, unsigned long newlen)
+void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long newlen)
 {
   unsigned char buf[6];
 
@@ -517,21 +518,22 @@ void jbg85_enc_newlen(struct jbg_enc_state *s, unsigned long newlen)
 }
 
 /*
- * Convert the error codes used by jbg_dec_in() into an English ASCII string
+ * Convert the error codes used by jbg85_dec_in() into an English ASCII string
  */
-const char *jbg_strerror(int errnum)
+const char *jbg85_strerror(int errnum)
 {
   if (errnum < 0 || (unsigned) errnum >= sizeof(errmsg)/sizeof(errmsg[0]))
-    return "Unknown error code passed to jbg_strerror()";
+    return "Unknown error code passed to jbg85_strerror()";
 
   return errmsg[errnum];
 }
 
+#ifdef TODO
 
 /*
  * The constructor for a decoder 
  */
-void jbg_dec_init(struct jbg_dec_state *s)
+void jbg85_dec_init(struct jbg85_dec_state *s)
 {
   s->order = 0;
   s->d = -1;
@@ -1563,3 +1565,5 @@ int jbg_newlen(unsigned char *bie, size_t len)
   }
   return JBG_EINVAL;
 }
+
+#endif

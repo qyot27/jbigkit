@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "jbig.h"
+#include "jbig85.h"
 
 #define TESTBUF_SIZE 400000L
 #define TESTPIC_SIZE 477995L
@@ -128,35 +128,28 @@ static void testimage(unsigned char *pic)
  * the image again both in one single chunk or byte by byte and compare
  * the results with the original input image.
  */
-static int test_cycle(unsigned char **orig_image, int width, int height,
-		      int options, int order, int layers, int planes,
-		      unsigned long l0, int mx, long correct_length,
-		      const char *test_id)
+static int test_cycle(unsigned char *orig_image, int width, int height,
+		      int options, unsigned long l0, int mx,
+		      long correct_length, const char *test_id)
 {
-  struct jbg_enc_state sje;
-  struct jbg_dec_state sjd;
+  struct jbg85_enc_state sje;
+  struct jbg85_dec_state sjd;
   int trouble = 0;
   long l;
   size_t plane_size;
   int i, result;
-  unsigned char **image;
+  unsigned char *image;
 
   plane_size = ((width + 7) / 8) * height;
-  image = (unsigned char **) checkedmalloc(planes * sizeof(unsigned char *));
-  for (i = 0; i < planes; i++) {
-    image[i] = (unsigned char *) checkedmalloc(plane_size);
-    memcpy(image[i], orig_image[i], plane_size);
-  }
-
+  image = (unsigned char *) checkedmalloc(plane_size);
+  memcpy(image, orig_image, plane_size);
+  
   printf("\nTest %s.1: Encoding ...\n", test_id);
   testbuf_len = 0;
-  jbg_enc_init(&sje, width, height, planes, image, testbuf_writel, NULL);
-  jbg_enc_layers(&sje, layers);
-  jbg_enc_options(&sje, order, options, l0, mx, 0);
-  jbg_enc_out(&sje);
-  jbg_enc_free(&sje);
-  for (i = 0; i < planes; i++)
-    free(image[i]);
+  jbg85_enc_init(&sje, width, height, testbuf_writel, NULL);
+  jbg85_enc_options(&sje, options, l0, mx);
+  for (i = 0; i < height; i++)
+    jbg85_enc_lineout(&sje, image + i * ((width + 7) / 8));
   free(image);
   printf("Encoded BIE has %6ld bytes: ", testbuf_len);
   if (correct_length >= 0)
@@ -165,10 +158,13 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
     else {
       trouble++;
       printf(FAILED ", correct would have been %ld\n", correct_length);
+      write(5,testbuf, testbuf_len);
+      abort();
     }
   else
     puts("");
   
+#if 0
   printf("Test %s.2: Decoding whole chunk ...\n", test_id);
   jbg_dec_init(&sjd);
   result = jbg_dec_in(&sjd, testbuf, testbuf_len, NULL);
@@ -226,6 +222,7 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
   }
 
   jbg_dec_free(&sjd);
+#endif
   puts("");
   
   return trouble != 0;
@@ -294,33 +291,19 @@ int main(int argc, char **argv)
     0xfe^0x40, 0xff^0x04, 0xff^0xe2, 0xfe^0x5c, 0xff^0x44,
     0xff^0x92, 0xfe^0x44, 0xff^0x38, 0xff^0xe2, 0xfe^0x38
   };
-  int orders[] = {
-    0,
-    JBG_ILEAVE,
-    JBG_ILEAVE | JBG_SMID,
-#if 0
-    JBG_SEQ,
-    JBG_SEQ | JBG_SMID,
-    JBG_SEQ | JBG_ILEAVE,
-    JBG_HITOLO,
-    JBG_HITOLO | JBG_ILEAVE,
-    JBG_HITOLO | JBG_ILEAVE | JBG_SMID,
-    JBG_HITOLO | JBG_SEQ,
-    JBG_HITOLO | JBG_SEQ | JBG_SMID,
-    JBG_HITOLO | JBG_SEQ | JBG_ILEAVE
-#endif
-  };
 
   printf("\nAutomatic JBIG Compatibility Test Suite\n"
 	 "---------------------------------------\n\n"
-	 "JBIG-KIT Version " JBG_VERSION
-	 " -- This test will take a few minutes.\n\n\n");
+	 "JBIG-KIT Version " JBG85_VERSION " (T.85 version)"
+	 " -- This test may take a few minutes.\n\n\n");
 
   /* allocate test buffer memory */
   testbuf = (unsigned char *) checkedmalloc(TESTBUF_SIZE);
   testpic = (unsigned char *) checkedmalloc(TESTPIC_SIZE);
-  se = (struct jbg_arenc_state *) checkedmalloc(sizeof(struct jbg_arenc_state));
-  sd = (struct jbg_ardec_state *) checkedmalloc(sizeof(struct jbg_ardec_state));
+  se = (struct jbg_arenc_state *)
+    checkedmalloc(sizeof(struct jbg_arenc_state));
+  sd = (struct jbg_ardec_state *)
+    checkedmalloc(sizeof(struct jbg_ardec_state));
 
   /* test a few properties of the machine architecture */
   testbuf[0] = 42;
@@ -340,28 +323,6 @@ int main(int argc, char **argv)
            "memory model, JBIG-KIT can only handle very small images and\n"
            "not even this compatibility test suite will run. :-(\n\n");
     exit(1);
-  }
-
-  /* only supported command line option:
-   * output file name for exporting test image */
-  if (argc > 1) {
-    FILE *f;
-
-    puts("Generating test image ...");
-    testimage(testpic);
-    printf("Storing in '%s' ...\n", argv[1]);
-    
-    /* write out test image as PBM file */
-    f = fopen(argv[1], "wb");
-    if (!f) abort();
-    fprintf(f, "P4\n");
-#if 0
-    fprintf(f, "# Test image as defined in ITU-T T.82, clause 7.2.1\n");
-#endif
-    fprintf(f, "1960 1951\n");
-    fwrite(testpic, 1, TESTPIC_SIZE, f);
-    fclose(f);
-    exit(0);
   }
 
 #if 1
@@ -467,70 +428,36 @@ int main(int argc, char **argv)
   puts("Generating test image ...");
   testimage(testpic);
   putchar('\n');
-  pp = testpic;
 
   puts("Test 3.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951, 0 layers");
-  problems += test_cycle(&pp, 1960, 1951, JBG_DELAY_AT,
-			 0, 0, 1, 1951, 0, 317384L, "3.1");
+  problems += test_cycle(testpic, 1960, 1951, JBG_DELAY_AT,
+			 1951, 0, 317384L, "3.1");
   puts("Test 3.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951, 0 layers");
-  problems += test_cycle(&pp, 1960, 1951, JBG_DELAY_AT | JBG_LRLTWO,
-			 0, 0, 1, 1951, 0, 317132L, "3.2");
+  problems += test_cycle(testpic, 1960, 1951, JBG_DELAY_AT | JBG_LRLTWO,
+			 1951, 0, 317132L, "3.2");
   puts("Test 3.3: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
-  problems += test_cycle(&pp, 1960, 1951, JBG_DELAY_AT | JBG_TPBON,
-			 0, 0, 1, 128, 8, 253653L, "3.3");
-  puts("Test 3.4: TPBON=1, DPON=1, TPDON=1, Mx=8, LRLTWO=0, L0=2, 6 layers");
-  problems += test_cycle(&pp, 1960, 1951,
-			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON,
-			 0, 6, 1, 2, 8, 279314L, "3.4");
-#if 0
-  puts("Test 3.5: as Test 3.4 but with order bit SEQ set");
-  problems += test_cycle(&pp, 1960, 1951,
-			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON,
-			 JBG_SEQ, 6, 1, 2, 8, 279314L, "3.5");
-#endif
+  problems += test_cycle(testpic, 1960, 1951, JBG_DELAY_AT | JBG_TPBON,
+			 128, 8, 253653L, "3.3");
 #endif
 
+#if 0
   puts("4) Same T.82 tests with SDRST instead of SDNORM\n"
        "-----------------------------------------------\n");
 
   puts("Test 4.0: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_SDRST | JBG_TPBON,
-			 0, 0, 1, 128, 8, -1, "4.0");
+			 128, 8, -1, "4.0");
 
   puts("Test 4.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_SDRST,
-			 0, 0, 1, 1951, 0, -1, "4.1");
+			 1951, 0, -1, "4.1");
   puts("Test 4.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_LRLTWO | JBG_SDRST,
-			 0, 0, 1, 1951, 0, -1, "4.2");
+			 1951, 0, -1, "4.2");
   puts("Test 4.3: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_TPBON | JBG_SDRST,
-			 0, 0, 1, 128, 8, -1, "4.3");
-  puts("Test 4.4: TPBON=1, DPON=1, TPDON=1, Mx=8, LRLTWO=0, L0=2, 6 layers");
-  problems += test_cycle(&pp, 1960, 1951,
-			 JBG_TPBON | JBG_TPDON |
-			 JBG_DPON | JBG_SDRST,
-			 0, 6, 1, 2, 8, -1, "4.4");
-
-  puts("5) Small test image, 0-3 layers, 4 planes, different orders\n"
-       "-----------------------------------------------------------\n");
-  
-  /* test a simple multi-plane image */
-  ppp[0] = jbig_normal;
-  ppp[1] = jbig_upsidedown;
-  ppp[2] = jbig_inverse;
-  ppp[3] = jbig_inverse;
-
-  i = 0;
-  for (layers = 0; layers <= 3; layers++)
-    for (order = 0; order < (int) (sizeof(orders)/sizeof(int)); order++) {
-      sprintf(test, "5.%ld", ++i);
-      printf("Test %s: order=%d, %d layers, 4 planes", test, orders[order],
-	     layers);
-      problems += test_cycle(ppp, 23, 5*4, JBG_TPBON | JBG_TPDON | JBG_DPON,
-			     orders[order], layers, 4, 2, 8, -1, test);
-    }
-
+			 128, 8, -1, "4.3");
+#endif
 
   printf("\nTest result summary: the library has %s the test suite.\n\n",
 	 problems ? FAILED : PASSED);

@@ -7,8 +7,8 @@
  *  $Id$
  */
 
-#ifndef JBG_H
-#define JBG_H
+#ifndef JBG85_H
+#define JBG85_H
 
 #include <stddef.h>
 #include "jbig_ar.h"
@@ -17,7 +17,7 @@
  * JBIG-KIT version number
  */
 
-#define JBG_VERSION    "1.7"
+#define JBG85_VERSION    "1.7"
 
 /*
  * Maximum number of ATMOVEs per stripe that decoder can handle
@@ -70,14 +70,14 @@
  * Status of a JBIG encoder
  */
 
-struct jbg_enc_state {
+struct jbg85_enc_state {
   unsigned long x0, y0;                         /* size of the input image */
   unsigned long l0;                          /* number of lines per stripe */
   unsigned char *pline[2];                  /* point to previous two lines */
   int options;                                      /* encoding parameters */
-  int newlen;       /* 0 = jbg_enc_newlen() has not yet been called
-                       1 = jbg_enc_newlen() has updated y0, NEWLEN pending
-                       2 = NEWLEN has already been output                  */
+  int newlen;     /* 0 = jbg85_enc_newlen() has not yet been called
+                     1 = jbg85_enc_newlen() has updated y0, NEWLEN pending
+                     2 = NEWLEN has already been output                    */
   unsigned mx;                               /* maximum ATMOVE window size */
   unsigned long y;                       /* next line number to be encoded */
   unsigned long i;            /* next per-stripe line number to be encoded */
@@ -100,14 +100,14 @@ struct jbg_enc_state {
  * Status of a JBIG decoder
  */
 
-struct jbg_dec_state {
+struct jbg85_dec_state {
   /* data from BIH */
   unsigned long x0, y0;                          /* size of the full image */
   unsigned long l0;                          /* number of lines per stripe */
   int options;                                      /* encoding parameters */
   int mx;                                    /* maximum ATMOVE window size */
+  /* image data */
   unsigned char *p[3];      /* current (p[0]) and previous (p[1..2]) lines */
-
   /* status information */
   int tx;                                         /*  x-offset of AT pixel */
   struct jbg_ardec_state s;                   /* arithmetic decoder status */
@@ -133,27 +133,27 @@ struct jbg_dec_state {
 
 /* function prototypes */
 
-void jbg85_enc_init(struct jbg_enc_state *s,
+void jbg85_enc_init(struct jbg85_enc_state *s,
 		    unsigned long x0, unsigned long y0,
 		    void (*data_out)(unsigned char *start, size_t len,
 				     void *file),
 		    void *file);
-void jbg85_enc_options(struct jbg_enc_state *s, int options,
+void jbg85_enc_options(struct jbg85_enc_state *s, int options,
 		       unsigned long l0, int mx);
-void jbg85_enc_lineout(struct jbg_enc_state *s, unsigned char *line);
-void jbg85_enc_newlen(struct jbg_enc_state *s, unsigned long y0);
+void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line);
+void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long y0);
 
-void jbg85_dec_init(struct jbg_dec_state *s,
+void jbg85_dec_init(struct jbg85_dec_state *s,
 		    unsigned char *buf, size_t buflen,
 		    void (*line_out)(unsigned char *start, size_t len,
 				     void *file),
 		    void *file);
-void jbg85_dec_maxlen(struct jbg_dec_state *s, unsigned long ymax);
-int  jbg85_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
+void jbg85_dec_maxlen(struct jbg85_dec_state *s, unsigned long ymax);
+int  jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 		  size_t *cnt);
-long jbg85_dec_getwidth(const struct jbg_dec_state *s);
-long jbg85_dec_getheight(const struct jbg_dec_state *s);
+long jbg85_dec_getwidth(const struct jbg85_dec_state *s);
+long jbg85_dec_getheight(const struct jbg85_dec_state *s);
 
 const char *jbg85_strerror(int errnum);
 
-#endif /* JBG_H */
+#endif /* JBG85_H */

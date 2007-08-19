@@ -314,7 +314,7 @@ int main(int argc, char **argv)
   printf("\nAutomatic JBIG Compatibility Test Suite\n"
 	 "---------------------------------------\n\n"
 	 "JBIG-KIT Version " JBG_VERSION
-	 " -- This test will take a few minutes.\n\n\n");
+	 " -- This test may take a few minutes.\n\n\n");
 
   /* allocate test buffer memory */
   testbuf = (unsigned char *) checkedmalloc(TESTBUF_SIZE);
