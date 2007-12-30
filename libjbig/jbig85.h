@@ -126,7 +126,7 @@ struct jbg85_dec_state {
   unsigned long at_line[JBG_ATMOVES_MAX];           /* lines at which an   *
 					             * AT move will happen */
   int at_tx[JBG_ATMOVES_MAX];        /* ATMOVE x-offsets in current stripe */
-  unsigned long line_1, line_2, line_3;        /* variables of decode_pscd */
+  unsigned long line_h1, line_h2, line_h3;     /* variables of decode_pscd */
   int pseudo;         /* flag for TPBON/TPDON:  next pixel is pseudo pixel */
   int lntp;                            /* flag for TP: line is not typical */
   unsigned long xmax;            /* maximum width supported by line buffer */
