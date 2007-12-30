@@ -537,10 +537,9 @@ const char *jbg85_strerror(int errnum)
 void jbg85_dec_init(struct jbg85_dec_state *s,
 		    unsigned char *buf, size_t buflen,
 		    void (*line_out)(unsigned char *start, size_t len,
-				     void *file),
+				     unsigned long y, void *file),
 		    void *file)
 {
-  s->xmax = (buflen / 3) * 8;
   s->ymax = 4294967295UL;
   s->linebuf = buf;
   s->linebuf_len = buflen;
@@ -557,7 +556,7 @@ void jbg85_dec_init(struct jbg85_dec_state *s,
  * Specify a maximum image height for the decoder. It will abort to
  * decode after ymax lines have been received.
  */
-void jbg_dec_maxlen(struct jbg85_dec_state *s, unsigned long ymax)
+void jbg85_dec_maxlen(struct jbg85_dec_state *s, unsigned long ymax)
 {
   if (ymax > 0) s->ymax = ymax;
   return;
@@ -575,25 +574,19 @@ void jbg_dec_maxlen(struct jbg85_dec_state *s, unsigned long ymax)
 static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 			  size_t len)
 {
-  unsigned long stripe;
-  unsigned long y, bpl;
-  unsigned char *hp, *p1, *q1;
+  unsigned char *hp1, *hp2, *hp3, *p1;
   register unsigned long line_h1, line_h2, line_h3;
   unsigned long x;
   long o;
   unsigned a;
   int n;
-  int pix, cx = 0, slntp;
+  int pix, slntp;
+  int buflines = 3 - !!(s->options & JBG_LRLTWO);
 
   /* forward data to arithmetic decoder */
   s->s.pscd_ptr = data;
   s->s.pscd_end = data + len;
   
-  /* bytes per line */
-  bpl = (s->x0 + 7) / 8;
-  /* pointer to image byte */
-  hp  = s->p[0] (s->x >> 3);
-
   /* restore a few local variables */
   line_h1 = s->line_h1;
   line_h2 = s->line_h2;
@@ -606,13 +599,12 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	    (void *) s, (void *) data, (long) len);
 #endif
 
-  if (s->x == 0 && s->i == 0 &&
-      (stripe == 0 || s->reset) && s->pseudo) {
-    s->tx = 0;
-    s->lntp = 1;
-  }
+  for (; s->i < s->l0 && s->y < s->y0; s->i++, s->y++) {
 
-  for (; s->i < s->l0 && y < s->y0; s->i++, y++) {
+    /* pointer to image byte */
+    hp1  = s->linebuf + s->p[0] * s->bpl + (s->x >> 3);
+    hp2  = s->linebuf + s->p[1] * s->bpl + (s->x >> 3);
+    hp3  = s->linebuf + s->p[2] * s->bpl + (s->x >> 3);
 
     /* adaptive template changes */
     if (x == 0 && s->pseudo)
@@ -634,14 +626,15 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	!(slntp ^ s->lntp);
       if (!s->lntp) {
 	/* this line is 'typical' (i.e. identical to the previous one) */
-	p1 = hp;
-	if (s->i == 0 && (stripe == 0 || s->reset))
-	  while (p1 < hp + hbpl) *p1++ = 0;
-	else {
-	  q1 = hp - hbpl;
-	  while (q1 < hp) *p1++ = *q1++;
+	s->p[2] = s->p[1];
+	s->p[1] = s->p[0];
+	if (s->y == 0 || s->reset) {
+	  for (p1 = hp1; p1 < hp1 + s->bpl; *p1++ = 0);
+	  s->line_out(hp1, s->bpl, s->y, s->file);
+	  if (++(s->p[0]) >= buflines) s->p[0] = 0;
+	} else {
+	  s->line_out(hp1, s->bpl, s->y, s->file);
 	}
-	hp += hbpl;
 	continue;
       }
       /* this line is 'not typical' and has to be coded completely */
@@ -659,64 +652,19 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
     
     if (x == 0) {
       line_h1 = line_h2 = line_h3 = 0;
-      if (s->i > 0 || (y > 0 && !s->reset))
-	line_h2 = (long)*(hp - hbpl) << 8;
-      if (s->i > 1 || (y > 1 && !s->reset))
-	line_h3 = (long)*(hp - hbpl - hbpl) << 8;
+      if (s->p[1] >= 0)
+	line_h2 = (long)*hp2 << 8;
+      if (s->p[2] >= 0)
+	line_h3 = (long)*hp3 << 8;
     }
     
-    /*
-     * Another tiny JBIG standard bug:
-     *
-     * While implementing the line_h3 handling here, I discovered
-     * another problem with the ITU-T T.82(1993 E) specification.
-     * This might be a somewhat pathological case, however. The
-     * standard is unclear about how a decoder should behave in the
-     * following situation:
-     *
-     * Assume we are in layer 0 and all stripes are single lines
-     * (L0=1 allowed by table 9). We are now decoding the first (and
-     * only) line of the third stripe. Assume, the first stripe was
-     * terminated by SDRST and the second stripe was terminated by
-     * SDNORM. While decoding the only line of the third stripe with
-     * the three-line template, we need access to pixels from the
-     * previous two stripes. We know that the previous stripe
-     * terminated with SDNROM, so we access the pixel from the
-     * second stripe. But do we have to replace the pixels from the
-     * first stripe by background pixels, because this stripe ended
-     * with SDRST? The standard, especially clause 6.2.5 does never
-     * mention this case, so the behaviour is undefined here. My
-     * current implementation remembers only the marker used to
-     * terminate the previous stripe. In the above example, the
-     * pixels of the first stripe are accessed despite the fact that
-     * this stripe ended with SDRST. An alternative (only slightly
-     * more complicated) implementation would be to remember the end
-     * marker (SDNORM or SDRST) of the previous two stripes in a
-     * plane/layer and to act accordingly when accessing the two
-     * previous lines. What am I supposed to do here?
-     *
-     * As the standard is unclear about the correct behaviour in the
-     * situation of the above example, I strongly suggest to avoid
-     * the following situation while encoding data with JBIG:
-     *
-     *   LRLTWO = 0, L0=1 and both SDNORM and SDRST appear in layer 0.
-     *
-     * I guess that only a very few if any encoders will switch
-     * between SDNORM and SDRST, so let us hope that this ambiguity
-     * in the standard will never cause any interoperability
-     * problems.
-     *
-     * Markus Kuhn -- 1995-04-30
-     */
-    
     /* decode line */
-    while (x < hx) {
+    while (x < s->x0) {
       if ((x & 7) == 0) {
-	if (x < hbpl * 8 - 8 &&
-	    (s->i > 0 || (y > 0 && !s->reset))) {
-	  line_h2 |= *(hp - hbpl + 1);
-	  if (s->i > 1 || (y > 1 && !s->reset))
-	    line_h3 |= *(hp - hbpl - hbpl + 1);
+	if (x < (s->bpl - 1) * 8 && s->p[1] >= 0) {
+	  line_h2 |= *(hp2 + 1);
+	  if (s->p[2] >= 0)
+	    line_h3 |= *(hp3 + 1);
 	}
       }
       if (s->options & JBG_LRLTWO) {
@@ -729,7 +677,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	      a = ((line_h1 >> (s->tx - 5)) & 0x010);
 	    else {
 	      o = (x - s->tx) - (x & ~7L);
-	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      a = (hp1[o >> 3] >> (7 - (o & 7))) & 1;
 	      a <<= 4;
 	    }
 	    assert(s->tx > 31 ||
@@ -743,7 +691,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	    goto leave;
 	  line_h1 = (line_h1 << 1) | pix;
 	  line_h2 <<= 1;
-	} while ((++x & 7) && x < hx);
+	} while ((++x & 7) && x < s->x0);
       } else {
 	/* three line template */
 	do {
@@ -754,7 +702,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	      a = ((line_h1 >> (s->tx - 3)) & 0x004);
 	    else {
 	      o = (x - s->tx) - (x & ~7L);
-	      a = (hp[o >> 3] >> (7 - (o & 7))) & 1;
+	      a = (hp1[o >> 3] >> (7 - (o & 7))) & 1;
 	      a <<= 2;
 	    }
 	    assert(s->tx > 31 ||
@@ -768,15 +716,17 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 				       (line_h1 & 0x003)));
 	  if (s->s.result == JBG_MORE || s->s.result == JBG_MARKER)
 	    goto leave;
-	  
 	  line_h1 = (line_h1 << 1) | pix;
 	  line_h2 <<= 1;
 	  line_h3 <<= 1;
-	} while ((++x & 7) && x < hx);
+	} while ((++x & 7) && x < s->x0);
       } /* if (s->options & JBG_LRLTWO) */
-      *hp++ = line_h1;
-    } /* while */
-    *(hp - 1) <<= hbpl * 8 - hx;
+      *hp1++ = line_h1;
+      hp2++;
+      hp3++;
+    } /* while (x < s->x0) */
+    *(hp1 - 1) <<= s->bpl * 8 - s->x0;
+    s->line_out(s->linebuf + s->p[0] * s->bpl, s->bpl, s->y, s->file);
     x = 0;
     s->pseudo = 1;
   } /* for (i = ...) */
@@ -810,7 +760,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
  * occured and the only function you can still call is jbg_strerror()
  * in order to find out what to tell the user.
  */
-int jbg_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
+int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	       size_t *cnt)
 {
   int required_length;
@@ -850,12 +800,21 @@ int jbg_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
     s->options = s->buffer[19];
     if (s->options & 0x17)
       return JBG_EIMPL; /* parameters outside T.85 */
+    if (s->x0 > (s->linebuf_len / ((s->options & JBG_LRLTWO) ? 2 : 3)) * 8)
+      return JBG_ENOMEM; /* provided line buffer is too short */
     s->comment_skip = 0;
     s->buf_len = 0;
     s->x = 0;
+    s->y = 0;
     s->i = 0;
     s->pseudo = 1;
     s->at_moves = 0;
+    s->tx = 0;
+    s->lntp = 1;
+    s->bpl = (s->x0 >> 3) + !!(s->x0 & 7); /* bytes per line */
+    s->p[0] = 0;
+    s->p[1] = -1;
+    s->p[2] = -1;
   }
 
   /*
@@ -947,6 +906,10 @@ int jbg_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	s->i = 0;
 	s->pseudo = 1;
 	s->at_moves = 0;
+	if (s->reset) {
+	  s->tx = 0;
+	  s->lntp = 1;
+	}
 	
 	s->buf_len = 0;
 	
@@ -998,7 +961,7 @@ int jbg_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
  * After jbg_dec_in() returned JBG_EOK or JBG_EOK_INTR, you can call this
  * function in order to find out the width of the image.
  */
-long jbg_dec_getwidth(const struct jbg85_dec_state *s)
+long jbg85_dec_getwidth(const struct jbg85_dec_state *s)
 {
   return s->x0;
 }
@@ -1008,7 +971,7 @@ long jbg_dec_getwidth(const struct jbg85_dec_state *s)
  * After jbg_dec_in() returned JBG_EOK or JBG_EOK_INTR, you can call this
  * function in order to find out the height of the image.
  */
-long jbg_dec_getheight(const struct jbg85_dec_state *s)
+long jbg85_dec_getheight(const struct jbg85_dec_state *s)
 {
   return s->y0;
 }

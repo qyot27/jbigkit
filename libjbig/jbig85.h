@@ -107,9 +107,11 @@ struct jbg85_dec_state {
   int options;                                      /* encoding parameters */
   int mx;                                    /* maximum ATMOVE window size */
   /* image data */
-  unsigned char *p[3];      /* current (p[0]) and previous (p[1..2]) lines */
+  int p[3];    /* curr. line starts at linebuf+bpl*p[0], prev. line starts
+                * at linebuf+bpl*p[1], its predecessor at linebuf+bpl*p[2] */
   unsigned char *linebuf;              /* buffer region provided by caller */
   size_t linebuf_len;
+  size_t bpl;                                            /* bytes per line */
   /* status information */
   int tx;                                         /*  x-offset of AT pixel */
   struct jbg_ardec_state s;                   /* arithmetic decoder status */
@@ -129,9 +131,9 @@ struct jbg85_dec_state {
   unsigned long line_h1, line_h2, line_h3;     /* variables of decode_pscd */
   int pseudo;         /* flag for TPBON/TPDON:  next pixel is pseudo pixel */
   int lntp;                            /* flag for TP: line is not typical */
-  unsigned long xmax;            /* maximum width supported by line buffer */
   unsigned long ymax;  /* if possible abort before image grows beyond this */
-  void (*line_out)(unsigned char *start, size_t len, void *file);
+  void (*line_out)(unsigned char *start, size_t len,
+		   unsigned long y, void *file);
                                                     /* data write callback */
   void *file;                            /* parameter passed to data_out() */
 };
@@ -152,7 +154,7 @@ void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long y0);
 void jbg85_dec_init(struct jbg85_dec_state *s,
 		    unsigned char *buf, size_t buflen,
 		    void (*line_out)(unsigned char *start, size_t len,
-				     void *file),
+				     unsigned long y, void *file),
 		    void *file);
 void jbg85_dec_maxlen(struct jbg85_dec_state *s, unsigned long ymax);
 int  jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,

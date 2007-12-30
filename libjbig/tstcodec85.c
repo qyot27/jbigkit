@@ -31,7 +31,7 @@ static void *checkedmalloc(size_t n)
 {
   void *p;
   
-  if ((p = malloc(n)) == NULL) {
+  if ((p = calloc(1, n)) == NULL) {
     fprintf(stderr, "Sorry, not enough memory available!\n");
     exit(1);
   }
@@ -70,6 +70,14 @@ static void testbuf_writel(unsigned char *start, size_t len, void *dummy)
 #endif
 
   (void) dummy;
+  return;
+}
+
+
+static void line_out(unsigned char *start, size_t len,
+		     unsigned long y, void *bitmap)
+{
+  memcpy((unsigned char *) bitmap + len * y, start, len);
   return;
 }
 
@@ -136,9 +144,9 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
   struct jbg85_dec_state sjd;
   int trouble = 0;
   long l;
-  size_t plane_size;
+  size_t plane_size, buffer_len;
   int i, result;
-  unsigned char *image;
+  unsigned char *image, *buffer;
 
   plane_size = ((width + 7) / 8) * height;
   image = (unsigned char *) checkedmalloc(plane_size);
@@ -158,44 +166,43 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
     else {
       trouble++;
       printf(FAILED ", correct would have been %ld\n", correct_length);
-      write(5,testbuf, testbuf_len);
-      abort();
     }
   else
     puts("");
   
-#if 0
+#if 1
+  buffer_len = ((width + 7) / 8) * 3;
+  buffer = (unsigned char *) checkedmalloc(buffer_len);
+  image = (unsigned char *) checkedmalloc(plane_size);
   printf("Test %s.2: Decoding whole chunk ...\n", test_id);
-  jbg_dec_init(&sjd);
-  result = jbg_dec_in(&sjd, testbuf, testbuf_len, NULL);
+  jbg85_dec_init(&sjd, buffer, buffer_len, line_out, image);
+  result = jbg85_dec_in(&sjd, testbuf, testbuf_len, NULL);
   if (result != JBG_EOK) {
     printf("Decoder complained with return value %d: " FAILED "\n"
-	   "Cause: '%s'\n", result, jbg_strerror(result));
+	   "Cause: '%s'\n", result, jbg85_strerror(result));
     trouble++;
   } else {
     printf("Image comparison: ");
     result = 1;
-    for (i = 0; i < planes; i++) {
-      if (memcmp(orig_image[i], sjd.lhp[layers & 1][i],
-		 ((width + 7) / 8) * height)) {
-	result = 0;
-	trouble++;
-	printf(FAILED " for plane %d\n", i);
-      }
+    if (memcmp(orig_image, image, plane_size)) {
+      result = 0;
+      trouble++;
+      printf(FAILED);
     }
     if (result)
       puts(PASSED);
   }
-  jbg_dec_free(&sjd);
+  free(image);
 
+  image = (unsigned char *) checkedmalloc(plane_size);
   printf("Test %s.3: Decoding with single-byte feed ...\n", test_id);
-  jbg_dec_init(&sjd);
+  jbg85_dec_init(&sjd, buffer, buffer_len, line_out, image);
   result = JBG_EAGAIN;
   for (l = 0; l < testbuf_len; l++) {
-    result = jbg_dec_in(&sjd, testbuf + l, 1, NULL);
+    result = jbg85_dec_in(&sjd, testbuf + l, 1, NULL);
     if (l < testbuf_len - 1 && result != JBG_EAGAIN) {
       printf("Decoder complained with return value %d at byte %ld: " FAILED
-	     "\nCause: '%s'\n", result, l, jbg_strerror(result));
+	     "\nCause: '%s'\n", result, l, jbg85_strerror(result));
       trouble++;
       break;
     }
@@ -203,25 +210,22 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
   if (l == testbuf_len) {
     if (result != JBG_EOK) {
       printf("Decoder complained with return value %d at final byte: " FAILED
-	     "\nCause: '%s'\n", result, jbg_strerror(result));
+	     "\nCause: '%s'\n", result, jbg85_strerror(result));
       trouble++;
     } else {
       printf("Image comparison: ");
       result = 1;
-      for (i = 0; i < planes; i++) {
-	if (memcmp(orig_image[i], sjd.lhp[layers & 1][i],
-		   ((width + 7) / 8) * height)) {
-	  result = 0;
-	  trouble++;
-	  printf(FAILED " for plane %d\n", i);
-	}
+      if (memcmp(orig_image, image, plane_size)) {
+	result = 0;
+	trouble++;
+	printf(FAILED);
       }
       if (result)
 	puts(PASSED);
     }
   }
+  free(image);
 
-  jbg_dec_free(&sjd);
 #endif
   puts("");
   
@@ -235,7 +239,7 @@ int main(int argc, char **argv)
   struct jbg_arenc_state *se;
   struct jbg_ardec_state *sd;
   long i;
-  int pix, order, layers;
+  int pix;
   char test[10];
   size_t st;
   unsigned char *pp;
@@ -300,29 +304,29 @@ int main(int argc, char **argv)
   /* allocate test buffer memory */
   testbuf = (unsigned char *) checkedmalloc(TESTBUF_SIZE);
   testpic = (unsigned char *) checkedmalloc(TESTPIC_SIZE);
-  se = (struct jbg_arenc_state *)
-    checkedmalloc(sizeof(struct jbg_arenc_state));
-  sd = (struct jbg_ardec_state *)
-    checkedmalloc(sizeof(struct jbg_ardec_state));
+  se = (struct jbg_arenc_state *) checkedmalloc(sizeof(struct jbg_arenc_state));
+  sd = (struct jbg_ardec_state *) checkedmalloc(sizeof(struct jbg_ardec_state));
 
-  /* test a few properties of the machine architecture */
-  testbuf[0] = 42;
-  testbuf[0x10000L] = 0x42;
-  st = 1 << 16;
-  testbuf[st]++;
-  pp = testbuf + 0x4000;
-  pp += 0x4000;
-  pp += 0x4000;
-  pp += 0x4000;
-  if (testbuf[0] != 42 || *pp != 0x43) {
-    printf("Porting error detected:\n\n"
-	   "Pointer arithmetic with this compiler has not at least 32 bits!\n"
-	   "Are you sure, you have not compiled this program on an 8-bit\n"
-	   "or 16-bit architecture? This compiler mode can obviously not\n"
-           "handle arrays with a size of more than 65536 bytes. With this\n"
-           "memory model, JBIG-KIT can only handle very small images and\n"
-           "not even this compatibility test suite will run. :-(\n\n");
-    exit(1);
+  /* only supported command line option:
+   * output file name for exporting test image */
+  if (argc > 1) {
+    FILE *f;
+    
+    puts("Generating test image ...");
+    testimage(testpic);
+    printf("Storing in '%s' ...\n", argv[1]);
+    
+    /* write out test image as PBM file */
+    f = fopen(argv[1], "wb");
+    if (!f) abort();
+    fprintf(f, "P4\n");
+#if 0
+    fprintf(f, "# Test image as defined in ITU-T T.82, clause 7.2.1\n");
+#endif
+    fprintf(f, "1960 1951\n");
+    fwrite(testpic, 1, TESTPIC_SIZE, f);
+    fclose(f);
+    exit(0);
   }
 
 #if 1
