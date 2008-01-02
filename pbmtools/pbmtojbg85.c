@@ -102,7 +102,8 @@ int main (int argc, char **argv)
   unsigned long width, height;
   size_t bpl;
   char type;
-  unsigned char *p, *line;
+  unsigned char *p, *lines, *next_line;
+  unsigned char *prev_line = NULL, *prevprev_line = NULL;
   struct jbg85_enc_state s;
   int reset = 0;
   int mx = -1;
@@ -198,7 +199,7 @@ int main (int argc, char **argv)
 
   /* allocate buffer for a single image line */
   bpl = (width >> 3) + !!(width & 7);     /* bytes per line */
-  line = (unsigned char *) checkedmalloc(bpl);
+  lines = (unsigned char *) checkedmalloc(bpl * 3);
   
   /* open output file */
   if (fnout) {
@@ -217,6 +218,8 @@ int main (int argc, char **argv)
   /* Specify a few other options (each is ignored if negative) */
   if (reset)
     options |= JBG_SDRST;
+  if (yi)
+    options |= JBG_VLENGTH;
   if (comment) {
     s.comment_len = strlen(comment);
     s.comment = (unsigned char *) comment;
@@ -225,10 +228,15 @@ int main (int argc, char **argv)
 
   for (y = 0; y < height; y++) {
 
+    /* Use a 3-line ring buffer, because the encoder requires that the two
+     * previously supplied lines are still in memory when the next line is
+     * processed. */
+    next_line = lines + (y%3)*bpl;
+
     switch (type) {
     case '1':
       /* PBM text format */
-      p = line;
+      p = next_line;
       for (x = 0; x <= ((width-1) | 7); x++) {
 	*p <<= 1;
 	if (x < width)
@@ -239,7 +247,7 @@ int main (int argc, char **argv)
       break;
     case '4':
       /* PBM raw binary format */
-      fread(line, bpl, 1, fin);
+      fread(next_line, bpl, 1, fin);
       break;
     default:
       fprintf(stderr, "Unsupported PBM type P%c!\n", type);
@@ -255,8 +263,10 @@ int main (int argc, char **argv)
       exit(1);
     }
 
-    /* JBIG compress the line and write out result via callback */
-    jbg85_enc_lineout(&s, line);
+    /* JBIG compress another line and write out result via callback */
+    jbg85_enc_lineout(&s, next_line, prev_line, prevprev_line);
+    prevprev_line = prev_line;
+    prev_line = next_line;
 
     /* adjust final image height via NEWLEN */
     if (yi && y == yr)

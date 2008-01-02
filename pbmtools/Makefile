@@ -28,8 +28,13 @@ pbmtojbg.o: pbmtojbg.c ../libjbig/jbig.h
 jbgtopbm85.o: jbgtopbm85.c ../libjbig/jbig85.h
 pbmtojbg85.o: pbmtojbg85.c ../libjbig/jbig85.h
 
-../libjbig/libjbig.a: ../libjbig/jbig.c ../libjbig/jbig.h
-	cd ../libjbig ; make libjbig.a
+../libjbig/libjbig.a: ../libjbig/jbig.c ../libjbig/jbig.h \
+	../libjbig/jbig_ar.c ../libjbig/jbig_ar.h
+	make -C ../libjbig libjbig.a
+
+../libjbig/libjbig85.a: ../libjbig/jbig85.c ../libjbig/jbig85.h \
+	../libjbig/jbig_ar.c ../libjbig/jbig_ar.h
+	make -C ../libjbig libjbig85.a
 
 test: pbmtojbg jbgtopbm
 	make IMG=ccitt1     OPTIONSP=                      dotest1
@@ -83,14 +88,36 @@ dotest2g:
 	cmp test-$(IMG).pgm ../examples/$(IMG).pgm
 
 test85: pbmtojbg jbgtopbm pbmtojbg85 
-	make IMG=ccitt1 OPTIONSP= dotest85
+	make IMG=ccitt1 "OPTIONSP=-p 0"      dotest85
+	make IMG=ccitt1 "OPTIONSP=-p 8"      dotest85
+	make IMG=ccitt1 "OPTIONSP=-p 64"     dotest85
+	make IMG=ccitt1 "OPTIONSP=-p 72"     dotest85
+	make IMG=ccitt1 "OPTIONSP=-s 2"      dotest85
+	make IMG=ccitt1 "OPTIONSP=-s 99999"  dotest85
+	make IMG=ccitt1 "OPTIONSP=-Y 9999 0" dotest85
+	make IMG=ccitt1 "OPTIONSP=-Y -1 127" dotest85
+	make IMG=ccitt1 "OPTIONSP=-Y -1 128" dotest85
+	make IMG=ccitt1 "OPTIONSP=-Y -1 2303" dotest85
+	make IMG=ccitt1 "OPTIONSP=-Y -1 2304" dotest85
+	make IMG=ccitt1 "OPTIONSP=-Y -1 2374" dotest85
+	make IMG=ccitt1 "OPTIONSP=-Y -1 2375" dotest85
+	make IMG=ccitt2 dotest85
+	make IMG=ccitt3 dotest85
 	rm -f test-*.jbg test-*.jbg85 test-*.pbm
+	@echo
+	@echo "The T.85 pbmtools have PASSED the functional tests. Good!"
+	@echo
 
-dotest85:
-	./jbgtopbm ../examples/$(IMG).jbg test-$(IMG).pbm
-	./pbmtojbg -f $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg
+dotest85: test-$(IMG).pbm
 	./pbmtojbg85  $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg85
-	cmp test-$(IMG).jbg test-$(IMG).jbg85
+	 #./pbmtojbg -f $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg
+	 #cmp test-$(IMG).jbg test-$(IMG).jbg85
+	ls -l test-$(IMG).jbg85
+	./jbgtopbm test-$(IMG).jbg85 test-$(IMG).pbm85
+	cmp test-$(IMG).pbm test-$(IMG).pbm85
+
+test-%.pbm: ../examples/%.jbg
+	./jbgtopbm $< $@
 
 .1.txt .5.txt:
 	groff -man -Tascii -P -c -P -b -P -u $< >$@

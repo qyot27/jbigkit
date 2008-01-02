@@ -20,33 +20,28 @@
 #define JBG85_VERSION    "1.7"
 
 /*
+ * JBIG-KIT licence code:
+ * replace below the letters GPL with the licence code that you received
+ * with your licence contract if you use JBIG-KIT under a commercial licence
+ */
+
+#define JBG85_LICENCE    "GPL"
+
+/*
  * Maximum number of ATMOVEs per stripe that decoder can handle
  */
 
-#define JBG_ATMOVES_MAX  64
+#define JBG85_ATMOVES_MAX  1
 
 /*
  * Option and order flags
  */
 
-#define JBG_HITOLO     0x08
-#define JBG_SEQ        0x04
-#define JBG_ILEAVE     0x02
-#define JBG_SMID       0x01
-
 #define JBG_LRLTWO     0x40
 #define JBG_VLENGTH    0x20
-#define JBG_TPDON      0x10
 #define JBG_TPBON      0x08
-#define JBG_DPON       0x04
-#define JBG_DPPRIV     0x02
-#define JBG_DPLAST     0x01
 
 /* encoding options that will not be indicated in the header */
-
-#define JBG_DELAY_AT   0x100  /* Delay ATMOVE until the first line of the next
-			       * stripe. Option available for compatibility
-			       * with conformance test example in clause 7.2. */
 
 #define JBG_SDRST      0x200  /* Use SDRST instead of SDNORM. This option is
 			       * there for anyone who needs to generate
@@ -73,7 +68,6 @@
 struct jbg85_enc_state {
   unsigned long x0, y0;                         /* size of the input image */
   unsigned long l0;                          /* number of lines per stripe */
-  unsigned char *pline[2];                  /* point to previous two lines */
   int options;                                      /* encoding parameters */
   int newlen;     /* 0 = jbg85_enc_newlen() has not yet been called
                      1 = jbg85_enc_newlen() has updated y0, NEWLEN pending
@@ -125,9 +119,9 @@ struct jbg85_dec_state {
   unsigned long y;                      /* line in image (first line is 0) */ 
   unsigned long i;   /* line in current stripe (first line of stripe is 0) */ 
   int at_moves;                /* number of AT moves in the current stripe */
-  unsigned long at_line[JBG_ATMOVES_MAX];           /* lines at which an   *
+  unsigned long at_line[JBG85_ATMOVES_MAX];         /* lines at which an   *
 					             * AT move will happen */
-  int at_tx[JBG_ATMOVES_MAX];        /* ATMOVE x-offsets in current stripe */
+  int at_tx[JBG85_ATMOVES_MAX];      /* ATMOVE x-offsets in current stripe */
   unsigned long line_h1, line_h2, line_h3;     /* variables of decode_pscd */
   int pseudo;         /* flag for TPBON/TPDON:  next pixel is pseudo pixel */
   int lntp;                            /* flag for TP: line is not typical */
@@ -148,7 +142,8 @@ void jbg85_enc_init(struct jbg85_enc_state *s,
 		    void *file);
 void jbg85_enc_options(struct jbg85_enc_state *s, int options,
 		       unsigned long l0, int mx);
-void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line);
+void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
+		       unsigned char *prevline, unsigned char *prevprevline);
 void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long y0);
 
 void jbg85_dec_init(struct jbg85_dec_state *s,

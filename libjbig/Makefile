@@ -20,6 +20,11 @@ libjbig.a: jbig.o jbig_ar.o
 	ar rc libjbig.a jbig.o jbig_ar.o
 	-ranlib libjbig.a
 
+libjbig85.a: jbig85.o jbig_ar.o
+	rm -f libjbig85.a
+	ar rc libjbig85.a jbig85.o jbig_ar.o
+	-ranlib libjbig85.a
+
 jbig.o: jbig.c jbig.h jbig_ar.h
 jbig85.o: jbig85.c jbig85.h jbig_ar.h
 jbig_ar.o: jbig_ar.c jbig_ar.h

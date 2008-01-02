@@ -80,8 +80,9 @@
 /* object code version id */
 
 const char jbg_version[] = 
-" JBIG-KIT " JBG_VERSION " -- Markus Kuhn -- "
-"$Id$ ";
+  "JBIG-KIT " JBG_VERSION " -- (c) 1995-2008 Markus Kuhn -- "
+  "Licence: " JBG_LICENCE "\n"
+  "$Id$ ";
 
 /*
  * the following array specifies for each combination of the 3

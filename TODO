@@ -26,3 +26,7 @@ Ideas which I may implement in one of the next releases:
 
   - version of jbg_newlen() for dealing with BIEs that are split
     into several blocks
+
+  - reset AT pixel location in a layer to default position after SDRST,
+    as required by the change to Subclause 6.2.6.1 made in
+    Technical Corrigendum 2 (2001) to ITU-T T.82.

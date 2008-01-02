@@ -19,6 +19,14 @@
 #define JBG_VERSION    "1.7"
 
 /*
+ * JBIG-KIT licence code:
+ * replace below the letters GPL with the licence code that you received
+ * with your licence contract if you use JBIG-KIT under a commercial licence
+ */
+
+#define JBG_LICENCE    "GPL"
+
+/*
  * Buffer block for SDEs which are temporarily stored by encoder
  */
 

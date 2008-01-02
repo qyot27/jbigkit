@@ -67,8 +67,9 @@
 /* object code version id */
 
 const char jbg85_version[] = 
-" JBIG-KIT " JBG85_VERSION " (T.85 version) -- Markus Kuhn -- "
-"$Id$ ";
+  "JBIG-KIT " JBG85_VERSION " (T.85 version) -- (c) 1995-2008 Markus Kuhn -- "
+  "Licence: " JBG85_LICENCE "\n"
+  "$Id$\n";
 
 #define _(String) String  /* to mark translatable string for GNU gettext */
 
@@ -92,7 +93,7 @@ static const char *errmsg[] = {
 /*
  * Callback adapter function for arithmetic encoder
  */
-static void jbg85_enc_byte_out(int byte, void *s)
+static void enc_byte_out(int byte, void *s)
 {
   unsigned char c = byte;
   ((struct jbg85_enc_state *)s)->data_out(&c, sizeof(unsigned char),
@@ -127,14 +128,13 @@ void jbg85_enc_init(struct jbg85_enc_state *s,
   s->tx = 0;
   s->options = JBG_TPBON | JBG_VLENGTH;
   s->comment = NULL;            /* no COMMENT pending */
-  s->pline[0] = s->pline[1] = NULL;
   s->y = 0;
   s->i = 0;
   s->ltp_old = 0;
   
   /* initialize arithmetic encoder */
   arith_encode_init(&s->s, 0);
-  s->s.byte_out = &jbg85_enc_byte_out;
+  s->s.byte_out = &enc_byte_out;
   s->s.file = s;
   
   return;
@@ -157,11 +157,37 @@ void jbg85_enc_options(struct jbg85_enc_state *s, int options,
 }
 
 
+/* auxiliary routine to write out NEWLEN */
+static void output_newlen(struct jbg85_enc_state *s)
+{
+  unsigned char buf[6];
+
+  assert(s->i == 0);
+  if (s->newlen != 1)
+    return;
+  buf[0] = MARKER_ESC;
+  buf[1] = MARKER_NEWLEN;
+  buf[2] =  s->y0 >> 24;
+  buf[3] = (s->y0 >> 16) & 0xff;
+  buf[4] = (s->y0 >>  8) & 0xff;
+  buf[5] =  s->y0        & 0xff;
+  s->data_out(buf, 6, s->file);
+  s->newlen = 2;
+  if (s->y == s->y0) {
+    /* if newlen refers to a line in the preceeding stripe, ITU-T T.82
+     * section 6.2.6.2 requires us to append another SDNORM */
+    buf[1] = MARKER_SDNORM;
+    s->data_out(buf, 2, s->file);
+  }
+}
+
+
 /*
  * Encode one full BIE and pass the generated data to the specified
  * call-back function
  */
-void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
+void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
+		       unsigned char *prevline, unsigned char *prevprevline)
 {
   unsigned char buf[20];
   unsigned long bpl;
@@ -173,11 +199,21 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
   int ltp;
   unsigned long cmin, cmax, clmin, clmax;
   int tmax;
+#ifdef DEBUG
+  static long tp_lines;
+  static long encoded_pixels;
+#endif
 
   if (s->y >= s->y0) {
     /* we have already output the full image, go away */
     return;
   }
+  
+  /* line 0 have no previous line */
+  if (s->y < 1)
+    prevline = NULL;
+  if (s->y < 2)
+    prevprevline = NULL;
 
   /* things that need to be done before the first line is encoded */
   if (s->y == 0) {
@@ -211,16 +247,7 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
   if (s->i == 0) {
 
     /* output NEWLEN if there is any pending */
-    if (s->newlen == 1) {
-      buf[0] = MARKER_ESC;
-      buf[1] = MARKER_NEWLEN;
-      buf[2] =  s->y0 >> 24;
-      buf[3] = (s->y0 >> 16) & 0xff;
-      buf[4] = (s->y0 >>  8) & 0xff;
-      buf[5] =  s->y0        & 0xff;
-      s->data_out(buf, 6, s->file);
-      s->newlen = 2;
-    }
+    output_newlen(s);
 
     /* output comment marker segment if there is any pending */
     if (s->comment) {
@@ -264,15 +291,13 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
   }
 
 #ifdef DEBUG
-  static long tp_lines, tp_exceptions, tp_pixels, dp_pixels;
-  static long encoded_pixels;
   if (s->y == 0)
-    tp_lines = tp_exceptions = tp_pixels = dp_pixels = encoded_pixels = 0;
-  fprintf(stderr, "encode line %ld (%2d of stripe)\n", s->y, s->i);
+    tp_lines = encoded_pixels = 0;
+  fprintf(stderr, "encode line %lu (%2lu of stripe)\n", s->y, s->i);
 #endif
 
   /* bytes per line */
-  bpl = (s->x0 + 7) >> 3;
+  bpl = (s->x0 >> 3) + !!(s->x0 & 7);
   /* ensure correct zero padding of bitmap at the final byte of each line */
   if (s->x0 & 7) {
     line[bpl - 1] &= ~((1 << (8 - (s->x0 & 7))) - 1);
@@ -282,7 +307,7 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
   ltp = 0;
   if (s->options & JBG_TPBON) {
     p1 = line;
-    q1 = s->pline[0];
+    q1 = prevline;
     ltp = 1;
     if (q1)
       while (p1 < line + bpl && (ltp = (*p1++ == *q1++)) != 0);
@@ -308,8 +333,8 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
      */
   
     /* pointer to first image byte of the three lines of interest */
-    hp3 = s->pline[1];
-    hp2 = s->pline[0];
+    hp3 = prevprevline;
+    hp2 = prevline;
     hp1 = line;
   
     line_h1 = line_h2 = line_h3 = 0;
@@ -422,8 +447,6 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
 
   /* line is complete now, deal with end of stripe */
   s->i++; s->y++;
-  s->pline[1] = s->pline[0];
-  s->pline[0] = line;
   if (s->i == s->l0 || s->y == s->y0) {
     /* end of stripe reached */
     arith_encode_flush(&s->s);
@@ -431,6 +454,9 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
     buf[1] = MARKER_SDNORM;
     s->data_out(buf, 2, s->file);
     s->i = 0;
+
+    /* output NEWLEN if there is any pending */
+    output_newlen(s);
   }
 
   /* check whether it is worth to perform an ATMOVE */
@@ -465,11 +491,10 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line)
   }
   assert(s->tx >= 0); /* i.e., tx can safely be cast to unsigned */
   
-#if 0
+#ifdef DEBUG
   if (s->y == s->y0)
-    fprintf(stderr, "tp_lines = %ld, tp_exceptions = %ld, tp_pixels = %ld, "
-	    "dp_pixels = %ld, encoded_pixels = %ld\n",
-	    tp_lines, tp_exceptions, tp_pixels, dp_pixels, encoded_pixels);
+    fprintf(stderr, "tp_lines = %ld, encoded_pixels = %ld\n",
+	    tp_lines, encoded_pixels);
 #endif
 
   return;
@@ -492,8 +517,9 @@ void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long newlen)
     /* we are already beyond the new end, therefore move the new end */
     newlen = s->y;
   }
+  if (s->y > 0 && s->y0 != newlen)
+    s->newlen = 1;
   s->y0 = newlen;
-  s->newlen = 1;
   if (s->y == s->y0) {
     /* we are already at the end; abort the current stripe if necessary */
     if (s->i > 0) {
@@ -503,18 +529,8 @@ void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long newlen)
       s->data_out(buf, 2, s->file);
       s->i = 0;
     }
-    buf[0] = MARKER_ESC;
-    buf[1] = MARKER_NEWLEN;
-    buf[2] =  s->y0 >> 24;
-    buf[3] = (s->y0 >> 16) & 0xff;
-    buf[4] = (s->y0 >>  8) & 0xff;
-    buf[5] =  s->y0        & 0xff;
-    s->data_out(buf, 6, s->file);
-    s->newlen = 2;
-    /* if newlen refers to a line in the preceeding stripe, ITU-T T.82
-     * section 6.2.6.2 requires us to append another SDNORM */
-    buf[1] = MARKER_SDNORM;
-    s->data_out(buf, 2, s->file);
+    /* output NEWLEN if there is any pending */
+    output_newlen(s);
   }
 }
 
@@ -869,7 +885,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	   ((long) s->buffer[4] <<  8) | (long) s->buffer[5]);
 	break;
       case MARKER_ATMOVE:
-	if (s->at_moves < JBG_ATMOVES_MAX) {
+	if (s->at_moves < JBG85_ATMOVES_MAX) {
 	  s->at_line[s->at_moves] =
 	    (((long) s->buffer[2] << 24) | ((long) s->buffer[3] << 16) |
 	     ((long) s->buffer[4] <<  8) | (long) s->buffer[5]);
