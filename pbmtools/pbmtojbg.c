@@ -52,6 +52,7 @@ static void usage(void)
   fprintf(stderr,
      "  -Y number\tannounce in header initially this larger image height\n"
      "\t\t(only for generating test files with NEWLEN and VLENGTH=1)\n"
+     "  -f\t\tchose encoding options for T.85 fax profile complianance\n"
      "  -v\t\tverbose output\n\n");
   exit(1);
 }
@@ -128,7 +129,6 @@ int main (int argc, char **argv)
   int options = JBG_TPDON | JBG_TPBON | JBG_DPON;
   int order = JBG_ILEAVE | JBG_SMID;
 
-
   /* parse command line arguments */
   progname = argv[0];
   for (i = 1; i < argc; i++) {
@@ -155,6 +155,14 @@ int main (int argc, char **argv)
 	    break;
 	  case 'r':
 	    reset = 1;
+	    break;
+	  case 'f':
+	    d = 0;
+	    order = 0;
+            options = 8;
+	    l0 = 128;
+	    encode_planes = 1;
+	    mx = 127;
 	    break;
 	  case 'x':
 	    if (++i >= argc) usage();

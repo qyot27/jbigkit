@@ -17,17 +17,25 @@ pbmtojbg: pbmtojbg.o ../libjbig/libjbig.a
 jbgtopbm: jbgtopbm.o ../libjbig/libjbig.a
 	$(CC) $(CFLAGS) -o jbgtopbm jbgtopbm.o -L../libjbig -ljbig
 
+pbmtojbg85: pbmtojbg85.o ../libjbig/libjbig85.a
+	$(CC) $(CFLAGS) -o pbmtojbg85 pbmtojbg85.o -L../libjbig -ljbig85
+
+jbgtopbm85: jbgtopbm85.o ../libjbig/libjbig85.a
+	$(CC) $(CFLAGS) -o jbgtopbm85 jbgtopbm85.o -L../libjbig -ljbig85
+
 jbgtopbm.o: jbgtopbm.c ../libjbig/jbig.h
 pbmtojbg.o: pbmtojbg.c ../libjbig/jbig.h
+jbgtopbm85.o: jbgtopbm85.c ../libjbig/jbig85.h
+pbmtojbg85.o: pbmtojbg85.c ../libjbig/jbig85.h
 
 ../libjbig/libjbig.a: ../libjbig/jbig.c ../libjbig/jbig.h
 	cd ../libjbig ; make libjbig.a
 
 test: pbmtojbg jbgtopbm
-	make IMG=ccitt1     OPTIONSJ=      OPTIONSP=       dotest1
-	make IMG=ccitt2     OPTIONSJ=      OPTIONSP=       dotest1
-	make IMG=ccitt3     OPTIONSJ=      OPTIONSP=       dotest1
-	make IMG=xvlogo     OPTIONSJ=     "OPTIONSP=-d 3"  dotest1
+	make IMG=ccitt1     OPTIONSP=                      dotest1
+	make IMG=ccitt2     OPTIONSP=                      dotest1
+	make IMG=ccitt3     OPTIONSP=                      dotest1
+	make IMG=xvlogo    "OPTIONSP=-d 3"                 dotest1
 	make IMG=sandra     OPTIONSP=      OPTIONSJ=       dotest2g
 	make IMG=sandra     OPTIONSP=-b    OPTIONSJ=-b     dotest2g
 	make IMG=sandra     OPTIONSP=-q    OPTIONSJ=       dotest2g
@@ -60,7 +68,7 @@ test: pbmtojbg jbgtopbm
 	@echo
 
 dotest1:
-	./jbgtopbm $(OPTIONSJ) ../examples/$(IMG).jbg test-$(IMG).pbm
+	./jbgtopbm ../examples/$(IMG).jbg test-$(IMG).pbm
 	./pbmtojbg $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg
 	cmp test-$(IMG).jbg ../examples/$(IMG).jbg
 
@@ -73,6 +81,16 @@ dotest2g:
 	./pbmtojbg $(OPTIONSP) ../examples/$(IMG).pgm test-$(IMG).jbg
 	./jbgtopbm $(OPTIONSJ) test-$(IMG).jbg test-$(IMG).pgm
 	cmp test-$(IMG).pgm ../examples/$(IMG).pgm
+
+test85: pbmtojbg jbgtopbm pbmtojbg85 
+	make IMG=ccitt1 OPTIONSP= dotest85
+	rm -f test-*.jbg test-*.jbg85 test-*.pbm
+
+dotest85:
+	./jbgtopbm ../examples/$(IMG).jbg test-$(IMG).pbm
+	./pbmtojbg -f $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg
+	./pbmtojbg85  $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg85
+	cmp test-$(IMG).jbg test-$(IMG).jbg85
 
 .1.txt .5.txt:
 	groff -man -Tascii -P -c -P -b -P -u $< >$@
