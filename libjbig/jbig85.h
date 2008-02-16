@@ -126,7 +126,8 @@ struct jbg85_dec_state {
   int pseudo;         /* flag for TPBON/TPDON:  next pixel is pseudo pixel */
   int lntp;                            /* flag for TP: line is not typical */
   unsigned long ymax;  /* if possible abort before image grows beyond this */
-  void (*line_out)(unsigned char *start, size_t len,
+  void (*line_out)(const struct jbg85_dec_state *s,
+		   unsigned char *start, size_t len,
 		   unsigned long y, void *file);
                                                     /* data write callback */
   void *file;                            /* parameter passed to data_out() */
@@ -148,7 +149,8 @@ void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long y0);
 
 void jbg85_dec_init(struct jbg85_dec_state *s,
 		    unsigned char *buf, size_t buflen,
-		    void (*line_out)(unsigned char *start, size_t len,
+		    void (*line_out)(const struct jbg85_dec_state *s,
+				     unsigned char *start, size_t len,
 				     unsigned long y, void *file),
 		    void *file);
 void jbg85_dec_maxlen(struct jbg85_dec_state *s, unsigned long ymax);

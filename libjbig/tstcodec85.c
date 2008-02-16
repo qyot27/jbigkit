@@ -74,7 +74,8 @@ static void testbuf_writel(unsigned char *start, size_t len, void *dummy)
 }
 
 
-static void line_out(unsigned char *start, size_t len,
+static void line_out(const struct jbg85_dec_state *s,
+		     unsigned char *start, size_t len,
 		     unsigned long y, void *bitmap)
 {
   memcpy((unsigned char *) bitmap + len * y, start, len);
@@ -148,6 +149,7 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
   int i, result;
   unsigned char *image, *buffer;
   size_t bpl;
+  size_t cnt;
 
   bpl = (width + 7) / 8;
   plane_size = bpl * height;
@@ -176,15 +178,17 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
     puts("");
   
 #if 1
-  buffer_len = ((width + 7) / 8) * 3;
+  buffer_len = ((width >> 3) + !!(width & 7)) * 3;
   buffer = (unsigned char *) checkedmalloc(buffer_len);
   image = (unsigned char *) checkedmalloc(plane_size);
   printf("Test %s.2: Decoding whole chunk ...\n", test_id);
   jbg85_dec_init(&sjd, buffer, buffer_len, line_out, image);
-  result = jbg85_dec_in(&sjd, testbuf, testbuf_len, NULL);
+  result = jbg85_dec_in(&sjd, testbuf, testbuf_len, &cnt);
   if (result != JBG_EOK) {
     printf("Decoder complained with return value %d: " FAILED "\n"
 	   "Cause: '%s'\n", result, jbg85_strerror(result));
+    printf("%ld bytes of BIE read, %lu lines decoded.\n",
+	   (long) cnt, sjd.y);
     trouble++;
   } else {
     printf("Image comparison: ");

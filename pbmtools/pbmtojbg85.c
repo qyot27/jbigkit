@@ -22,7 +22,7 @@ char *progname;                  /* global pointer to argv[0] */
 static void usage(void)
 {
   fprintf(stderr,
-     "PBMtoJBIG converter " JBG85_VERSION " (T.85 version) -- "
+     "PBMtoJBIG converter " JBG85_VERSION " (T.85 version) --\n"
      "creates bi-level image entity (BIE) as output file\n\n"
      "usage: %s [<options>] [<input-file> | -  [<output-file>]]\n\n"
      "options:\n\n", progname);

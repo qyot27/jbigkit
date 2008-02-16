@@ -1,7 +1,7 @@
 /*
  *  T.85 "light" version of the portable JBIG image compression library
  *
- *  Copyright 1995-2007 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
+ *  Copyright 1995-2008 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
  *  $Id$
  *
@@ -552,7 +552,8 @@ const char *jbg85_strerror(int errnum)
  */
 void jbg85_dec_init(struct jbg85_dec_state *s,
 		    unsigned char *buf, size_t buflen,
-		    void (*line_out)(unsigned char *start, size_t len,
+		    void (*line_out)(const struct jbg85_dec_state *s,
+				     unsigned char *start, size_t len,
 				     unsigned long y, void *file),
 		    void *file)
 {
@@ -642,14 +643,17 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	!(slntp ^ s->lntp);
       if (!s->lntp) {
 	/* this line is 'typical' (i.e. identical to the previous one) */
-	s->p[2] = s->p[1];
-	s->p[1] = s->p[0];
 	if (s->y == 0 || s->reset) {
 	  for (p1 = hp1; p1 < hp1 + s->bpl; *p1++ = 0);
-	  s->line_out(hp1, s->bpl, s->y, s->file);
+	  s->line_out(s, hp1, s->bpl, s->y, s->file);
+	  /* rotate the ring buffer that holds the last three lines */
+	  s->p[2] = s->p[1];
+	  s->p[1] = s->p[0];
 	  if (++(s->p[0]) >= buflines) s->p[0] = 0;
 	} else {
-	  s->line_out(hp1, s->bpl, s->y, s->file);
+	  s->line_out(s, hp2, s->bpl, s->y, s->file);
+	  /* duplicate the last line in the ring buffer */
+	  s->p[2] = s->p[1];
 	}
 	continue;
       }
@@ -742,9 +746,13 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
       hp3++;
     } /* while (x < s->x0) */
     *(hp1 - 1) <<= s->bpl * 8 - s->x0;
-    s->line_out(s->linebuf + s->p[0] * s->bpl, s->bpl, s->y, s->file);
+    s->line_out(s, s->linebuf + s->p[0] * s->bpl, s->bpl, s->y, s->file);
     x = 0;
     s->pseudo = 1;
+    /* rotate the ring buffer that holds the last three lines */
+    s->p[2] = s->p[1];
+    s->p[1] = s->p[0];
+    if (++(s->p[0]) >= buflines) s->p[0] = 0;
   } /* for (i = ...) */
   
  leave:
@@ -972,10 +980,9 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 }
 
 
-#if TODO
 /*
- * After jbg_dec_in() returned JBG_EOK or JBG_EOK_INTR, you can call this
- * function in order to find out the width of the image.
+ * From the first call to line_out (and even inside the line_out routine),
+ * you can call this function in order to find out the width of the image.
  */
 long jbg85_dec_getwidth(const struct jbg85_dec_state *s)
 {
@@ -984,11 +991,13 @@ long jbg85_dec_getwidth(const struct jbg85_dec_state *s)
 
 
 /*
- * After jbg_dec_in() returned JBG_EOK or JBG_EOK_INTR, you can call this
- * function in order to find out the height of the image.
+ * After jbg_dec_in() returned JBG_EOK, you can call this function in
+ * order to find out the height of the image. (You can call it already
+ * from the first call to line_out, but note that the result can
+ * change later on due to a NEWLEN marker, so make sure you also call
+ * this function after jbg_dec_in() returned JBG_EOK.)
  */
 long jbg85_dec_getheight(const struct jbg85_dec_state *s)
 {
   return s->y0;
 }
-#endif

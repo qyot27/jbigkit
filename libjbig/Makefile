@@ -28,6 +28,8 @@ libjbig85.a: jbig85.o jbig_ar.o
 jbig.o: jbig.c jbig.h jbig_ar.h
 jbig85.o: jbig85.c jbig85.h jbig_ar.h
 jbig_ar.o: jbig_ar.c jbig_ar.h
+tstcodec.o: tstcodec.c jbig.h
+tstcodec85.o: tstcodec85.c jbig85.h
 
 jbig.pot: jbig.c
 	xgettext -o$@ -k_ \
