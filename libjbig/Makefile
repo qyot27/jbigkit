@@ -7,7 +7,7 @@ CC = gcc
 # Options for the compiler: A high optimization level is suggested
 CFLAGS = -g -O -Wall -ansi -pedantic
 
-all: libjbig.a tstcodec
+all: libjbig.a tstcodec tstcodec85
 
 tstcodec: tstcodec.o jbig.o jbig_ar.o
 	$(CC) $(CFLAGS) -o tstcodec $+

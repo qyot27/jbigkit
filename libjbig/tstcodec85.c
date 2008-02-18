@@ -156,7 +156,7 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
   image = (unsigned char *) checkedmalloc(plane_size);
   memcpy(image, orig_image, plane_size);
   
-  printf("\nTest %s.1: Encoding ...\n", test_id);
+  printf("\nTest-85 %s.1: Encoding ...\n", test_id);
   testbuf_len = 0;
   jbg85_enc_init(&sje, width, height, testbuf_writel, NULL);
   jbg85_enc_options(&sje, options, l0, mx);
@@ -181,7 +181,7 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
   buffer_len = ((width >> 3) + !!(width & 7)) * 3;
   buffer = (unsigned char *) checkedmalloc(buffer_len);
   image = (unsigned char *) checkedmalloc(plane_size);
-  printf("Test %s.2: Decoding whole chunk ...\n", test_id);
+  printf("Test-85 %s.2: Decoding whole chunk ...\n", test_id);
   jbg85_dec_init(&sjd, buffer, buffer_len, line_out, image);
   result = jbg85_dec_in(&sjd, testbuf, testbuf_len, &cnt);
   if (result != JBG_EOK) {
@@ -204,7 +204,7 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
   free(image);
 
   image = (unsigned char *) checkedmalloc(plane_size);
-  printf("Test %s.3: Decoding with single-byte feed ...\n", test_id);
+  printf("Test-85 %s.3: Decoding with single-byte feed ...\n", test_id);
   jbg85_dec_init(&sjd, buffer, buffer_len, line_out, image);
   result = JBG_EAGAIN;
   for (l = 0; l < testbuf_len; l++) {
@@ -403,13 +403,13 @@ int main(int argc, char **argv)
   testimage(testpic);
   putchar('\n');
 
-  puts("Test 3.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951, 0 layers");
+  puts("Test-85 3.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951, 0 layers");
   problems += test_cycle(testpic, 1960, 1951, 0,
 			 1951, 0, 317384L, "3.1");
-  puts("Test 3.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951, 0 layers");
+  puts("Test-85 3.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951, 0 layers");
   problems += test_cycle(testpic, 1960, 1951, JBG_LRLTWO,
 			 1951, 0, 317132L, "3.2");
-  puts("Test 3.3: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
+  puts("Test-85 3.3: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
   problems += test_cycle(testpic, 1960, 1951, JBG_TPBON,
 			 128, 8, 253653L, "3.3");
 #endif
@@ -418,22 +418,22 @@ int main(int argc, char **argv)
   puts("4) Same T.82 tests with SDRST instead of SDNORM\n"
        "-----------------------------------------------\n");
 
-  puts("Test 4.0: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
+  puts("Test-85 4.0: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_SDRST | JBG_TPBON,
 			 128, 8, -1, "4.0");
 
-  puts("Test 4.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951, 0 layers");
+  puts("Test-85 4.1: TPBON=0, Mx=0, LRLTWO=0, L0=1951, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_SDRST,
 			 1951, 0, -1, "4.1");
-  puts("Test 4.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951, 0 layers");
+  puts("Test-85 4.2: TPBON=0, Mx=0, LRLTWO=1, L0=1951, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_LRLTWO | JBG_SDRST,
 			 1951, 0, -1, "4.2");
-  puts("Test 4.3: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
+  puts("Test-85 4.3: TPBON=1, Mx=8, LRLTWO=0, L0=128, 0 layers");
   problems += test_cycle(&pp, 1960, 1951, JBG_TPBON | JBG_SDRST,
 			 128, 8, -1, "4.3");
 #endif
 
-  printf("\nTest result summary: the library has %s the test suite.\n\n",
+  printf("\nTest result summary: the T.85 library has %s the test suite.\n\n",
 	 problems ? FAILED : PASSED);
   if (problems)
     puts("This is bad. If you cannot identify the problem yourself, please "

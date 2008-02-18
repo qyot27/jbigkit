@@ -27,7 +27,7 @@ static void usage(void)
 	  "usage: %s [<input-file> | -  [<output-file>]]\n\n", progname);
   fprintf(stderr, "options:\n\n"
 	  "  -x number\tmaximum number of pixels per line for which memory\n"
-	  "\t\tis allocated (default: 8092)\n"
+	  "\t\tis allocated (default: 8192)\n"
           "  -y number\tmaximum number of lines to read (default: all)\n\n");
   exit(1);
 }
@@ -60,8 +60,8 @@ int main (int argc, char **argv)
   int all_args = 0, files = 0;
   struct jbg85_dec_state s;
   unsigned char *inbuf, *outbuf;
-  size_t inbuflen, outbuflen, len, cnt;
-  unsigned long xmax = 8092;
+  size_t inbuflen = 8192, outbuflen, len, cnt;
+  unsigned long xmax = 8192;
   unsigned long ymax = 4294967295UL;
 
   /* parse command line arguments */
@@ -86,6 +86,12 @@ int main (int argc, char **argv)
             j = -1;
             ymax = atol(argv[i]);
             break;
+          case 'B':
+            if (++i >= argc) usage();
+            j = -1;
+            inbuflen = atol(argv[i]);
+	    if (inbuflen < 1) usage();
+            break;
 	  default:
 	    usage();
 	  }
@@ -98,7 +104,6 @@ int main (int argc, char **argv)
       }
   }
 
-  inbuflen = 8000;
   inbuf = (unsigned char *) malloc(inbuflen);
   outbuflen = ((xmax >> 3) + !!(xmax & 7)) * 3;
   outbuf = (unsigned char *) malloc(outbuflen);

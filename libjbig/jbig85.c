@@ -611,7 +611,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
   x = s->x;
 
 #ifdef DEBUG
-  if (s->x == 0 && s->i == 0 && s->pseudo)
+  if (x == 0 && s->i == 0 && s->pseudo)
     fprintf(stderr, "decode_pscd(%p, %p, %ld)\n",
 	    (void *) s, (void *) data, (long) len);
 #endif
@@ -619,9 +619,9 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
   for (; s->i < s->l0 && s->y < s->y0; s->i++, s->y++) {
 
     /* pointer to image byte */
-    hp1  = s->linebuf + s->p[0] * s->bpl + (s->x >> 3);
-    hp2  = s->linebuf + s->p[1] * s->bpl + (s->x >> 3);
-    hp3  = s->linebuf + s->p[2] * s->bpl + (s->x >> 3);
+    hp1  = s->linebuf + s->p[0] * s->bpl + (x >> 3);
+    hp2  = s->linebuf + s->p[1] * s->bpl + (x >> 3);
+    hp3  = s->linebuf + s->p[2] * s->bpl + (x >> 3);
 
     /* adaptive template changes */
     if (x == 0 && s->pseudo)
