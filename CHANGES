@@ -2,7 +2,39 @@
 JBIG-KIT revision history
 -------------------------
 
-Changes in version 1.7 (yet to be released)
+Changes in version 2.0 (yet to be released)
+
+Main new features of release 2.0:
+
+  - This release adds a separate lightweight "T.85" version of the
+    encoder and decoder library (jbig85.c, jbig85.h). This new T.85
+    library is optimized for embedded low-memory applications, such as
+    printers and fax machines. It implements only the subset of the
+    JBIG standard that is required by the ITU-T T.85 fax profile,
+    namely only a single bit plane (P = 1) and no differential layers
+    (DL = D = HITOLO = SEQ = ILEAVE = SMID = TPDON = DPON = DPON =
+    DPLAST = 0) and some other restrictions (MY = 0, MX < 128).
+
+    The T.85 library requires only three pixel rows of the
+    uncompressed image to reside in memory at any time. This 3-line
+    buffer has to be allocated by the calling application, therefore
+    the T.85 library will not call any heap management functions such
+    as malloc() or free() itself.
+
+  - There are also two new example applications pbmtojbg85 and
+    jbgtopbm85 included that provide command-line access to the new
+    T.85 library. (Note to distribution maintainers: there is probably
+    little point in adding pbmtojbg85 and jbgtopbm85 to precompiled
+    JBIG-KIT packages for workstation operating systems, as these two
+    programs do not really provide the end user any additional
+    functionality beyond what pbmtojbg and jbgtopbm already do, which
+    use the full library instead.)
+
+Changes to the full library:
+
+  - the arithmetic codec routines are now located in a separate source
+    file (they are now used by both the full and the T.85 library, and
+    might also be of use to other applications)
 
   - added encoder support for adding comment marker segment
 
@@ -19,8 +51,6 @@ Changes in version 1.7 (yet to be released)
     in a separate PO file (e.g., for use with GNU gettext),
     jbg_strerror() no longer has a language attribute and the
     JBG_EN, JBG_DE_8859_1, JBG_DE_UTF_8 constants no longer exist
-
-  - arithmetic codec routines in separate source file
 
   - pbmtojbg has new option -f as a shortcut for all the options
     needed to make the output comply to the basic ITU-T T.85 fax

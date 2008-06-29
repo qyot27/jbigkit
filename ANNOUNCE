@@ -135,6 +135,12 @@ Special features of the JBIG-KIT implementation are:
 
   - Ready-to-use pbmtojbg and jbgtopbm converters.
 
+  - Includes a separate lightweight "T.85" version of the library (for
+    low-memory embedded applications) that implements only the JBIG1
+    subset defined in the ITU-T T.85 profile (single bit plane, no
+    differential layers) and requires only three pixel rows of the
+    uncompressed image to be kept in memory.
+
 I will try to provide free support and maintenance for this software
 for the foreseeable future, depending on my available time.
 
