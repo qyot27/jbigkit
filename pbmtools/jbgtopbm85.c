@@ -1,9 +1,9 @@
 /*
- *  jbgtopbm - JBIG to Portable Bitmap converter
+ *  jbgtopbm85 - JBIG to Portable Bitmap converter (T.85 version)
  *
- *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
+ *  Markus Kuhn - http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
- *  $Id: jbgtopbm.c 1074 2007-07-29 18:05:30Z mgk25 $
+ *  $Id$
  */
 
 #include <stdio.h>
@@ -151,8 +151,9 @@ int main (int argc, char **argv)
     exit(1);
   }
   if (result != JBG_EOK) {
-    fprintf(stderr, "Problem with input file '%s': %s\n",
-	    fnin, jbg85_strerror(result));
+    fprintf(stderr, "Problem with input file '%s': %s "
+            "(%lu pixel rows processed)\n",
+	    fnin, jbg85_strerror(result), s.y);
     if (fout != stdout) {
       fclose(fout);
       /*remove(fnout);*/

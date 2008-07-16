@@ -90,6 +90,7 @@ dotest2g:
 test85: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85
 	make IMG=ccitt1 "OPTIONSP=-p 0"      dotest85
 	make IMG=ccitt1 "OPTIONSP=-p 8"      dotest85
+	make IMG=ccitt1 "OPTIONSP=-p 8 -r"   dotest85b
 	make IMG=ccitt1 "OPTIONSP=-p 64"     dotest85
 	make IMG=ccitt1 "OPTIONSP=-p 72"     dotest85
 	make IMG=ccitt1 "OPTIONSP=-s 2"      dotest85
@@ -111,6 +112,18 @@ test85: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85
 dotest85: test-$(IMG).pbm
 	./pbmtojbg85  $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg85
 	ls -l test-$(IMG).jbg85
+	./jbgtopbm test-$(IMG).jbg85 test-$(IMG).pbm85
+	cmp test-$(IMG).pbm test-$(IMG).pbm85
+	rm test-$(IMG).pbm85
+	./jbgtopbm85 test-$(IMG).jbg85 test-$(IMG).pbm85
+	cmp test-$(IMG).pbm test-$(IMG).pbm85
+
+dotest85b: test-$(IMG).pbm
+	./pbmtojbg -f $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg85
+	ls -l test-$(IMG).jbg85
+	./jbgtopbm test-$(IMG).jbg85 test-$(IMG).pbm85
+	cmp test-$(IMG).pbm test-$(IMG).pbm85
+	rm test-$(IMG).pbm85
 	./jbgtopbm85 test-$(IMG).jbg85 test-$(IMG).pbm85
 	cmp test-$(IMG).pbm test-$(IMG).pbm85
 
@@ -122,4 +135,4 @@ test-%.pbm: ../examples/%.jbg
 
 clean:
 	rm -f *.o *~ core pbmtojbg jbgtopbm
-	rm -f test-*.jbg test-*.pbm test-*.pgm
+	rm -f test-*.jbg test-*.pbm test-*.pgm test-*.jbg85 test-*.pbm85

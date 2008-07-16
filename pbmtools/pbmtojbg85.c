@@ -1,7 +1,7 @@
 /*
- *  pbmtojbg - Portable Bitmap to JBIG converter
+ *  pbmtojbg85 - Portable Bitmap to JBIG converter (T.85 version)
  *
- *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
+ *  Markus Kuhn - http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
  *  $Id$
  */
@@ -33,9 +33,7 @@ static void usage(void)
      "  -p number\toptions byte value: add TPBON=8, LRLTWO=64\n"
      "\t\t(default 8 = TPBON)\n");
   fprintf(stderr,
-     "  -C string\tadd the provided string as a comment marker segment\n"
-     "  -r\t\tterminate each stripe with SDRST marker\n"
-	  "\t\t(only intended for decoder testing)\n" );
+     "  -C string\tadd the provided string as a comment marker segment\n");
   fprintf(stderr,
      "  -Y yi yr\tannounce in header initially the larger image height yi\n"
      "\t\tand then announce after line yr has been encoded the real height\n"
@@ -105,7 +103,6 @@ int main (int argc, char **argv)
   unsigned char *p, *lines, *next_line;
   unsigned char *prev_line = NULL, *prevprev_line = NULL;
   struct jbg85_enc_state s;
-  int reset = 0;
   int mx = -1;
   unsigned long l0 = 0, yi = 0, yr;
   char *comment = NULL;
@@ -125,9 +122,6 @@ int main (int argc, char **argv)
 	    break;
 	  case 0 :
 	    if (files++) usage();
-	    break;
-	  case 'r':
-	    reset = 1;
 	    break;
 	  case 'Y':
 	    if (i+2 >= argc) usage();
@@ -216,8 +210,6 @@ int main (int argc, char **argv)
   jbg85_enc_init(&s, width, yi ? yi : height, data_out, fout);
 
   /* Specify a few other options (each is ignored if negative) */
-  if (reset)
-    options |= JBG_SDRST;
   if (yi)
     options |= JBG_VLENGTH;
   if (comment) {

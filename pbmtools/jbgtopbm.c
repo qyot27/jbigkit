@@ -1,7 +1,7 @@
 /*
  *  jbgtopbm - JBIG to Portable Bitmap converter
  *
- *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
+ *  Markus Kuhn - http://www.cl.cam.ac.uk/~mgk25/jbigkit/
  *
  *  $Id$
  */

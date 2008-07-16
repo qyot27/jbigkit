@@ -209,7 +209,7 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
     return;
   }
   
-  /* line 0 have no previous line */
+  /* line 0 has no previous line */
   if (s->y < 1)
     prevline = NULL;
   if (s->y < 2)
