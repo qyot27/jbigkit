@@ -617,11 +617,11 @@ Once the end of a BIE has been reached, the return value of
 jbg_dec_in() will be JBG_EOK. After this has happened, the functions
 and macros
 
-  long jbg_dec_getwidth(struct jbg_dec_state *s);
-  long jbg_dec_getheight(struct jbg_dec_state *s);
+  unsigned long jbg_dec_getwidth(struct jbg_dec_state *s);
+  unsigned long jbg_dec_getheight(struct jbg_dec_state *s);
   int jbg_dec_getplanes(struct jbg_dec_state *s);
   unsigned char *jbg_dec_getimage(struct jbg_dec_state *s, int plane);
-  long jbg_dec_getsize(struct jbg_dec_state *s);
+  unsigned long jbg_dec_getsize(struct jbg_dec_state *s);
 
 can be used to query the dimensions of the now completely decoded
 image and to get a pointer to all bitmap planes. The bitmaps are
@@ -641,7 +641,7 @@ zero, then a binary encoding will be used. The output array will be
 delivered via the callback function data_out, exactly in the same way
 in which the encoder provides the BIE. The function
 
-  long jbg_dec_getsize_merged(const struct jbg_dec_state *s);
+  unsigned long jbg_dec_getsize_merged(const struct jbg_dec_state *s);
 
 determines how long the data array delivered by jbg_dec_merge_planes()
 is going to be.

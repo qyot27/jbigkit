@@ -442,7 +442,7 @@ int main (int argc, char **argv)
 
   if (jbg_dec_getplanes(&s) == 1 || plane >= 0) {
     /* write PBM output file */
-    fprintf(fout, "P4\n%ld %ld\n", jbg_dec_getwidth(&s),
+    fprintf(fout, "P4\n%10lu\n%10lu\n", jbg_dec_getwidth(&s),
 	    jbg_dec_getheight(&s));
     fwrite(jbg_dec_getimage(&s, plane < 0 ? 0 : plane), 1,
 	   jbg_dec_getsize(&s), fout);
@@ -460,7 +460,7 @@ int main (int argc, char **argv)
     max = 0;
     for (i = jbg_dec_getplanes(&s); i > 0; i--)
       max = (max << 1) | 1;
-    fprintf(fout, "P5\n%ld %ld\n%lu\n", jbg_dec_getwidth(&s),
+    fprintf(fout, "P5\n%10lu\n%10lu\n%lu\n", jbg_dec_getwidth(&s),
 	    jbg_dec_getheight(&s), max);
     jbg_dec_merge_planes(&s, use_graycode, write_it, fout);
   }

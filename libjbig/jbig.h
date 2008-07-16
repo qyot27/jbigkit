@@ -208,14 +208,14 @@ void jbg_dec_maxsize(struct jbg_dec_state *s, unsigned long xmax,
 		     unsigned long ymax);
 int  jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 		size_t *cnt);
-long jbg_dec_getwidth(const struct jbg_dec_state *s);
-long jbg_dec_getheight(const struct jbg_dec_state *s);
+unsigned long jbg_dec_getwidth(const struct jbg_dec_state *s);
+unsigned long jbg_dec_getheight(const struct jbg_dec_state *s);
 unsigned char *jbg_dec_getimage(const struct jbg_dec_state *s, int plane);
-long jbg_dec_getsize(const struct jbg_dec_state *s);
+unsigned long jbg_dec_getsize(const struct jbg_dec_state *s);
 void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
 			  void (*data_out)(unsigned char *start, size_t len,
 					   void *file), void *file);
-long jbg_dec_getsize_merged(const struct jbg_dec_state *s);
+unsigned long jbg_dec_getsize_merged(const struct jbg_dec_state *s);
 void jbg_dec_free(struct jbg_dec_state *s);
 
 const char *jbg_strerror(int errnum);

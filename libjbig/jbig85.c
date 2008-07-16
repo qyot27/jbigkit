@@ -984,7 +984,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
  * From the first call to line_out (and even inside the line_out routine),
  * you can call this function in order to find out the width of the image.
  */
-long jbg85_dec_getwidth(const struct jbg85_dec_state *s)
+unsigned long jbg85_dec_getwidth(const struct jbg85_dec_state *s)
 {
   return s->x0;
 }
@@ -997,7 +997,7 @@ long jbg85_dec_getwidth(const struct jbg85_dec_state *s)
  * change later on due to a NEWLEN marker, so make sure you also call
  * this function after jbg_dec_in() returned JBG_EOK.)
  */
-long jbg85_dec_getheight(const struct jbg85_dec_state *s)
+unsigned long jbg85_dec_getheight(const struct jbg85_dec_state *s)
 {
   return s->y0;
 }

@@ -56,6 +56,14 @@ Changes to the full library:
     needed to make the output comply to the basic ITU-T T.85 fax
     profile
 
+  - jbg_dec_getwidth(), jbg_dec_getheight(), jbg_dec_getsize(), and
+    jbg_dec_getsize_merged() return now an unsigned long value
+    (was: long), and return 0 (was: -1) if no image is available yet
+
+  - jbgtopbm now outputs image dimensions in header padded to 10
+    digits fixed width, for consistency with jbgtopbm85
+    to allow for later in-place update of height due to NEWLEN
+
 Changes in version 1.6 (2004-06-11)
 
   - various small changes to reduce the risk of 32-bit unsigned

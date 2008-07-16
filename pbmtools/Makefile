@@ -87,7 +87,7 @@ dotest2g:
 	./jbgtopbm $(OPTIONSJ) test-$(IMG).jbg test-$(IMG).pgm
 	cmp test-$(IMG).pgm ../examples/$(IMG).pgm
 
-test85: pbmtojbg jbgtopbm pbmtojbg85 
+test85: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85
 	make IMG=ccitt1 "OPTIONSP=-p 0"      dotest85
 	make IMG=ccitt1 "OPTIONSP=-p 8"      dotest85
 	make IMG=ccitt1 "OPTIONSP=-p 64"     dotest85
@@ -110,10 +110,8 @@ test85: pbmtojbg jbgtopbm pbmtojbg85
 
 dotest85: test-$(IMG).pbm
 	./pbmtojbg85  $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg85
-	 #./pbmtojbg -f $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg
-	 #cmp test-$(IMG).jbg test-$(IMG).jbg85
 	ls -l test-$(IMG).jbg85
-	./jbgtopbm test-$(IMG).jbg85 test-$(IMG).pbm85
+	./jbgtopbm85 test-$(IMG).jbg85 test-$(IMG).pbm85
 	cmp test-$(IMG).pbm test-$(IMG).pbm85
 
 test-%.pbm: ../examples/%.jbg

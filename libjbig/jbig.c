@@ -2885,15 +2885,16 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 
 /*
  * After jbg_dec_in() returned JBG_EOK or JBG_EOK_INTR, you can call this
- * function in order to find out the width of the image.
+ * function in order to find out the width of the image. Returns 0 if
+ * there is no image available yet.
  */
-long jbg_dec_getwidth(const struct jbg_dec_state *s)
+unsigned long jbg_dec_getwidth(const struct jbg_dec_state *s)
 {
   if (s->d < 0)
-    return -1;
+    return 0;
   if (iindex[s->order & 7][LAYER] == 0) {
     if (s->ii[0] < 1)
-      return -1;
+      return 0;
     else
       return jbg_ceil_half(s->xd, s->d - (s->ii[0] - 1));
   }
@@ -2904,15 +2905,16 @@ long jbg_dec_getwidth(const struct jbg_dec_state *s)
 
 /*
  * After jbg_dec_in() returned JBG_EOK or JBG_EOK_INTR, you can call this
- * function in order to find out the height of the image.
+ * function in order to find out the height of the image. Returns 0 if
+ * there is no image available yet.
  */
-long jbg_dec_getheight(const struct jbg_dec_state *s)
+unsigned long jbg_dec_getheight(const struct jbg_dec_state *s)
 {
   if (s->d < 0)
-    return -1;
+    return 0;
   if (iindex[s->order & 7][LAYER] == 0) {
     if (s->ii[0] < 1)
-      return -1;
+      return 0;
     else
       return jbg_ceil_half(s->yd, s->d - (s->ii[0] - 1));
   }
@@ -2923,7 +2925,8 @@ long jbg_dec_getheight(const struct jbg_dec_state *s)
 
 /*
  * After jbg_dec_in() returned JBG_EOK or JBG_EOK_INTR, you can call this
- * function in order to get a pointer to the image.
+ * function in order to get a pointer to the image. Returns NULL if
+ * there is no image available yet.
  */
 unsigned char *jbg_dec_getimage(const struct jbg_dec_state *s, int plane)
 {
@@ -2945,16 +2948,16 @@ unsigned char *jbg_dec_getimage(const struct jbg_dec_state *s, int plane)
  * this function in order to find out the size in bytes of one
  * bitplane of the image.
  */
-long jbg_dec_getsize(const struct jbg_dec_state *s)
+unsigned long jbg_dec_getsize(const struct jbg_dec_state *s)
 {
   if (s->d < 0)
-    return -1;
+    return 0;
   if (iindex[s->order & 7][LAYER] == 0) {
     if (s->ii[0] < 1)
-      return -1;
+      return 0;
     else
       return 
-	jbg_ceil_half(s->xd, s->d - (s->ii[0] - 1) + 3) *
+	jbg_ceil_half(s->xd, s->d - (s->ii[0] - 1) + 3) * /* overflow risk? */
 	jbg_ceil_half(s->yd, s->d - (s->ii[0] - 1));
   }
   
@@ -2967,16 +2970,16 @@ long jbg_dec_getsize(const struct jbg_dec_state *s)
  * this function in order to find out the size of the image that you
  * can retrieve with jbg_merge_planes().
  */
-long jbg_dec_getsize_merged(const struct jbg_dec_state *s)
+unsigned long jbg_dec_getsize_merged(const struct jbg_dec_state *s)
 {
   if (s->d < 0)
-    return -1;
+    return 0;
   if (iindex[s->order & 7][LAYER] == 0) {
     if (s->ii[0] < 1)
-      return -1;
+      return 0;
     else
       return 
-	jbg_ceil_half(s->xd, s->d - (s->ii[0] - 1)) *
+	jbg_ceil_half(s->xd, s->d - (s->ii[0] - 1)) * /* overflow risk? */
 	jbg_ceil_half(s->yd, s->d - (s->ii[0] - 1)) *
 	((s->planes + 7) / 8);
   }
@@ -3112,7 +3115,7 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
   
   x = jbg_dec_getwidth(s);
   y = jbg_dec_getheight(s);
-  if (x <= 0 || y <= 0)
+  if (x == 0 || y == 0)
     return;
   bpp = (s->planes + 7) / 8;   /* bytes per pixel in dest image */
   bpl = jbg_ceil_half(x, 3);   /* bytes per line in src plane */

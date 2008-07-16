@@ -156,8 +156,8 @@ void jbg85_dec_init(struct jbg85_dec_state *s,
 void jbg85_dec_maxlen(struct jbg85_dec_state *s, unsigned long ymax);
 int  jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 		  size_t *cnt);
-long jbg85_dec_getwidth(const struct jbg85_dec_state *s);
-long jbg85_dec_getheight(const struct jbg85_dec_state *s);
+unsigned long jbg85_dec_getwidth(const struct jbg85_dec_state *s);
+unsigned long jbg85_dec_getheight(const struct jbg85_dec_state *s);
 
 const char *jbg85_strerror(int errnum);
 
