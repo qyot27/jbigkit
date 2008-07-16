@@ -109,7 +109,6 @@ struct jbg85_dec_state {
   /* status information */
   int tx;                                         /*  x-offset of AT pixel */
   struct jbg_ardec_state s;                   /* arithmetic decoder status */
-  int reset;                   /* true if previous stripe ended with SDRST */
   unsigned long bie_len;                    /* number of bytes read so far */
   unsigned char buffer[20]; /* used to store BIH or marker segments fragm. */
   int buf_len;                                /* number of bytes in buffer */

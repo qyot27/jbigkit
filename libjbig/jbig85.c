@@ -643,7 +643,8 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	!(slntp ^ s->lntp);
       if (!s->lntp) {
 	/* this line is 'typical' (i.e. identical to the previous one) */
-	if (s->y == 0 || s->reset) {
+	if (s->p[1] < 0) {
+	  /* first line of page or (following SDRST) of stripe */
 	  for (p1 = hp1; p1 < hp1 + s->bpl; *p1++ = 0);
 	  s->line_out(s, hp1, s->bpl, s->y, s->file);
 	  /* rotate the ring buffer that holds the last three lines */
@@ -922,17 +923,19 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	/* decode final pixels based on trailing zero bytes */
 	decode_pscd(s, s->buffer, 2);
 
-	s->reset = (s->buffer[1] == MARKER_SDRST);
-	arith_decode_init(&s->s, !s->reset);
+	arith_decode_init(&s->s, s->buffer[1] == MARKER_SDNORM);
 	
 	/* prepare for next SDE */
 	s->x = 0;
 	s->i = 0;
 	s->pseudo = 1;
 	s->at_moves = 0;
-	if (s->reset) {
+	if (s->buffer[1] == MARKER_SDRST) {
 	  s->tx = 0;
 	  s->lntp = 1;
+	  s->p[0] = 0;
+	  s->p[1] = -1;
+	  s->p[2] = -1;
 	}
 	
 	s->buf_len = 0;
