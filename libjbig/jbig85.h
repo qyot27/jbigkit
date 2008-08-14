@@ -17,7 +17,7 @@
  * JBIG-KIT version number
  */
 
-#define JBG85_VERSION    "1.7"
+#define JBG85_VERSION    "2.0"
 
 /*
  * JBIG-KIT licence code:
@@ -33,6 +33,8 @@
 
 #define JBG85_ATMOVES_MAX  1
 
+#ifndef JBG_LRLTWO
+
 /*
  * Option and order flags
  */
@@ -41,25 +43,21 @@
 #define JBG_VLENGTH    0x20
 #define JBG_TPBON      0x08
 
-/* encoding options that will not be indicated in the header */
-
-#define JBG_SDRST      0x200  /* Use SDRST instead of SDNORM. This option is
-			       * there for anyone who needs to generate
-			       * test data that covers the SDRST cases. */
-
 /*
  * Possible error code return values
  */
 
-#define JBG_EOK        0
-#define JBG_EOK_INTR   1
-#define JBG_EAGAIN     2
-#define JBG_ENOMEM     3
-#define JBG_EABORT     4
-#define JBG_EMARKER    5
-#define JBG_ENOCONT    6
-#define JBG_EINVAL     7
-#define JBG_EIMPL      8
+#define JBG_EOK        (0 << 4)
+#define JBG_EOK_INTR   (1 << 4)
+#define JBG_EAGAIN     (2 << 4)
+#define JBG_ENOMEM     (3 << 4)
+#define JBG_EABORT     (4 << 4)
+#define JBG_EMARKER    (5 << 4)
+#define JBG_ENOCONT    (6 << 4)
+#define JBG_EINVAL     (7 << 4)
+#define JBG_EIMPL      (8 << 4)
+
+#endif
 
 /*
  * Status of a JBIG encoder
@@ -145,6 +143,7 @@ void jbg85_enc_options(struct jbg85_enc_state *s, int options,
 void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
 		       unsigned char *prevline, unsigned char *prevprevline);
 void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long y0);
+void jbg85_enc_abort(struct jbg85_enc_state *s);
 
 void jbg85_dec_init(struct jbg85_dec_state *s,
 		    unsigned char *buf, size_t buflen,

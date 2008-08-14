@@ -30,7 +30,7 @@ Main new features of release 2.0:
     functionality beyond what pbmtojbg and jbgtopbm already do, which
     use the full library instead.)
 
-Changes to the full library:
+Changes to the original full library from version 1.6:
 
   - the arithmetic codec routines are now located in a separate source
     file (they are now used by both the full and the T.85 library, and

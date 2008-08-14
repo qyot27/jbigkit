@@ -185,8 +185,8 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
   jbg85_dec_init(&sjd, buffer, buffer_len, line_out, image);
   result = jbg85_dec_in(&sjd, testbuf, testbuf_len, &cnt);
   if (result != JBG_EOK) {
-    printf("Decoder complained with return value %d: " FAILED "\n"
-	   "Cause: '%s'\n", result, jbg85_strerror(result));
+    printf("Decoder complained with return value 0x%02x: "
+	   FAILED "\nCause: '%s'\n", result, jbg85_strerror(result));
     printf("%ld bytes of BIE read, %lu lines decoded.\n",
 	   (long) cnt, sjd.y);
     trouble++;
@@ -210,16 +210,16 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
   for (l = 0; l < testbuf_len; l++) {
     result = jbg85_dec_in(&sjd, testbuf + l, 1, NULL);
     if (l < testbuf_len - 1 && result != JBG_EAGAIN) {
-      printf("Decoder complained with return value %d at byte %ld: " FAILED
-	     "\nCause: '%s'\n", result, l, jbg85_strerror(result));
+      printf("Decoder complained with return value 0x%02x at byte %ld: "
+	     FAILED "\nCause: '%s'\n", result, l, jbg85_strerror(result));
       trouble++;
       break;
     }
   }
   if (l == testbuf_len) {
     if (result != JBG_EOK) {
-      printf("Decoder complained with return value %d at final byte: " FAILED
-	     "\nCause: '%s'\n", result, jbg85_strerror(result));
+      printf("Decoder complained with return value 0x%02x at final byte: "
+	     FAILED "\nCause: '%s'\n", result, jbg85_strerror(result));
       trouble++;
     } else {
       printf("Image comparison: ");

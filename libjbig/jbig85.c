@@ -147,7 +147,7 @@ void jbg85_enc_init(struct jbg85_enc_state *s,
  * the number of layer 0 lines per stripes.
  */
 void jbg85_enc_options(struct jbg85_enc_state *s, int options,
-		     unsigned long l0, int mx)
+		       unsigned long l0, int mx)
 {
   if (options >= 0) s->options = options;
   if (l0 > 0) s->l0 = l0;
@@ -521,7 +521,7 @@ void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long newlen)
     s->newlen = 1;
   s->y0 = newlen;
   if (s->y == s->y0) {
-    /* we are already at the end; abort the current stripe if necessary */
+    /* we are already at the end; finish the current stripe if necessary */
     if (s->i > 0) {
       arith_encode_flush(&s->s);
       buf[0] = MARKER_ESC;
@@ -536,10 +536,25 @@ void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long newlen)
 
 
 /*
+ * Abort encoding process immediately by outputting an ABORT marker segment
+ */
+void jbg85_enc_abort(struct jbg85_enc_state *s)
+{
+  unsigned char buf[2];
+
+  buf[0] = MARKER_ESC;
+  buf[1] = MARKER_ABORT;
+  s->data_out(buf, 2, s->file);
+  s->y = s->y0;  /* just to prevent further calls to jbg85_enc_lineout() */
+}
+
+
+/*
  * Convert the error codes used by jbg85_dec_in() into an English ASCII string
  */
 const char *jbg85_strerror(int errnum)
 {
+  errnum >>= 4;
   if (errnum < 0 || (unsigned) errnum >= sizeof(errmsg)/sizeof(errmsg[0]))
     return "Unknown error code passed to jbg85_strerror()";
 
@@ -767,26 +782,74 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
   return s->s.pscd_ptr - data;
 }
 
-
 /*
- * Provide a new BIE fragment to the decoder.
+ * Helper routine for processing SDNORM/SDRST marker segment
+ * (which is found in s->buffer[0..1])
+ */
+static void finish_sde(struct jbg85_dec_state *s)
+{
+  /* decode final pixels based on trailing zero bytes */
+  decode_pscd(s, s->buffer, 2);
+  
+  /* prepare decoder for next SDE */
+  arith_decode_init(&s->s, s->buffer[1] == MARKER_SDNORM);
+	
+  s->x = 0;
+  s->i = 0;
+  s->pseudo = 1;
+  s->at_moves = 0;
+  if (s->buffer[1] == MARKER_SDRST) {
+    s->tx = 0;
+    s->lntp = 1;
+    s->p[0] = 0;
+    s->p[1] = -1;
+    s->p[2] = -1;
+  }
+}
+	
+/*
+ * Provide to the decoder a new BIE fragment of len bytes starting at data.
  *
- * If cnt is not NULL, then *cnt will contain after the call the
- * number of actually read bytes. If the data was not complete, then
- * the return value will be JBG_EAGAIN and *cnt == len. In case this
- * function has returned with JBG_EOK, then it has reached the end of
- * a BIE and the full image has been decoded. In case the return value
- * was JBG_EOK_INTR then this function can be called again with the
- * rest of the BIE, because parsing the BIE has been interrupted by a
- * jbg_dec_maxlen() specification. In this case the remaining len -
- * *cnt bytes of the previous block will have to passed to this
- * function again (if len > *cnt). In case of any other return value
- * than JBG_EOK, JBG_EOK_INTR or JBG_EAGAIN, a serious problem has
- * occured and the only function you can still call is jbg_strerror()
- * in order to find out what to tell the user.
+ * Unless cnt is NULL, *cnt will contain the number of actually read bytes
+ * on return.
+ *
+ * Normal return values:
+ *
+ *   JBG_EAGAIN      All data bytes provided so far have been processed
+ *                   (*cnt == len) but the end of the data stream has
+ *                   not yet been recognized. Call the function again
+ *                   with additional BIE bytes.
+ *   JBG_EOK         The function has reached the end of the BIE and
+ *                   the full image has been decoded.
+ *   JBG_EOK_INTR    Parsing the BIE has been interrupted as had been
+ *                   requested via jbg_dec_maxlen().
+ *                   This function can be called again with the
+ *                   rest of the BIE to continue the decoding process.
+ *                   The remaining len - *cnt bytes of the previous
+ *                   data block will then have to passed to this function
+ *                   again (if len > *cnt).
+ *
+ * Any other return value indicates that the decoding process was
+ * aborted by a serious problem and the only function you can then
+ * still call is jbg_strerror() to find out what to tell the user.
+ * (Looking at the least significant bits of the return value will
+ * provide additional information by identifying which test exactly
+ * has failed.)
+ *
+ * After the final BIE byte has been delivered to this routine, it may
+ * still return with JBG_EAGAIN in case the VLENGTH=1 option was used
+ * and no NEWLEN marker section has appeared yet. This is because such
+ * a BIE is not self-terminating (i.e., there could still be a NEWLEN
+ * followed by an SDNORM or SDRST lurk after the final stripe, which
+ * needs to be processed before the final line is output, see ITU-T
+ * Recommendation T.85, Appendix I). Therefore, after the last byte has
+ * been delivered, call this routine once more with len = 0 to signal
+ * the end of the BIE. This is necessary to allow the routine to
+ * finish processing BIEs with option VLENGTH=1 that do not actually
+ * contain any NEWLEN marker section.
  */
 int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
-	       size_t *cnt)
+		 size_t *cnt)
 {
   int required_length;
   unsigned long y;
@@ -794,7 +857,6 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 
   if (!cnt) cnt = &dummy_cnt;
   *cnt = 0;
-  if (len < 1) return JBG_EAGAIN;
 
   /* read in 20-byte BIH */
   if (s->bie_len < 20) {
@@ -803,28 +865,30 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
     if (s->bie_len < 20) 
       return JBG_EAGAIN;
     /* test whether this looks like a valid JBIG header at all */
-    if (s->buffer[1] < s->buffer[0])
-      return JBG_EINVAL;
-    if (s->buffer[3] != 0 || (s->buffer[18] & 0xf0) != 0 ||
-	(s->buffer[19] & 0x80) != 0)
-      return JBG_EINVAL; /* padding bits are not zero as required */
+    if (s->buffer[1] < s->buffer[0]) return JBG_EINVAL | 0;
+    /* are padding bits zero as required? */
+    if (s->buffer[3] != 0)           return JBG_EINVAL | 1; /* padding != 0 */
+    if ((s->buffer[18] & 0xf0) != 0) return JBG_EINVAL | 2; /* padding != 0 */
+    if ((s->buffer[19] & 0x80) != 0) return JBG_EINVAL | 3; /* padding != 0 */
     s->x0 = (((long) s->buffer[ 4] << 24) | ((long) s->buffer[ 5] << 16) |
 	     ((long) s->buffer[ 6] <<  8) | (long) s->buffer[ 7]);
     s->y0 = (((long) s->buffer[ 8] << 24) | ((long) s->buffer[ 9] << 16) |
 	     ((long) s->buffer[10] <<  8) | (long) s->buffer[11]);
     s->l0 = (((long) s->buffer[12] << 24) | ((long) s->buffer[13] << 16) |
 	     ((long) s->buffer[14] <<  8) | (long) s->buffer[15]);
-    if (!s->x0 || !s->y0 || !s->l0)
-      return JBG_EINVAL;
+    if (!s->x0) return JBG_EINVAL | 4;
+    if (!s->y0) return JBG_EINVAL | 5;
+    if (!s->l0) return JBG_EINVAL | 6;
     s->mx = s->buffer[16];
     if (s->mx > 127)
-      return JBG_EINVAL;
-    if (s->buffer[ 0] != 0 || s->buffer[ 1] != 0 || s->buffer[ 2] != 1 ||
-	s->buffer[17] != 0 || s->buffer[18] != 0)
-      return JBG_EIMPL; /* parameters outside T.85 */
+      return JBG_EINVAL | 7;
+    if (s->buffer[ 0] != 0) return JBG_EIMPL | 0; /* parameter outside T.85 */
+    if (s->buffer[ 1] != 0) return JBG_EIMPL | 1; /* parameter outside T.85 */
+    if (s->buffer[ 2] != 1) return JBG_EIMPL | 2; /* parameter outside T.85 */
+    if (s->buffer[17] != 0) return JBG_EIMPL | 3; /* parameter outside T.85 */
+    if (s->buffer[18] != 0) return JBG_EIMPL | 4; /* parameter outside T.85 */
     s->options = s->buffer[19];
-    if (s->options & 0x17)
-      return JBG_EIMPL; /* parameters outside T.85 */
+    if (s->options & 0x17)  return JBG_EIMPL | 5; /* parameter outside T.85 */
     if (s->x0 > (s->linebuf_len / ((s->options & JBG_LRLTWO) ? 2 : 3)) * 8)
       return JBG_ENOMEM; /* provided line buffer is too short */
     s->comment_skip = 0;
@@ -846,7 +910,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
    * BID processing loop
    */
   
-  while (*cnt < len) {
+  while (*cnt < len || len == 0) {
 
     /* process floating marker segments */
 
@@ -872,9 +936,21 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
       case MARKER_COMMENT: required_length = 6; break;
       case MARKER_ATMOVE:  required_length = 8; break;
       case MARKER_NEWLEN:  required_length = 6; break;
-      case MARKER_ABORT:
+      case MARKER_ABORT:   required_length = 2; break;
       case MARKER_SDNORM:
-      case MARKER_SDRST:   required_length = 2; break;
+      case MARKER_SDRST:
+	if ((s->options & JBG_VLENGTH) && len) {
+	  /* peek ahead whether a NEWLEN marker segment follows */
+	  required_length = 2 + 1;
+	  if (s->buf_len >= 2 + 1 &&
+	      s->buffer[2] == MARKER_ESC)
+	    required_length = 2 + 2;  /* SDNORM + 2 marker sequence bytes */
+	  if (s->buf_len >= 2 + 2 &&
+	      s->buffer[2] == MARKER_ESC && s->buffer[3] == MARKER_NEWLEN)
+	    required_length = 2 + 6;  /* SDNORM + NEWLEN */
+	} else
+	  required_length = 2; /* no further NEWLEN allowed or EOF reached */
+	break;
       case MARKER_STUFF:
 	/* forward stuffed 0xff to arithmetic decoder */
 	s->buf_len = 0;
@@ -886,7 +962,9 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
       while (s->buf_len < required_length && *cnt < len)
 	s->buffer[s->buf_len++] = data[(*cnt)++];
       if (s->buf_len < required_length) continue;
-      /* now the buffer is filled with exactly one marker segment */
+      /* now the buffer is filled with exactly one marker segment
+       * (or in the case of SDNORM/SDRST sometimes also with
+       * two additional peek-ahead bytes) */
       switch (s->buffer[1]) {
       case MARKER_COMMENT:
 	s->comment_skip =
@@ -903,61 +981,83 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	      (s->at_tx[s->at_moves] < ((s->options & JBG_LRLTWO) ? 5 : 3) &&
 	       s->at_tx[s->at_moves] != 0) ||
 	      s->buffer[7] != 0)
-	    return JBG_EINVAL;
+	    return JBG_EINVAL | 8;
 	  s->at_moves++;
 	} else
-	  return JBG_EIMPL;
+	  return JBG_EIMPL | 6; /* more than JBG85_ATMOVES_MAX ATMOVES */
 	break;
       case MARKER_NEWLEN:
 	y = (((long) s->buffer[2] << 24) | ((long) s->buffer[3] << 16) |
 	     ((long) s->buffer[4] <<  8) | (long) s->buffer[5]);
-	if (y > s->y0 || !(s->options & JBG_VLENGTH))
-	  return JBG_EINVAL;
+	if (y > s->y0)                   return JBG_EINVAL | 9;
+	if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 10;
 	s->y0 = y;
+	s->options &= ~JBG_VLENGTH;
 	break;
       case MARKER_ABORT:
 	return JBG_EABORT;
 	
       case MARKER_SDNORM:
       case MARKER_SDRST:
-	/* decode final pixels based on trailing zero bytes */
-	decode_pscd(s, s->buffer, 2);
 
-	arith_decode_init(&s->s, s->buffer[1] == MARKER_SDNORM);
-	
-	/* prepare for next SDE */
-	s->x = 0;
-	s->i = 0;
-	s->pseudo = 1;
-	s->at_moves = 0;
-	if (s->buffer[1] == MARKER_SDRST) {
-	  s->tx = 0;
-	  s->lntp = 1;
-	  s->p[0] = 0;
-	  s->p[1] = -1;
-	  s->p[2] = -1;
-	}
-	
-	s->buf_len = 0;
-	
-	/* check whether this was the last SDE */
-	if (s->y >= s->y0) {
+	switch (required_length) {
+	case 2:
+	  /* process regular SDNORM/SDRST without peek-ahead bytes */
+	  finish_sde(s);
+	  s->buf_len = 0;
+	  /* check whether this was the last SDE */
+	  if (s->y >= s->y0) return JBG_EOK;
+	  /* check whether we abort because of ymax */
+	  if (s->y >= s->ymax) {
+	    s->ymax = 4294967295UL;
+	    return JBG_EOK_INTR;
+	  }
+	  /* todo: should check each line, not just after each SDE */
+	  break;
+	case 2+1:
+	  /* process single peek-ahead byte */
+	  if (s->buffer[2] == MARKER_ESC)
+	    continue; /* next time we'll have s->buf_len == 2 + 2 */
+	  else {
+	    finish_sde(s);
+	    /* recycle the remaining single peek-ahead PCSD byte */
+	    s->buf_len = 0;
+	    if (decode_pscd(s, s->buffer + 2, 1) < 1) {
 #ifdef DEBUG
-	  fprintf(stderr, "This was the final SDE in this BIE, "
-		  "%d bytes left.\n", len - *cnt);
+	      fprintf(stderr, "PSCD was longer than expected, 1 unread byte "
+		      "%02x\n", s->buffer[2]);
 #endif
-	  return JBG_EOK;
+	      return JBG_EINVAL | 11;
+	    }
+	  }
+	  break;
+	case 2+2:
+	  /* process 2-byte peek-ahead marker sequence */
+	  if (s->buffer[2] == MARKER_ESC && s->buffer[3] == MARKER_NEWLEN)
+	    continue; /* next time we'll have required_length == 2 + 6 */
+	  else {
+	    finish_sde(s);
+	    /* recycle the two peek-ahead marker sequence bytes */
+	    s->buffer[0] = s->buffer[2];
+	    s->buffer[1] = s->buffer[3];
+	    s->buf_len = 2;
+	    continue;
+	  }
+	case 2+6:
+	  /* process peek-ahead NEWLEN marker sequence */
+	  y = (((long) s->buffer[4] << 24) | ((long) s->buffer[5] << 16) |
+	       ((long) s->buffer[6] <<  8) | (long) s->buffer[7]);
+	  s->buf_len = 0;
+	  if (y > s->y0)                   return JBG_EINVAL | 12;
+	  if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 13;
+	  s->y0 = y;
+	  s->options &= ~JBG_VLENGTH;
+	  finish_sde(s);
+	  /* we leave returning JBG_EOK to the following SDNORM/RST */
+	  break;
 	}
 
-	/* check whether we have to abort because of ymax */
-	if (s->y >= s->ymax) {
-	  s->ymax = 4294967295UL;
-	  return JBG_EOK_INTR;
-	}
-	/* todo: should check each line, not just after each SDE */
-
-	break;
-      }
+      }  /* switch (s->buffer[1]) */
       s->buf_len = 0;
 
     } else if (data[*cnt] == MARKER_ESC)
@@ -973,7 +1073,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 		"%02x %02x %02x %02x ...\n", data[*cnt], data[*cnt+1],
 		data[*cnt+2], data[*cnt+3]);
 #endif
-	return JBG_EINVAL;
+	return JBG_EINVAL | 14; /* PSCD was longer than expected */
       }
       
     }
