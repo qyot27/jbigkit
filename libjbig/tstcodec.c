@@ -358,7 +358,7 @@ int main(int argc, char **argv)
 #if 0
     fprintf(f, "# Test image as defined in ITU-T T.82, clause 7.2.1\n");
 #endif
-    fprintf(f, "1960 1951\n");
+    fprintf(f, "%10lu\n%10lu\n", 1960LU, 1951LU);
     fwrite(testpic, 1, TESTPIC_SIZE, f);
     fclose(f);
     exit(0);

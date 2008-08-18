@@ -74,12 +74,12 @@ static void testbuf_writel(unsigned char *start, size_t len, void *dummy)
 }
 
 
-static void line_out(const struct jbg85_dec_state *s,
-		     unsigned char *start, size_t len,
-		     unsigned long y, void *bitmap)
+static int line_out(const struct jbg85_dec_state *s,
+		    unsigned char *start, size_t len,
+		    unsigned long y, void *bitmap)
 {
   memcpy((unsigned char *) bitmap + len * y, start, len);
-  return;
+  return 0;
 }
 
 

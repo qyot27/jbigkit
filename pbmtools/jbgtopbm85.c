@@ -16,6 +16,7 @@ char *progname;                  /* global pointer to argv[0] */
 unsigned long y0;
 fpos_t ypos;
 int ypos_error = 1;
+unsigned long ymax = 4294967295UL;
 
 /*
  * Print usage message and abort
@@ -36,8 +37,8 @@ static void usage(void)
 /*
  * Call-back routine for merged image output
  */
-void line_out(const struct jbg85_dec_state *s,
-	      unsigned char *start, size_t len, unsigned long y, void *file)
+int line_out(const struct jbg85_dec_state *s,
+	     unsigned char *start, size_t len, unsigned long y, void *file)
 {
   if (y == 0) {
     /* prefix first line with PBM header */
@@ -49,6 +50,7 @@ void line_out(const struct jbg85_dec_state *s,
     fprintf((FILE *) file, "%10lu\n", y0); /* pad number to 10 bytes */
   }
   fwrite(start, len, 1, (FILE *) file);
+  return y == ymax;
 }
 
 
@@ -62,7 +64,7 @@ int main (int argc, char **argv)
   unsigned char *inbuf, *outbuf;
   size_t inbuflen = 8192, outbuflen, len, cnt;
   unsigned long xmax = 8192;
-  unsigned long ymax = 4294967295UL;
+  size_t bytes_read = 0;
 
   /* parse command line arguments */
   progname = argv[0];
@@ -133,11 +135,10 @@ int main (int argc, char **argv)
 
   /* send input file to decoder */
   jbg85_dec_init(&s, outbuf, outbuflen, line_out, fout);
-  jbg85_dec_maxlen(&s, ymax);
   result = JBG_EAGAIN;
   while ((len = fread(inbuf, 1, inbuflen, fin))) {
     result = jbg85_dec_in(&s, inbuf, inbuflen, &cnt);
-    printf("result = %d (%d bytes read)\n", result, cnt);
+    bytes_read += cnt;
     if (result != JBG_EAGAIN)
       break;
   }
@@ -151,9 +152,11 @@ int main (int argc, char **argv)
     exit(1);
   }
   if (result != JBG_EOK) {
-    fprintf(stderr, "Problem with input file '%s': %s "
-            "(%lu pixel rows processed)\n",
-	    fnin, jbg85_strerror(result), s.y);
+    fprintf(stderr, "Problem with input file '%s':\n%s\n"
+            "(error code 0x%02x, %lu = 0x%04lx BIE bytes "
+	    "and %lu pixel rows processed)\n",
+	    fnin, jbg85_strerror(result), result,
+	    (unsigned long) bytes_read, (unsigned long) bytes_read, s.y);
     if (fout != stdout) {
       fclose(fout);
       /*remove(fnout);*/

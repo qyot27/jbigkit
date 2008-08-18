@@ -5,7 +5,7 @@
 CC = gcc
 
 # Options for the compiler: A high optimization level is suggested
-CFLAGS = -g -O -Wall -ansi -pedantic
+CFLAGS = -g -O -Wall -ansi -pedantic # --coverage
 
 all: libjbig.a tstcodec tstcodec85
 
@@ -44,5 +44,5 @@ t82test.pbm: tstcodec
 	./tstcodec $@
 
 clean:
-	rm -f *.o *~ core gmon.out dbg_d\=??.pbm t82test.pbm
+	rm -f *.{o,gcda,gcno,gcov} *~ core gmon.out dbg_d\=??.pbm t82test.pbm
 	rm -f tstcodec tstcodec85

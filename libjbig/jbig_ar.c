@@ -282,6 +282,63 @@ void arith_decode_init(struct jbg_ardec_state *s, int reuse_st)
   return;
 }
 
+/*
+ * Decode and return one symbol from the provided PSCD byte stream
+ * that starts in s->pscd_ptr and ends in the byte before s->pscd_end.
+ * The context cx is a 12-bit integer in the range 0..4095. This
+ * function will advance s->pscd_ptr each time it has consumed all
+ * information from that PSCD byte and the s->result code will indicate
+ * when s->pscd_end has been reached.
+ *
+ * If a symbol has been decoded successfully, the return value will be
+ * 0 or 1 (depending on the symbol) and s->result will have one of the
+ * following values:
+ *
+ *   JBG_OK       The decoder had not yet used up the information in
+ *                last byte of the current PSCD (i.e., it has not yet
+ *                seen the following marker segment).
+ *
+ *   JBG_READY    The decoder has already used up the last byte of the
+ *                PSCD, i.e. it has encountered a marker sequence other than
+ *                MARKER_STUFF, and in order to be able to decode the
+ *                currently returned (and any future) symbol, it had to
+ *                append one or more zero bytes to the PSCD, which the
+ *                the decoder assumed have been truncated by the encoder.
+ *
+ * [Note that each PSCD can be decoded into an infinitely long
+ * sequence of symbols, because the encoder might have truncated away
+ * an arbitrarily long sequence of trailing 0x00 bytes, which the
+ * decoder will append automatically as needed when it reaches the end
+ * of the PSCD. Therefore, the decoder cannot report any end of the
+ * symbol sequence and other means (external to the PSCD and
+ * arithmetic decoding process) are needed to determine that. Although
+ * JBG_READY indicates that one or more 0x00 bytes had to be appended
+ * to be able to decode the current symbol, this does not mean that
+ * JBG_OK guarantees that the returned symbol was actually part of the
+ * originally encoded sequence; it could also have been extracted from
+ * least-significant bits of the last PSCD byte that the encoder never
+ * used.]
+ *
+ * If the decoder was not able to decode a symbol from the provided PSCD,
+ * then the return value will be -1, and s->result will have one of the
+ * following values:
+ *
+ *   JBG_MORE     The decoder has used up all information in the provided
+ *                PSCD bytes (i.e., s->pscd_ptr == s->pscd_end). Further
+ *                PSCD bytes have to be provided (via new values of
+ *                s->pscd_ptr and/or s->pscd_end) before another symbol
+ *                can be decoded.
+ *
+ *   JBG_MARKER   The decoder has used up all provided PSCD bytes except
+ *                for the very last byte (at s->pscd_ptr == s->pscd_end - 1),
+ *                because that has the value 0xff. The decoder can at
+ *                this point not yet tell whether this 0xff belongs to a
+ *                MARKER_STUFF sequence or marks the end of the PSCD.
+ *                Further PSCD bytes have to be provided (via new values of
+ *                s->pscd_ptr and/or s->pscd_end), including the not yet
+ *                processed 0xff byte, before another symbol can be decoded
+ *                successfully.
+ */
 
 int arith_decode(struct jbg_ardec_state *s, int cx)
 {

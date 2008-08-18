@@ -122,12 +122,12 @@ struct jbg85_dec_state {
   unsigned long line_h1, line_h2, line_h3;     /* variables of decode_pscd */
   int pseudo;         /* flag for TPBON/TPDON:  next pixel is pseudo pixel */
   int lntp;                            /* flag for TP: line is not typical */
-  unsigned long ymax;  /* if possible abort before image grows beyond this */
-  void (*line_out)(const struct jbg85_dec_state *s,
-		   unsigned char *start, size_t len,
-		   unsigned long y, void *file);
+  int (*line_out)(const struct jbg85_dec_state *s,
+		  unsigned char *start, size_t len,
+		  unsigned long y, void *file);
                                                     /* data write callback */
   void *file;                            /* parameter passed to data_out() */
+  int intr;                      /* flag that line_out requested interrupt */
 };
 
 
@@ -147,11 +147,10 @@ void jbg85_enc_abort(struct jbg85_enc_state *s);
 
 void jbg85_dec_init(struct jbg85_dec_state *s,
 		    unsigned char *buf, size_t buflen,
-		    void (*line_out)(const struct jbg85_dec_state *s,
-				     unsigned char *start, size_t len,
-				     unsigned long y, void *file),
+		    int (*line_out)(const struct jbg85_dec_state *s,
+				    unsigned char *start, size_t len,
+				    unsigned long y, void *file),
 		    void *file);
-void jbg85_dec_maxlen(struct jbg85_dec_state *s, unsigned long ymax);
 int  jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 		  size_t *cnt);
 unsigned long jbg85_dec_getwidth(const struct jbg85_dec_state *s);

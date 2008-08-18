@@ -31,13 +31,7 @@ struct jbg_arenc_state {
  * Status of arithmetic decoder
  */
 
-enum jbg_ardec_result {
-  JBG_OK,                          /* symbol has been successfully decoded */
-  JBG_READY,               /* no more bytes of this PSCD required, marker  *
-			    * encountered, probably more symbols available */
-  JBG_MORE,            /* more PSCD data bytes required to decode a symbol */
-  JBG_MARKER     /* more PSCD data bytes required, ignored final 0xff byte */
-};
+enum jbg_ardec_result { JBG_OK, JBG_READY, JBG_MORE, JBG_MARKER };
 
 struct jbg_ardec_state {
   unsigned char st[4096];    /* probability status for contexts, MSB = MPS */

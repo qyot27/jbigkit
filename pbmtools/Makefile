@@ -5,7 +5,7 @@
 CC = gcc
 
 # Options for the compiler
-CFLAGS = -g -Wall -ansi -pedantic -I../libjbig
+CFLAGS = -g -Wall -ansi -pedantic -I../libjbig # --coverage
 
 .SUFFIXES: .1 .5 .txt $(SUFFIXES)
 
@@ -87,21 +87,22 @@ dotest2g:
 	./jbgtopbm $(OPTIONSJ) test-$(IMG).jbg test-$(IMG).pgm
 	cmp test-$(IMG).pgm ../examples/$(IMG).pgm
 
-test85: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85
-	make IMG=ccitt1 "OPTIONSP=-p 0"      dotest85
-	make IMG=ccitt1 "OPTIONSP=-p 8"      dotest85
-	make IMG=ccitt1 "OPTIONSP=-p 8 -r"   dotest85b
-	make IMG=ccitt1 "OPTIONSP=-p 64"     dotest85
-	make IMG=ccitt1 "OPTIONSP=-p 72"     dotest85
-	make IMG=ccitt1 "OPTIONSP=-s 2"      dotest85
-	make IMG=ccitt1 "OPTIONSP=-s 99999"  dotest85
-	make IMG=ccitt1 "OPTIONSP=-Y 9999 0" dotest85
-	make IMG=ccitt1 "OPTIONSP=-Y -1 127" dotest85
-	make IMG=ccitt1 "OPTIONSP=-Y -1 128" dotest85
-	make IMG=ccitt1 "OPTIONSP=-Y -1 2303" dotest85
-	make IMG=ccitt1 "OPTIONSP=-Y -1 2304" dotest85
-	make IMG=ccitt1 "OPTIONSP=-Y -1 2374" dotest85
-	make IMG=ccitt1 "OPTIONSP=-Y -1 2375" dotest85
+test85: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85 test-t82.pbm
+	make IMG=t82 "OPTIONSP=-p 0"      dotest85
+	make IMG=t82 "OPTIONSP=-p 8"      dotest85
+	make IMG=t82 "OPTIONSP=-p 8 -r"   dotest85b
+	make IMG=t82 "OPTIONSP=-p 64"     dotest85
+	make IMG=t82 "OPTIONSP=-p 72"     dotest85
+	make IMG=t82 "OPTIONSP=-s 2 -C c" dotest85
+	make IMG=t82 "OPTIONSP=-s 99999"  dotest85
+	make IMG=t82 "OPTIONSP=-Y 9999 0" dotest85
+	make IMG=t82 "OPTIONSP=-Y -1 127" dotest85
+	make IMG=t82 "OPTIONSP=-Y -1 128" dotest85
+	make IMG=t82 "OPTIONSP=-Y -1 1919" dotest85
+	make IMG=t82 "OPTIONSP=-Y -1 1920" dotest85
+	make IMG=t82 "OPTIONSP=-Y -1 1949" dotest85
+	make IMG=t82 "OPTIONSP=-Y -1 1950" dotest85
+	make IMG=ccitt1 dotest85
 	make IMG=ccitt2 dotest85
 	make IMG=ccitt3 dotest85
 	rm -f test-*.jbg test-*.jbg85 test-*.pbm
@@ -117,6 +118,9 @@ dotest85: test-$(IMG).pbm
 	rm test-$(IMG).pbm85
 	./jbgtopbm85 test-$(IMG).jbg85 test-$(IMG).pbm85
 	cmp test-$(IMG).pbm test-$(IMG).pbm85
+	rm test-$(IMG).pbm85
+	./jbgtopbm85 -B 1 test-$(IMG).jbg85 test-$(IMG).pbm85
+	cmp test-$(IMG).pbm test-$(IMG).pbm85
 
 dotest85b: test-$(IMG).pbm
 	./pbmtojbg -f $(OPTIONSP) test-$(IMG).pbm test-$(IMG).jbg85
@@ -126,9 +130,16 @@ dotest85b: test-$(IMG).pbm
 	rm test-$(IMG).pbm85
 	./jbgtopbm85 test-$(IMG).jbg85 test-$(IMG).pbm85
 	cmp test-$(IMG).pbm test-$(IMG).pbm85
+	rm test-$(IMG).pbm85
+	./jbgtopbm85 -B 1 test-$(IMG).jbg85 test-$(IMG).pbm85
+	cmp test-$(IMG).pbm test-$(IMG).pbm85
 
 test-%.pbm: ../examples/%.jbg
 	./jbgtopbm $< $@
+
+test-t82.pbm:
+	make -C ../libjbig tstcodec
+	../libjbig/tstcodec $@
 
 .1.txt .5.txt:
 	groff -man -Tascii -P -c -P -b -P -u $< >$@

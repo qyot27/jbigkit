@@ -567,12 +567,11 @@ const char *jbg85_strerror(int errnum)
  */
 void jbg85_dec_init(struct jbg85_dec_state *s,
 		    unsigned char *buf, size_t buflen,
-		    void (*line_out)(const struct jbg85_dec_state *s,
-				     unsigned char *start, size_t len,
-				     unsigned long y, void *file),
+		    int (*line_out)(const struct jbg85_dec_state *s,
+				    unsigned char *start, size_t len,
+				    unsigned long y, void *file),
 		    void *file)
 {
-  s->ymax = 4294967295UL;
   s->linebuf = buf;
   s->linebuf_len = buflen;
   s->line_out = line_out;
@@ -580,17 +579,6 @@ void jbg85_dec_init(struct jbg85_dec_state *s,
   s->bie_len = 0;
   s->buf_len = 0;
   arith_decode_init(&s->s, 0);
-  return;
-}
-
-
-/*
- * Specify a maximum image height for the decoder. It will abort to
- * decode after ymax lines have been received.
- */
-void jbg85_dec_maxlen(struct jbg85_dec_state *s, unsigned long ymax)
-{
-  if (ymax > 0) s->ymax = ymax;
   return;
 }
 
@@ -631,7 +619,8 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	    (void *) s, (void *) data, (long) len);
 #endif
 
-  for (; s->i < s->l0 && s->y < s->y0; s->i++, s->y++) {
+  s->intr = 0;
+  for (; s->i < s->l0 && s->y < s->y0 && !s->intr; s->i++, s->y++) {
 
     /* pointer to image byte */
     hp1  = s->linebuf + s->p[0] * s->bpl + (x >> 3);
@@ -661,13 +650,13 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	if (s->p[1] < 0) {
 	  /* first line of page or (following SDRST) of stripe */
 	  for (p1 = hp1; p1 < hp1 + s->bpl; *p1++ = 0);
-	  s->line_out(s, hp1, s->bpl, s->y, s->file);
+	  s->intr = s->line_out(s, hp1, s->bpl, s->y, s->file);
 	  /* rotate the ring buffer that holds the last three lines */
 	  s->p[2] = s->p[1];
 	  s->p[1] = s->p[0];
 	  if (++(s->p[0]) >= buflines) s->p[0] = 0;
 	} else {
-	  s->line_out(s, hp2, s->bpl, s->y, s->file);
+	  s->intr = s->line_out(s, hp2, s->bpl, s->y, s->file);
 	  /* duplicate the last line in the ring buffer */
 	  s->p[2] = s->p[1];
 	}
@@ -762,7 +751,8 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
       hp3++;
     } /* while (x < s->x0) */
     *(hp1 - 1) <<= s->bpl * 8 - s->x0;
-    s->line_out(s, s->linebuf + s->p[0] * s->bpl, s->bpl, s->y, s->file);
+    s->intr = s->line_out(s, s->linebuf + s->p[0] * s->bpl,
+			  s->bpl, s->y, s->file);
     x = 0;
     s->pseudo = 1;
     /* rotate the ring buffer that holds the last three lines */
@@ -822,7 +812,7 @@ static void finish_sde(struct jbg85_dec_state *s)
  *   JBG_EOK         The function has reached the end of the BIE and
  *                   the full image has been decoded.
  *   JBG_EOK_INTR    Parsing the BIE has been interrupted as had been
- *                   requested via jbg_dec_maxlen().
+ *                   requested by a non-zero return value of line_out().
  *                   This function can be called again with the
  *                   rest of the BIE to continue the decoding process.
  *                   The remaining len - *cnt bytes of the previous
@@ -926,9 +916,10 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
       continue;
     }
     
-    /* load complete marker segments into s->buffer for processing */
+    /* load marker segments into s->buffer for processing */
     if (s->buf_len > 0) {
       assert(s->buffer[0] == MARKER_ESC);
+      /* load enough bytes to determine length of marker segment */
       while (s->buf_len < 2 && *cnt < len)
 	s->buffer[s->buf_len++] = data[(*cnt)++];
       if (s->buf_len < 2) continue;
@@ -936,29 +927,32 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
       case MARKER_COMMENT: required_length = 6; break;
       case MARKER_ATMOVE:  required_length = 8; break;
       case MARKER_NEWLEN:  required_length = 6; break;
-      case MARKER_ABORT:   required_length = 2; break;
       case MARKER_SDNORM:
       case MARKER_SDRST:
 	if ((s->options & JBG_VLENGTH) && len) {
 	  /* peek ahead whether a NEWLEN marker segment follows */
 	  required_length = 2 + 1;
-	  if (s->buf_len >= 2 + 1 &&
-	      s->buffer[2] == MARKER_ESC)
+	  if (s->buf_len == 2 + 1 && s->buffer[2] == MARKER_ESC)
 	    required_length = 2 + 2;  /* SDNORM + 2 marker sequence bytes */
-	  if (s->buf_len >= 2 + 2 &&
-	      s->buffer[2] == MARKER_ESC && s->buffer[3] == MARKER_NEWLEN)
+	  else if (s->buf_len >= 2 + 2 && s->buffer[3] == MARKER_NEWLEN)
 	    required_length = 2 + 6;  /* SDNORM + NEWLEN */
 	} else
 	  required_length = 2; /* no further NEWLEN allowed or EOF reached */
 	break;
+      case MARKER_ABORT:
+	s->buf_len = 0;
+	return JBG_EABORT;
       case MARKER_STUFF:
 	/* forward stuffed 0xff to arithmetic decoder */
 	s->buf_len = 0;
 	decode_pscd(s, s->buffer, 2);
+	if (s->intr)
+	  return JBG_EOK_INTR;  /* line_out() requested interrupt */
 	continue;
       default:
 	return JBG_EMARKER;
       }
+      /* load minimal number of additional bytes required for processing */
       while (s->buf_len < required_length && *cnt < len)
 	s->buffer[s->buf_len++] = data[(*cnt)++];
       if (s->buf_len < required_length) continue;
@@ -994,8 +988,6 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	s->y0 = y;
 	s->options &= ~JBG_VLENGTH;
 	break;
-      case MARKER_ABORT:
-	return JBG_EABORT;
 	
       case MARKER_SDNORM:
       case MARKER_SDRST:
@@ -1004,31 +996,18 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	case 2:
 	  /* process regular SDNORM/SDRST without peek-ahead bytes */
 	  finish_sde(s);
-	  s->buf_len = 0;
 	  /* check whether this was the last SDE */
 	  if (s->y >= s->y0) return JBG_EOK;
-	  /* check whether we abort because of ymax */
-	  if (s->y >= s->ymax) {
-	    s->ymax = 4294967295UL;
-	    return JBG_EOK_INTR;
-	  }
-	  /* todo: should check each line, not just after each SDE */
 	  break;
 	case 2+1:
 	  /* process single peek-ahead byte */
 	  if (s->buffer[2] == MARKER_ESC)
-	    continue; /* next time we'll have s->buf_len == 2 + 2 */
+	    continue; /* next time we'll have required_length == 2 + 2 */
 	  else {
 	    finish_sde(s);
-	    /* recycle the remaining single peek-ahead PCSD byte */
-	    s->buf_len = 0;
-	    if (decode_pscd(s, s->buffer + 2, 1) < 1) {
-#ifdef DEBUG
-	      fprintf(stderr, "PSCD was longer than expected, 1 unread byte "
-		      "%02x\n", s->buffer[2]);
-#endif
-	      return JBG_EINVAL | 11;
-	    }
+	    /* push back the single peek-ahead PCSD byte */
+	    assert(*cnt > 0);
+	    (*cnt)--;
 	  }
 	  break;
 	case 2+2:
@@ -1041,6 +1020,8 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	    s->buffer[0] = s->buffer[2];
 	    s->buffer[1] = s->buffer[3];
 	    s->buf_len = 2;
+	    if (s->intr)
+	      return JBG_EOK_INTR;  /* line_out() requested interrupt */
 	    continue;
 	  }
 	case 2+6:
@@ -1048,8 +1029,8 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	  y = (((long) s->buffer[4] << 24) | ((long) s->buffer[5] << 16) |
 	       ((long) s->buffer[6] <<  8) | (long) s->buffer[7]);
 	  s->buf_len = 0;
-	  if (y > s->y0)                   return JBG_EINVAL | 12;
-	  if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 13;
+	  if (y > s->y0)                   return JBG_EINVAL | 11;
+	  if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 12;
 	  s->y0 = y;
 	  s->options &= ~JBG_VLENGTH;
 	  finish_sde(s);
@@ -1059,6 +1040,8 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 
       }  /* switch (s->buffer[1]) */
       s->buf_len = 0;
+      if (s->intr)
+	return JBG_EOK_INTR;  /* line_out() requested interrupt */
 
     } else if (data[*cnt] == MARKER_ESC)
       s->buffer[s->buf_len++] = data[(*cnt)++];
@@ -1067,13 +1050,15 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 
       /* we have found PSCD bytes */
       *cnt += decode_pscd(s, data + *cnt, len - *cnt);
+      if (s->intr)
+	return JBG_EOK_INTR;  /* line_out() requested interrupt */
       if (*cnt < len && data[*cnt] != MARKER_ESC) {
 #ifdef DEBUG
 	fprintf(stderr, "PSCD was longer than expected, unread bytes "
 		"%02x %02x %02x %02x ...\n", data[*cnt], data[*cnt+1],
 		data[*cnt+2], data[*cnt+3]);
 #endif
-	return JBG_EINVAL | 14; /* PSCD was longer than expected */
+	return JBG_EINVAL | 13; /* PSCD was longer than expected */
       }
       
     }
