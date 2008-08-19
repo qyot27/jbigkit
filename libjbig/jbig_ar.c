@@ -348,8 +348,8 @@ int arith_decode(struct jbg_ardec_state *s, int cx)
 
   /* renormalization */
   while (s->a < 0x8000 || s->startup) {
-    if (s->ct < 1 && s->result != JBG_READY) {
-      /* first we have to move a new byte into s->c */
+    while (s->ct <= 8 && s->result != JBG_READY) {
+      /* first we can move a new byte into s->c */
       if (s->pscd_ptr >= s->pscd_end) {
 	s->result = JBG_MORE;
 	return -1;
