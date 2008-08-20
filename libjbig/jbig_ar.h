@@ -26,23 +26,20 @@ struct jbg_arenc_state {
   void *file;                              /* parameter passed to byte_out */
 };
 
-
 /*
  * Status of arithmetic decoder
  */
-
-enum jbg_ardec_result { JBG_OK, JBG_READY, JBG_MORE, JBG_MARKER };
 
 struct jbg_ardec_state {
   unsigned char st[4096];    /* probability status for contexts, MSB = MPS */
   unsigned long c;                /* register C: base of coding intervall, *
                                    * layout as in Table 25                 */
   unsigned long a;       /* register A: normalized size of coding interval */
-  int ct;     /* bit-shift counter, determines when next byte will be read */
   unsigned char *pscd_ptr;               /* pointer to next PSCD data byte */
   unsigned char *pscd_end;                   /* pointer to byte after PSCD */
-  enum jbg_ardec_result result;          /* result of previous decode call */
-  int startup;                            /* controls initial fill of s->c */
+  int ct;    /* bit-shift counter, determines when next byte will be read;
+              * special value -1 signals that zero-padding has started     */
+  int startup;          /* boolean flag that controls initial fill of s->c */
 };
 
 void arith_encode_init(struct jbg_arenc_state *s, int reuse_st);

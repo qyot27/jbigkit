@@ -641,7 +641,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
     /* typical prediction */
     if (s->options & JBG_TPBON && s->pseudo) {
       slntp = arith_decode(&s->s, (s->options & JBG_LRLTWO) ? TPB2CX : TPB3CX);
-      if (s->s.result == JBG_MORE || s->s.result == JBG_MARKER)
+      if (slntp < 0)
 	goto leave;
       s->lntp =
 	!(slntp ^ s->lntp);
@@ -712,7 +712,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	  } else
 	    pix = arith_decode(&s->s, (((line_h2 >> 9) & 0x3f0) |
 				       (line_h1 & 0x00f)));
-	  if (s->s.result == JBG_MORE || s->s.result == JBG_MARKER)
+	  if (pix < 0)
 	    goto leave;
 	  line_h1 = (line_h1 << 1) | pix;
 	  line_h2 <<= 1;
@@ -739,7 +739,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	    pix = arith_decode(&s->s, (((line_h3 >>  7) & 0x380) |
 				       ((line_h2 >> 11) & 0x07c) |
 				       (line_h1 & 0x003)));
-	  if (s->s.result == JBG_MORE || s->s.result == JBG_MARKER)
+	  if (pix < 0)
 	    goto leave;
 	  line_h1 = (line_h1 << 1) | pix;
 	  line_h2 <<= 1;

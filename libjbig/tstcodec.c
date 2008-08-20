@@ -399,18 +399,20 @@ int main(int argc, char **argv)
   for (i = 0; i < 16 * 16 && !trouble; i++) {
     pix = arith_decode(sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
     if (pix < 0) {
-      printf("Problem at Pixel %ld, result code %d.\n\n", i+1, sd->result);
+      printf("Problem at pixel %ld, byte %d.\n\n",
+	     i+1, sd->pscd_ptr - sd->pscd_end);
       trouble++;
       break;
     }
     if (pix != ((t82pix[i >> 4] >> ((15 - i) & 15)) & 1)) {
-      printf("Wrong PIX answer at Pixel %ld.\n\n", i+1);
+      printf("Wrong PIX answer (%d) at pixel %ld.\n\n", pix, i+1);
       trouble++;
       break;
     }
   }
-  if (!trouble && sd->result != JBG_READY) {
-    printf("Result is %d instead of JBG_READY.\n\n", sd->result);
+  if (!trouble && sd->pscd_ptr != sd->pscd_end - 2) {
+    printf("%d bytes left after decoder finished.\n\n",
+	   sd->pscd_end - sd->pscd_ptr - 2);
     trouble++;
   }
   printf("Test result: ");
@@ -429,29 +431,28 @@ int main(int argc, char **argv)
   trouble = 0;
   for (i = 0; i < 16 * 16 && !trouble; i++) {
     pix = arith_decode(sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
-    while ((sd->result == JBG_MORE || sd->result == JBG_MARKER) &&
-	   sd->pscd_end < t82sde + 32) {
+    while (pix < 0 && sd->pscd_end < t82sde + 32) {
       pp++;
-      sd->pscd_end = pp + 1;
-      if (sd->result == JBG_MARKER)
-	sd->pscd_ptr = pp - 1;
-      else
+      if (sd->pscd_ptr != pp - 1)
 	sd->pscd_ptr = pp;
+      sd->pscd_end = pp + 1;
       pix = arith_decode(sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
     }
     if (pix < 0) {
-      printf("Problem at Pixel %ld, result code %d.\n\n", i+1, sd->result);
+      printf("Problem at pixel %ld, byte %d.\n\n",
+	     i+1, sd->pscd_ptr - sd->pscd_end);
       trouble++;
       break;
     }
     if (pix != ((t82pix[i >> 4] >> ((15 - i) & 15)) & 1)) {
-      printf("Wrong PIX answer at Pixel %ld.\n\n", i+1);
+      printf("Wrong PIX answer (%d) at pixel %ld.\n\n", pix, i+1);
       trouble++;
       break;
     }
   }
-  if (!trouble && sd->result != JBG_READY) {
-    printf("Result is %d instead of JBG_READY.\n\n", sd->result);
+  if (!trouble && sd->pscd_ptr != sd->pscd_end - 2) {
+    printf("%d bytes left after decoder finished.\n\n",
+	   sd->pscd_end - sd->pscd_ptr - 2);
     trouble++;
   }
   printf("Test result: ");
