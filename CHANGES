@@ -36,9 +36,8 @@ Changes to the original full library from version 1.6:
     file (they are now used by both the full and the T.85 library, and
     might also be of use to other applications)
 
-  - internal interface changes to arithmetic decoder (to enable
-    handling of the peak-ahead needed to handle T.85-style NEWLEN
-    after the final stripe)
+  - arithmetic decoder changed to enable the lookahead needed
+    to handle T.85-style NEWLEN after the final stripe
 
   - added encoder support for adding comment marker segment
 

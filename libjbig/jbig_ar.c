@@ -278,6 +278,7 @@ void arith_decode_init(struct jbg_ardec_state *s, int reuse_st)
   s->a = 1;
   s->ct = 0;
   s->startup = 1;
+  s->nopadding = 0;
   return;
 }
 
@@ -289,36 +290,7 @@ void arith_decode_init(struct jbg_ardec_state *s, int reuse_st)
  * information from that PSCD byte.
  *
  * If a symbol has been decoded successfully, the return value will be
- * 0 or 1 (depending on the symbol). Some information can be inferred
- * about the length of the sequence of encoded symbols:
- *
- * s->ct >= 8
- *
- *   The returned symbol was actually fed into the encoder, because
- *   there is at least one PSCD byte left that has not yet influenced
- *   any of the symbols decoded so far. (If the symbol had not been
- *   fed into the decoder, the PSCD would have been at least one byte
- *   shorter.)
- *
- * s->ct < 8
- *
- *   The symbol may have been fed into the encoder, or it may just be
- *   the result of decoding beyond the end of the sequence of symbols
- *   that was originally fed into the encoder. All the PSCD bytes
- *   consumed so far had an influence on the symbols decoded so far.
- *
- *   [Note that each PSCD can be decoded into an infinitely long
- *   sequence of symbols, because the encoder might have truncated
- *   away an arbitrarily long sequence of trailing 0x00 bytes, which
- *   the decoder will append automatically as needed when it reaches
- *   the end of the PSCD. Therefore, the decoder cannot report any end
- *   of the symbol sequence and other means (external to the PSCD and
- *   arithmetic decoding process) are needed to determine that.]
- *
- * After the decoder has read all the symbols that were encoded by the
- * encoder, we will have s->pscd_ptr == s->pscd_end - 2, as the
- * decoder will only look at, but not not consume, the marker sequence
- * that terminates and follows the PSCD byte sequence.
+ * 0 or 1 (depending on the symbol).
  *
  * If the decoder was not able to decode a symbol from the provided
  * PSCD, then the return value will be -1, and two cases can be
@@ -340,6 +312,26 @@ void arith_decode_init(struct jbg_ardec_state *s, int reuse_st)
  *   bytes have to be provided (via new values of s->pscd_ptr and/or
  *   s->pscd_end), including the not yet processed 0xff byte, before
  *   another symbol can be decoded successfully.
+ *
+ * If s->nopadding != 0, the decoder will return -2 when it reaches
+ * the first two bytes of the marker segment that follows (and
+ * terminates) the PSCD, but before decoding the first symbol that
+ * depends on a bit in the input data that could have been the result
+ * of zero padding, and might, therefore, never have been encoded.
+ * This gives the caller the opportunity to lookahead early enough
+ * beyond a terminating SDNORM/SDRST for a trailing NEWLEN (as
+ * required by T.85) before decoding remaining symbols. Call the
+ * decoder again afterwards as often as necessary (leaving s->pscd_ptr
+ * pointing to the start of the marker segment) to retrieve any
+ * required remaining symbols that might depend on padding.
+ *
+ * [Note that each PSCD can be decoded into an infinitely long
+ * sequence of symbols, because the encoder might have truncated away
+ * an arbitrarily long sequence of trailing 0x00 bytes, which the
+ * decoder will append automatically as needed when it reaches the end
+ * of the PSCD. Therefore, the decoder cannot report any end of the
+ * symbol sequence and other means (external to the PSCD and
+ * arithmetic decoding process) are needed to determine that.]
  */
 
 int arith_decode(struct jbg_ardec_state *s, int cx)
@@ -363,8 +355,13 @@ int arith_decode(struct jbg_ardec_state *s, int cx)
 	    s->c |= 0xffL << (8 - s->ct);
 	    s->ct += 8;
 	    s->pscd_ptr += 2;
-	  } else
+	  } else {
 	    s->ct = -1; /* start padding with zero bytes */
+	    if (s->nopadding) {
+	      s->nopadding = 0;
+	      return -2; /* subsequent symbols might depend on zero padding */
+	    }
+	  }
 	}
       else {
 	s->c |= (long)*(s->pscd_ptr++) << (8 - s->ct);

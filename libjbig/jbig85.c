@@ -577,14 +577,12 @@ void jbg85_dec_init(struct jbg85_dec_state *s,
   s->line_out = line_out;
   s->file = file;
   s->bie_len = 0;
-  s->buf_len = 0;
-  arith_decode_init(&s->s, 0);
   return;
 }
 
 
 /*
- * Decode the new len PSDC bytes to which data points and output
+ * Decode the new len PSCD bytes to which data points and output
  * decoded lines as they are completed. Return the number of bytes
  * which have actually been read. This will be less than len if a
  * marker segment was part of the data or if the final byte was
@@ -783,6 +781,7 @@ static void finish_sde(struct jbg85_dec_state *s)
   
   /* prepare decoder for next SDE */
   arith_decode_init(&s->s, s->buffer[1] == MARKER_SDNORM);
+  s->s.nopadding = s->options & JBG_VLENGTH;
 	
   s->x = 0;
   s->i = 0;
@@ -881,6 +880,8 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
     if (s->options & 0x17)  return JBG_EIMPL | 5; /* parameter outside T.85 */
     if (s->x0 > (s->linebuf_len / ((s->options & JBG_LRLTWO) ? 2 : 3)) * 8)
       return JBG_ENOMEM; /* provided line buffer is too short */
+    arith_decode_init(&s->s, 0);
+    s->s.nopadding = s->options & JBG_VLENGTH;
     s->comment_skip = 0;
     s->buf_len = 0;
     s->x = 0;
@@ -984,9 +985,11 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	y = (((long) s->buffer[2] << 24) | ((long) s->buffer[3] << 16) |
 	     ((long) s->buffer[4] <<  8) | (long) s->buffer[5]);
 	if (y > s->y0)                   return JBG_EINVAL | 9;
+#ifndef JBG85_TOLERATE_MULTIPLE_NEWLEN
 	if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 10;
-	s->y0 = y;
 	s->options &= ~JBG_VLENGTH;
+#endif
+	s->y0 = y;
 	break;
 	
       case MARKER_SDNORM:

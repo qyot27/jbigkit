@@ -36,7 +36,9 @@ pbmtojbg85.o: pbmtojbg85.c ../libjbig/jbig85.h
 	../libjbig/jbig_ar.c ../libjbig/jbig_ar.h
 	make -C ../libjbig libjbig85.a
 
-test: pbmtojbg jbgtopbm
+testall: test82 test85
+
+test82: pbmtojbg jbgtopbm
 	make IMG=ccitt1     OPTIONSP=                      dotest1
 	make IMG=ccitt2     OPTIONSP=                      dotest1
 	make IMG=ccitt3     OPTIONSP=                      dotest1

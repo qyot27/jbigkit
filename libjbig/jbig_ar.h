@@ -40,6 +40,10 @@ struct jbg_ardec_state {
   int ct;    /* bit-shift counter, determines when next byte will be read;
               * special value -1 signals that zero-padding has started     */
   int startup;          /* boolean flag that controls initial fill of s->c */
+  int nopadding;        /* boolean flag that triggers return -2 between
+			 * reaching PSCD end and decoding the first symbol
+			 * that might never have been encoded in the first
+			 * place */
 };
 
 void arith_encode_init(struct jbg_arenc_state *s, int reuse_st);
