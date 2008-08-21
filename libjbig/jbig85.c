@@ -777,6 +777,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 static void finish_sde(struct jbg85_dec_state *s)
 {
   /* decode final pixels based on trailing zero bytes */
+  s->s.nopadding = 0;
   decode_pscd(s, s->buffer, 2);
   
   /* prepare decoder for next SDE */
@@ -1041,10 +1042,13 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	  break;
 	}
 
+	if (s->intr) {
+	  s->buf_len = 0;
+	  return JBG_EOK_INTR;  /* line_out() requested interrupt */
+	}
+
       }  /* switch (s->buffer[1]) */
       s->buf_len = 0;
-      if (s->intr)
-	return JBG_EOK_INTR;  /* line_out() requested interrupt */
 
     } else if (data[*cnt] == MARKER_ESC)
       s->buffer[s->buf_len++] = data[(*cnt)++];
