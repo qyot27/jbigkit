@@ -104,7 +104,7 @@ int main (int argc, char **argv)
   unsigned char *prev_line = NULL, *prevprev_line = NULL;
   struct jbg85_enc_state s;
   int mx = -1;
-  unsigned long l0 = 0, yi = 0, yr;
+  unsigned long l0 = 0, yi = 0, yr = 0;
   char *comment = NULL;
   int options = JBG_TPBON;
 

@@ -9,7 +9,8 @@ CFLAGS = -g -Wall -ansi -pedantic -I../libjbig # --coverage
 
 .SUFFIXES: .1 .5 .txt $(SUFFIXES)
 
-all: pbmtojbg jbgtopbm pbmtojbg.txt jbgtopbm.txt pbm.txt pgm.txt
+all: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85 \
+	pbmtojbg.txt jbgtopbm.txt pbm.txt pgm.txt
 
 pbmtojbg: pbmtojbg.o ../libjbig/libjbig.a
 	$(CC) $(CFLAGS) -o pbmtojbg pbmtojbg.o -L../libjbig -ljbig
@@ -98,6 +99,7 @@ test85: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85 test-t82.pbm
 	make IMG=t82 "OPTIONSP=-s 2 -C c" dotest85
 	make IMG=t82 "OPTIONSP=-s 99999"  dotest85
 	make IMG=t82 "OPTIONSP=-Y 9999 0" dotest85
+	make IMG=t82 "OPTIONSP=-Y 1951 0" dotest85
 	make IMG=t82 "OPTIONSP=-Y -1 127" dotest85
 	make IMG=t82 "OPTIONSP=-Y -1 128" dotest85
 	make IMG=t82 "OPTIONSP=-Y -1 1919" dotest85
@@ -147,5 +149,6 @@ test-t82.pbm:
 	groff -man -Tascii -P -c -P -b -P -u $< >$@
 
 clean:
-	rm -f *.o *~ core pbmtojbg jbgtopbm
+	rm -f *.o *~ core pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85
 	rm -f test-*.jbg test-*.pbm test-*.pgm test-*.jbg85 test-*.pbm85
+	rm -f *.gcda *.gcno

@@ -13,7 +13,7 @@
 #include "jbig85.h"
 
 char *progname;                  /* global pointer to argv[0] */
-unsigned long y0;
+unsigned long y_0;
 fpos_t ypos;
 int ypos_error = 1;
 unsigned long ymax = 4294967295UL;
@@ -29,7 +29,8 @@ static void usage(void)
   fprintf(stderr, "options:\n\n"
 	  "  -x number\tmaximum number of pixels per line for which memory\n"
 	  "\t\tis allocated (default: 8192)\n"
-          "  -y number\tmaximum number of lines to read (default: all)\n\n");
+          "  -y number\tmaximum number of lines to read (default: all)\n"
+	  "  -B number\tinput buffer size\n\n");
   exit(1);
 }
 
@@ -45,9 +46,9 @@ int line_out(const struct jbg85_dec_state *s,
     fprintf((FILE *) file, "P4\n");
     fprintf((FILE *) file, "%10lu\n", jbg85_dec_getwidth(s));
     /* store file position of height, so we can update it after NEWLEN */
-    y0 = jbg85_dec_getheight(s);
+    y_0 = jbg85_dec_getheight(s);
     ypos_error = fgetpos((FILE *) file, &ypos);
-    fprintf((FILE *) file, "%10lu\n", y0); /* pad number to 10 bytes */
+    fprintf((FILE *) file, "%10lu\n", y_0); /* pad number to 10 bytes */
   }
   fwrite(start, len, 1, (FILE *) file);
   return y == ymax;
@@ -137,7 +138,7 @@ int main (int argc, char **argv)
   jbg85_dec_init(&s, outbuf, outbuflen, line_out, fout);
   result = JBG_EAGAIN;
   while ((len = fread(inbuf, 1, inbuflen, fin))) {
-    result = jbg85_dec_in(&s, inbuf, inbuflen, &cnt);
+    result = jbg85_dec_in(&s, inbuf, len, &cnt);
     bytes_read += cnt;
     if (result != JBG_EAGAIN)
       break;
@@ -150,6 +151,10 @@ int main (int argc, char **argv)
       remove(fnout);
     }
     exit(1);
+  }
+  if (result == JBG_EAGAIN) {
+    /* signal end-of-BIE explicitely */
+    result = jbg85_dec_in(&s, NULL, 0, NULL);
   }
   if (result != JBG_EOK) {
     fprintf(stderr, "Problem with input file '%s':\n%s\n"
@@ -165,7 +170,7 @@ int main (int argc, char **argv)
   }
 
   /* do we have to update the image height in the PBM header? */
-  if (!ypos_error && y0 != jbg85_dec_getheight(&s)) {
+  if (!ypos_error && y_0 != jbg85_dec_getheight(&s)) {
     if (fsetpos(fout, &ypos) == 0) {
       fprintf(fout, "%10lu", jbg85_dec_getheight(&s)); /* pad to 10 bytes */
     } else {

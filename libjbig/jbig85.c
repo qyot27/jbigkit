@@ -844,6 +844,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
   int required_length;
   unsigned long y;
   size_t dummy_cnt;
+  int end_of_bie;
 
   if (!cnt) cnt = &dummy_cnt;
   *cnt = 0;
@@ -902,7 +903,9 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
    * BID processing loop
    */
   
-  while (*cnt < len || len == 0) {
+  end_of_bie = (len == 0);
+  while (*cnt < len || end_of_bie) {
+    end_of_bie = 0;
 
     /* process floating marker segments */
 
@@ -938,8 +941,10 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	    required_length = 2 + 2;  /* SDNORM + 2 marker sequence bytes */
 	  else if (s->buf_len >= 2 + 2 && s->buffer[3] == MARKER_NEWLEN)
 	    required_length = 2 + 6;  /* SDNORM + NEWLEN */
-	} else
-	  required_length = 2; /* no further NEWLEN allowed or EOF reached */
+	} else {
+	  /* no further NEWLEN allowed or end of BIE reached */
+	  required_length = 2;
+	}
 	break;
       case MARKER_ABORT:
 	s->buf_len = 0;
@@ -1050,7 +1055,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
       }  /* switch (s->buffer[1]) */
       s->buf_len = 0;
 
-    } else if (data[*cnt] == MARKER_ESC)
+    } else if (*cnt < len && data[*cnt] == MARKER_ESC)
       s->buffer[s->buf_len++] = data[(*cnt)++];
 
     else {
@@ -1086,11 +1091,11 @@ unsigned long jbg85_dec_getwidth(const struct jbg85_dec_state *s)
 
 
 /*
- * After jbg_dec_in() returned JBG_EOK, you can call this function in
- * order to find out the height of the image. (You can call it already
- * from the first call to line_out, but note that the result can
- * change later on due to a NEWLEN marker, so make sure you also call
- * this function after jbg_dec_in() returned JBG_EOK.)
+ * After jbg85_dec_in() returned JBG_EOK, you can call this function
+ * in order to find out the height of the image. (You can call it
+ * already from the first call to line_out, but note that the result
+ * can change later on due to a NEWLEN marker, so make sure you also
+ * call this function after jbg85_dec_in() returned JBG_EOK.)
  */
 unsigned long jbg85_dec_getheight(const struct jbg85_dec_state *s)
 {
