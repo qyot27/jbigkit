@@ -63,7 +63,7 @@ int main (int argc, char **argv)
   int all_args = 0, files = 0;
   struct jbg85_dec_state s;
   unsigned char *inbuf, *outbuf;
-  size_t inbuflen = 8192, outbuflen, len, cnt;
+  size_t inbuflen = 8192, outbuflen, len, cnt, cnt2;
   unsigned long xmax = 8192;
   size_t bytes_read = 0;
 
@@ -140,15 +140,14 @@ int main (int argc, char **argv)
   while ((len = fread(inbuf, 1, inbuflen, fin))) {
     result = jbg85_dec_in(&s, inbuf, len, &cnt);
     bytes_read += cnt;
-    if (result == JBG_EOK_INTR) {
+    while (result == JBG_EOK_INTR) {
       /* demonstrate decoder interrupt at given line number */
       printf("Decoding interrupted after %lu lines and %lu BIE bytes "
 	     "... continuing ...\n", s.y, (unsigned long) bytes_read);
       /* and now continue decoding */
-      if (len > cnt) {
-	result = jbg85_dec_in(&s, inbuf + cnt, len - cnt, &cnt);
-	bytes_read += cnt;
-      }
+      result = jbg85_dec_in(&s, inbuf + cnt, len - cnt, &cnt2);
+      bytes_read += cnt2;
+      cnt += cnt2;
     }
     if (result != JBG_EAGAIN)
       break;
@@ -162,9 +161,14 @@ int main (int argc, char **argv)
     }
     exit(1);
   }
-  if (result == JBG_EAGAIN) {
+  while (result == JBG_EAGAIN || result == JBG_EOK_INTR) {
     /* signal end-of-BIE explicitely */
-    result = jbg85_dec_in(&s, NULL, 0, NULL);
+    result = jbg85_dec_end(&s);
+    if (result == JBG_EOK_INTR) {
+      /* demonstrate decoder interrupt at given line number */
+      printf("Decoding interrupted after %lu lines and %lu BIE bytes "
+	     "... continuing ...\n", s.y, (unsigned long) bytes_read);
+    }
   }
   if (result != JBG_EOK) {
     fprintf(stderr, "Problem with input file '%s':\n%s\n"

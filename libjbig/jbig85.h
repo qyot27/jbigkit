@@ -128,6 +128,7 @@ struct jbg85_dec_state {
                                                     /* data write callback */
   void *file;                            /* parameter passed to data_out() */
   int intr;                      /* flag that line_out requested interrupt */
+  int end_of_bie;       /* flag that the end of the BIE has been signalled */
 };
 
 
@@ -153,6 +154,7 @@ void jbg85_dec_init(struct jbg85_dec_state *s,
 		    void *file);
 int  jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 		  size_t *cnt);
+int  jbg85_dec_end(struct jbg85_dec_state *s);
 unsigned long jbg85_dec_getwidth(const struct jbg85_dec_state *s);
 unsigned long jbg85_dec_getheight(const struct jbg85_dec_state *s);
 

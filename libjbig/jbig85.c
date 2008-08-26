@@ -577,6 +577,7 @@ void jbg85_dec_init(struct jbg85_dec_state *s,
   s->line_out = line_out;
   s->file = file;
   s->bie_len = 0;
+  s->end_of_bie = 0;
   return;
 }
 
@@ -828,18 +829,6 @@ static int finish_sde(struct jbg85_dec_state *s)
  * (Looking at the least significant bits of the return value will
  * provide additional information by identifying which test exactly
  * has failed.)
- *
- * After the final BIE byte has been delivered to this routine, it may
- * still return with JBG_EAGAIN in case the VLENGTH=1 option was used
- * and no NEWLEN marker section has appeared yet. This is because such
- * a BIE is not self-terminating (i.e., there could still be a NEWLEN
- * followed by an SDNORM or SDRST lurk after the final stripe, which
- * needs to be processed before the final line is output, see ITU-T
- * Recommendation T.85, Appendix I). Therefore, after the last byte has
- * been delivered, call this routine once more with len = 0 to signal
- * the end of the BIE. This is necessary to allow the routine to
- * finish processing BIEs with option VLENGTH=1 that do not actually
- * contain any NEWLEN marker section.
  */
 int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 		 size_t *cnt)
@@ -847,7 +836,6 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
   int required_length;
   unsigned long y;
   size_t dummy_cnt;
-  int end_of_bie;
 
   if (!cnt) cnt = &dummy_cnt;
   *cnt = 0;
@@ -906,9 +894,8 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
    * BID processing loop
    */
   
-  end_of_bie = (len == 0);
-  while (*cnt < len || end_of_bie) {
-    end_of_bie = 0;
+  while (*cnt < len || s->end_of_bie == 1) {
+    if (s->end_of_bie == 1) s->end_of_bie = 2;
 
     /* process floating marker segments */
 
@@ -937,7 +924,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
       case MARKER_NEWLEN:  required_length = 6; break;
       case MARKER_SDNORM:
       case MARKER_SDRST:
-	if ((s->options & JBG_VLENGTH) && len) {
+	if ((s->options & JBG_VLENGTH) && !s->end_of_bie) {
 	  /* peek ahead whether a NEWLEN marker segment follows */
 	  required_length = 2 + 1;
 	  if (s->buf_len == 2 + 1 && s->buffer[2] == MARKER_ESC)
@@ -1004,7 +991,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
       case MARKER_SDNORM:
       case MARKER_SDRST:
 
-	switch (required_length) {
+	switch (s->buf_len) {
 	case 2:
 	  /* process regular SDNORM/SDRST without peek-ahead bytes */
 	  if (finish_sde(s))
@@ -1015,7 +1002,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	case 2+1:
 	  /* process single peek-ahead byte */
 	  if (s->buffer[2] == MARKER_ESC)
-	    continue; /* next time we'll have required_length == 2 + 2 */
+	    continue; /* next time we'll have s->buf_len == 2 + 2 */
 	  else {
 	    /* push back the single peek-ahead PCSD byte */
 	    assert(*cnt > 0);
@@ -1029,7 +1016,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	case 2+2:
 	  /* process 2-byte peek-ahead marker sequence */
 	  if (s->buffer[2] == MARKER_ESC && s->buffer[3] == MARKER_NEWLEN)
-	    continue; /* next time we'll have required_length == 2 + 6 */
+	    continue; /* next time we'll have s->buf_len == 2 + 6 */
 	  else {
 	    if (finish_sde(s))
 	      return JBG_EOK_INTR;  /* line_out() requested interrupt */
@@ -1086,6 +1073,26 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
   }  /* of BID processing loop 'while (*cnt < len) ...' */
 
   return JBG_EAGAIN;
+}
+
+
+/*
+ * After the final BIE byte has been delivered to jbg85_dec_in(), it
+ * may still return with JBG_EAGAIN in case the VLENGTH=1 option was
+ * used and no NEWLEN marker section has appeared yet. This is because
+ * such a BIE is not self-terminating (i.e., there could still be a
+ * NEWLEN followed by an SDNORM or SDRST lurk after the final stripe,
+ * which needs to be processed before the final line is output, see
+ * ITU-T Recommendation T.85, Appendix I). Therefore, after the last
+ * byte has been delivered, call this routine to signal the end of the
+ * BIE. This is necessary to allow the routine to finish processing
+ * BIEs with option VLENGTH=1 that do not actually contain any NEWLEN
+ * marker section.
+ */
+int jbg85_dec_end(struct jbg85_dec_state *s)
+{
+  s->end_of_bie = 1;
+  return jbg85_dec_in(s, NULL, 0, NULL);
 }
 
 
