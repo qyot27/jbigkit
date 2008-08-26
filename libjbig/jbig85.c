@@ -774,11 +774,12 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
  * Helper routine for processing SDNORM/SDRST marker segment
  * (which is found in s->buffer[0..1])
  */
-static void finish_sde(struct jbg85_dec_state *s)
+static int finish_sde(struct jbg85_dec_state *s)
 {
   /* decode final pixels based on trailing zero bytes */
   s->s.nopadding = 0;
-  decode_pscd(s, s->buffer, 2);
+  if (decode_pscd(s, s->buffer, 2) != 2 && s->intr)
+    return 1;
   
   /* prepare decoder for next SDE */
   arith_decode_init(&s->s, s->buffer[1] == MARKER_SDNORM);
@@ -795,6 +796,8 @@ static void finish_sde(struct jbg85_dec_state *s)
     s->p[1] = -1;
     s->p[2] = -1;
   }
+
+  return 0;
 }
 	
 /*
@@ -817,7 +820,7 @@ static void finish_sde(struct jbg85_dec_state *s)
  *                   rest of the BIE to continue the decoding process.
  *                   The remaining len - *cnt bytes of the previous
  *                   data block will then have to passed to this function
- *                   again (if len > *cnt).
+ *                   again (only if len > *cnt).
  *
  * Any other return value indicates that the decoding process was
  * aborted by a serious problem and the only function you can then
@@ -951,8 +954,8 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	return JBG_EABORT;
       case MARKER_STUFF:
 	/* forward stuffed 0xff to arithmetic decoder */
-	s->buf_len = 0;
-	decode_pscd(s, s->buffer, 2);
+	if (decode_pscd(s, s->buffer, 2) == 2)
+	  s->buf_len = 0;
 	if (s->intr)
 	  return JBG_EOK_INTR;  /* line_out() requested interrupt */
 	continue;
@@ -1004,7 +1007,8 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	switch (required_length) {
 	case 2:
 	  /* process regular SDNORM/SDRST without peek-ahead bytes */
-	  finish_sde(s);
+	  if (finish_sde(s))
+	    return JBG_EOK_INTR;  /* line_out() requested interrupt */
 	  /* check whether this was the last SDE */
 	  if (s->y >= s->y0) return JBG_EOK;
 	  break;
@@ -1013,10 +1017,13 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	  if (s->buffer[2] == MARKER_ESC)
 	    continue; /* next time we'll have required_length == 2 + 2 */
 	  else {
-	    finish_sde(s);
 	    /* push back the single peek-ahead PCSD byte */
 	    assert(*cnt > 0);
 	    (*cnt)--;
+	    s->buf_len--;
+	    if (finish_sde(s)) {
+	      return JBG_EOK_INTR;  /* line_out() requested interrupt */
+	    }
 	  }
 	  break;
 	case 2+2:
@@ -1024,7 +1031,8 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	  if (s->buffer[2] == MARKER_ESC && s->buffer[3] == MARKER_NEWLEN)
 	    continue; /* next time we'll have required_length == 2 + 6 */
 	  else {
-	    finish_sde(s);
+	    if (finish_sde(s))
+	      return JBG_EOK_INTR;  /* line_out() requested interrupt */
 	    /* recycle the two peek-ahead marker sequence bytes */
 	    s->buffer[0] = s->buffer[2];
 	    s->buffer[1] = s->buffer[3];
@@ -1037,12 +1045,13 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	  /* process peek-ahead NEWLEN marker sequence */
 	  y = (((long) s->buffer[4] << 24) | ((long) s->buffer[5] << 16) |
 	       ((long) s->buffer[6] <<  8) | (long) s->buffer[7]);
-	  s->buf_len = 0;
 	  if (y > s->y0)                   return JBG_EINVAL | 11;
 	  if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 12;
 	  s->y0 = y;
+	  if (finish_sde(s))
+	    return JBG_EOK_INTR;  /* line_out() requested interrupt */
+	  s->buf_len = 0;
 	  s->options &= ~JBG_VLENGTH;
-	  finish_sde(s);
 	  /* we leave returning JBG_EOK to the following SDNORM/RST */
 	  break;
 	}

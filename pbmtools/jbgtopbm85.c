@@ -16,7 +16,7 @@ char *progname;                  /* global pointer to argv[0] */
 unsigned long y_0;
 fpos_t ypos;
 int ypos_error = 1;
-unsigned long ymax = 4294967295UL;
+unsigned long ymax = 0;
 
 /*
  * Print usage message and abort
@@ -29,7 +29,7 @@ static void usage(void)
   fprintf(stderr, "options:\n\n"
 	  "  -x number\tmaximum number of pixels per line for which memory\n"
 	  "\t\tis allocated (default: 8192)\n"
-          "  -y number\tmaximum number of lines to read (default: all)\n"
+          "  -y number\tinterrupt decoder after this number of lines\n"
 	  "  -B number\tinput buffer size\n\n");
   exit(1);
 }
@@ -51,7 +51,7 @@ int line_out(const struct jbg85_dec_state *s,
     fprintf((FILE *) file, "%10lu\n", y_0); /* pad number to 10 bytes */
   }
   fwrite(start, len, 1, (FILE *) file);
-  return y == ymax;
+  return y == ymax - 1;
 }
 
 
@@ -140,6 +140,16 @@ int main (int argc, char **argv)
   while ((len = fread(inbuf, 1, inbuflen, fin))) {
     result = jbg85_dec_in(&s, inbuf, len, &cnt);
     bytes_read += cnt;
+    if (result == JBG_EOK_INTR) {
+      /* demonstrate decoder interrupt at given line number */
+      printf("Decoding interrupted after %lu lines and %lu BIE bytes "
+	     "... continuing ...\n", s.y, (unsigned long) bytes_read);
+      /* and now continue decoding */
+      if (len > cnt) {
+	result = jbg85_dec_in(&s, inbuf + cnt, len - cnt, &cnt);
+	bytes_read += cnt;
+      }
+    }
     if (result != JBG_EAGAIN)
       break;
   }
