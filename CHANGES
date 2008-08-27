@@ -30,11 +30,11 @@ Main new features of release 2.0:
     functionality beyond what pbmtojbg and jbgtopbm already do, which
     use the full library instead.)
 
-Changes to the original full library from version 1.6:
+Changes to the original full jbig.c library from version 1.6:
 
   - the arithmetic codec routines are now located in a separate source
-    file (they are now used by both the full and the T.85 library, and
-    might also be of use to other applications)
+    file (they are now used by both the full library jbig.c and the new
+    T.85 library jbig85.c, and might also be of use to other applications)
 
   - arithmetic decoder changed to enable the lookahead needed
     to handle T.85-style NEWLEN after the final stripe
@@ -54,6 +54,11 @@ Changes to the original full library from version 1.6:
     in a separate PO file (e.g., for use with GNU gettext),
     jbg_strerror() no longer has a language attribute and the
     JBG_EN, JBG_DE_8859_1, JBG_DE_UTF_8 constants no longer exist
+
+  - jbg_dec_in() return values changed; the least significant bits of
+    the error codes now provide more information about what caused the
+    error, beyond what the more general error text messages returned by
+    jbg_strerror() reveal
 
   - pbmtojbg has new option -f as a shortcut for all the options
     needed to make the output comply to the basic ITU-T T.85 fax

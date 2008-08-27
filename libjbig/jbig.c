@@ -107,15 +107,15 @@ static const int iindex[8][3] = {
  * to return values from public functions in this library.
  */
 static const char *errmsg[] = {
-  _("Everything is OK"),                                     /* JBG_EOK */
-  _("Reached specified maximum image size"),                 /* JBG_EOK_INTR */
+  _("All OK"),                                               /* JBG_EOK */
+  _("Reached specified image size"),                         /* JBG_EOK_INTR */
   _("Unexpected end of input data stream"),                  /* JBG_EAGAIN */
   _("Not enough memory available"),                          /* JBG_ENOMEM */
   _("ABORT marker segment encountered"),                     /* JBG_EABORT */
   _("Unknown marker segment encountered"),                   /* JBG_EMARKER */
-  _("Incremental BIE does not continue previous one"),       /* JBG_ENOCONT */
   _("Input data stream contains invalid data"),              /* JBG_EINVAL */
-  _("Input data stream uses unimplemented JBIG features")    /* JBG_EIMPL */
+  _("Input data stream uses unimplemented JBIG features"),   /* JBG_EIMPL */
+  _("Incremental BIE does not continue previous one")        /* JBG_ENOCONT */
 };
 
 
@@ -2042,6 +2042,7 @@ void jbg_enc_free(struct jbg_enc_state *s)
  */
 const char *jbg_strerror(int errnum)
 {
+  errnum >>= 4;
   if (errnum < 0 || (unsigned) errnum >= sizeof(errmsg)/sizeof(errmsg[0]))
     return "Unknown error code passed to jbg_strerror()";
 
@@ -2542,23 +2543,38 @@ static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 
 
 /*
- * Provide a new BIE fragment to the decoder.
+ * Provide to the decoder a new BIE fragment of len bytes starting at data.
  *
- * If cnt is not NULL, then *cnt will contain after the call the
- * number of actually read bytes. If the data was not complete, then
- * the return value will be JBG_EAGAIN and *cnt == len. In case this
- * function has returned with JBG_EOK, then it has reached the end of
- * a BIE but it can be called again with data from the next BIE if
- * there exists one in order to get to a higher resolution layer. In
- * case the return value was JBG_EOK_INTR then this function can be
- * called again with the rest of the BIE, because parsing the BIE has
- * been interrupted by a jbg_dec_maxsize() specification. In both
- * cases the remaining len - *cnt bytes of the previous block will
- * have to passed to this function again (if len > *cnt). In case of
- * any other return value than JBG_EOK, JBG_EOK_INTR or JBG_EAGAIN, a
- * serious problem has occured and the only function you should call
- * is jbg_dec_free() in order to remove the mess (and probably
- * jbg_strerror() in order to find out what to tell the user).
+ * Unless cnt is NULL, *cnt will contain the number of actually read bytes
+ * on return.
+ *
+ * Normal return values:
+ *
+ *   JBG_EAGAIN      All data bytes provided so far have been processed
+ *                   (*cnt == len) but the end of the data stream has
+ *                   not yet been recognized. Call the function again
+ *                   with additional BIE bytes.
+ *   JBG_EOK         The function has reached the end of a and
+ *                   a full image has been decoded. The function can
+ *                   be called again with data from the next BIE, if
+ *                   there exists one, in order to get to a higher
+ *                   resolution layer. The remaining len - *cnt bytes
+ *                   of the previous data block will then have to passed
+ *                   to this function again if len > *cnt.
+ *   JBG_EOK_INTR    Parsing the BIE has been interrupted as had been
+ *                   requested by a jbg_dec_maxsize() specification.
+ *                   This function can be called again with the
+ *                   rest of the BIE to continue the decoding process.
+ *                   The remaining len - *cnt bytes of the previous
+ *                   data block will then have to be passed to this
+ *                   function again if len > *cnt.
+ *
+ * Any other return value indicates that the decoding process was
+ * aborted by a serious problem and the only function you can then
+ * still call is jbg_dec_free() in order to remove the mess, and
+ * jbg85_strerror() to find out what to tell the user. (Looking at the
+ * least significant bits of the return value will provide additional
+ * information by identifying which test exactly has failed.)
  */
 int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	       size_t *cnt)
@@ -2578,56 +2594,61 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
       s->buffer[s->bie_len++] = data[(*cnt)++];
     if (s->bie_len < 20) 
       return JBG_EAGAIN;
-    if (s->buffer[1] < s->buffer[0])
-      return JBG_EINVAL;
     /* test whether this looks like a valid JBIG header at all */
-    if (s->buffer[3] != 0 || (s->buffer[18] & 0xf0) != 0 ||
-	(s->buffer[19] & 0x80) != 0)
-      return JBG_EINVAL;
+    if (s->buffer[1] < s->buffer[0])
+      return JBG_EINVAL | 1;
+    if (s->buffer[3] != 0)           return JBG_EINVAL | 2; /* padding != 0 */
+    if ((s->buffer[18] & 0xf0) != 0) return JBG_EINVAL | 3; /* padding != 0 */
+    if ((s->buffer[19] & 0x80) != 0) return JBG_EINVAL | 4; /* padding != 0 */
     if (s->buffer[0] != s->d + 1)
-      return JBG_ENOCONT;
+      return JBG_ENOCONT | 1;
     s->dl = s->buffer[0];
     s->d = s->buffer[1];
     if (s->dl == 0)
       s->planes = s->buffer[2];
     else
       if (s->planes != s->buffer[2])
-	return JBG_ENOCONT;
+	return JBG_ENOCONT | 2;
     x = (((long) s->buffer[ 4] << 24) | ((long) s->buffer[ 5] << 16) |
 	 ((long) s->buffer[ 6] <<  8) | (long) s->buffer[ 7]);
     y = (((long) s->buffer[ 8] << 24) | ((long) s->buffer[ 9] << 16) |
 	 ((long) s->buffer[10] <<  8) | (long) s->buffer[11]);
     if (s->dl != 0 && ((s->xd << (s->d - s->dl + 1)) != x &&
 		       (s->yd << (s->d - s->dl + 1)) != y))
-      return JBG_ENOCONT;
+      return JBG_ENOCONT | 3;
     s->xd = x;
     s->yd = y;
     s->l0 = (((long) s->buffer[12] << 24) | ((long) s->buffer[13] << 16) |
 	     ((long) s->buffer[14] <<  8) | (long) s->buffer[15]);
     /* ITU-T T.85 trick not directly supported by decoder; for full
      * T.85 compatibility with respect to all NEWLEN marker scenarios,
-     * preprocess BIE with jbg_newlen() before passing it to the decoder. */
+     * preprocess BIE with jbg_newlen() before passing it to the decoder,
+     * or consider using the decoder found in jbig85.c instead. */
     if (s->yd == 0xffffffff)
-      return JBG_EIMPL;
-    if (!s->planes || !s->xd || !s->yd || !s->l0)
-      return JBG_EINVAL;
+      return JBG_EIMPL | 1;
+    if (!s->planes) return JBG_EINVAL | 5;
+    if (!s->xd)     return JBG_EINVAL | 6;
+    if (!s->yd)     return JBG_EINVAL | 7;
+    if (!s->l0)     return JBG_EINVAL | 8;
     /* prevent uint32 overflow: s->l0 * 2 ^ s->d < 2 ^ 32 */
-    if (s->d > 31 || (s->d != 0 && s->l0 >= (1UL << (32 - s->d))))
-      return JBG_EIMPL;
+    if (s->d > 31)
+      return JBG_EIMPL | 2;
+    if ((s->d != 0 && s->l0 >= (1UL << (32 - s->d))))
+      return JBG_EIMPL | 3;
     s->mx = s->buffer[16];
     if (s->mx > 127)
-      return JBG_EINVAL;
+      return JBG_EINVAL | 9;
     s->my = s->buffer[17];
 #if 0
-    if (s->my > 0) 
-      return JBG_EIMPL;
+    if (s->my > 0)
+      return JBG_EIMPL | 4;
 #endif
     s->order = s->buffer[18];
     if (iindex[s->order & 7][0] < 0)
-      return JBG_EINVAL;
+      return JBG_EINVAL | 10;
     /* HITOLO and SEQ currently not yet implemented */
     if (s->dl != s->d && (s->order & JBG_HITOLO || s->order & JBG_SEQ))
-      return JBG_EIMPL;
+      return JBG_EIMPL | 5;
     s->options = s->buffer[19];
 
     /* calculate number of stripes that will be required */
@@ -2770,18 +2791,18 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	      s->at_tx[s->at_moves] >   (int) s->mx ||
 	      s->at_ty[s->at_moves] >   (int) s->my ||
 	      (s->at_ty[s->at_moves] == 0 && s->at_tx[s->at_moves] < 0))
-	    return JBG_EINVAL;
+	    return JBG_EINVAL | 11;
 	  if (s->at_ty[s->at_moves] != 0)
-	    return JBG_EIMPL;
+	    return JBG_EIMPL | 6;
 	  s->at_moves++;
 	} else
-	  return JBG_EIMPL;
+	  return JBG_EIMPL | 7; /* more than JBG_ATMOVES_MAX ATMOVES */
 	break;
       case MARKER_NEWLEN:
 	y = (((long) s->buffer[2] << 24) | ((long) s->buffer[3] << 16) |
 	     ((long) s->buffer[4] <<  8) | (long) s->buffer[5]);
-	if (y > s->yd || !(s->options & JBG_VLENGTH))
-	  return JBG_EINVAL;
+	if (y > s->yd)                   return JBG_EINVAL | 12;
+	if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 13;
 	s->yd = y;
 	/* calculate again number of stripes that will be required */
 	s->stripes = jbg_stripes(s->l0, s->yd, s->d);
@@ -2872,7 +2893,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 		"%02x %02x %02x %02x ...\n", data[*cnt], data[*cnt+1],
 		data[*cnt+2], data[*cnt+3]);
 #endif
-	return JBG_EINVAL;
+	return JBG_EINVAL | 14;
       }
       
     }
@@ -3264,5 +3285,5 @@ int jbg_newlen(unsigned char *bie, size_t len)
 	return JBG_EABORT;
       }
   }
-  return JBG_EINVAL;
+  return JBG_EINVAL | 0;
 }

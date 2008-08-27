@@ -284,6 +284,7 @@ int main (int argc, char **argv)
   struct jbg_dec_state s;
   unsigned char *buffer, *p;
   size_t buflen, len, cnt;
+  size_t bytes_read = 0;
   unsigned long xmax = 4294967295UL, ymax = 4294967295UL, max;
   int plane = -1, use_graycode = 1, diagnose = 0, multi = 0;
 
@@ -394,6 +395,7 @@ int main (int argc, char **argv)
 	result = jbg_dec_in(&s, p, len, &cnt);
 	p += cnt;
 	len -= cnt;
+	bytes_read += cnt;
       }
     }
   } else {
@@ -407,6 +409,7 @@ int main (int argc, char **argv)
 	result = jbg_dec_in(&s, p, len, &cnt);
 	p += cnt;
 	len -= cnt;
+	bytes_read += cnt;
       }
       if (!(result == JBG_EAGAIN || (result == JBG_EOK && multi)))
 	break;
@@ -423,8 +426,10 @@ int main (int argc, char **argv)
     }
   }
   if (result != JBG_EOK && result != JBG_EOK_INTR) {
-    fprintf(stderr, "Problem with input file '%s': %s\n",
-	    fnin, jbg_strerror(result));
+    fprintf(stderr, "Problem with input file '%s': %s\n"
+            "(error code 0x%02x, %lu = 0x%04lx BIE bytes processed)\n",
+ 	    fnin, jbg_strerror(result), result,
+	    (unsigned long) bytes_read, (unsigned long) bytes_read);
     if (fout != stdout) {
       fclose(fout);
       remove(fnout);

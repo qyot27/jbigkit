@@ -79,15 +79,15 @@ struct jbg_buf {
  * Possible error code return values
  */
 
-#define JBG_EOK        0
-#define JBG_EOK_INTR   1
-#define JBG_EAGAIN     2
-#define JBG_ENOMEM     3
-#define JBG_EABORT     4
-#define JBG_EMARKER    5
-#define JBG_ENOCONT    6
-#define JBG_EINVAL     7
-#define JBG_EIMPL      8
+#define JBG_EOK        (0 << 4)
+#define JBG_EOK_INTR   (1 << 4)
+#define JBG_EAGAIN     (2 << 4)
+#define JBG_ENOMEM     (3 << 4)
+#define JBG_EABORT     (4 << 4)
+#define JBG_EMARKER    (5 << 4)
+#define JBG_EINVAL     (6 << 4)
+#define JBG_EIMPL      (7 << 4)
+#define JBG_ENOCONT    (8 << 4)
 
 /*
  * Status of a JBIG encoder

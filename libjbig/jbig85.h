@@ -53,9 +53,8 @@
 #define JBG_ENOMEM     (3 << 4)
 #define JBG_EABORT     (4 << 4)
 #define JBG_EMARKER    (5 << 4)
-#define JBG_ENOCONT    (6 << 4)
-#define JBG_EINVAL     (7 << 4)
-#define JBG_EIMPL      (8 << 4)
+#define JBG_EINVAL     (6 << 4)
+#define JBG_EIMPL      (7 << 4)
 
 #endif
 

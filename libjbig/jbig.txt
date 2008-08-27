@@ -2,11 +2,22 @@
 Using the JBIG-KIT library
 --------------------------
 
-Markus Kuhn -- 2007-07-22
+Markus Kuhn -- 2008-08-27
 
 
 This text explains how to use the functions provided by the JBIG-KIT
-portable image compression library in your application software.
+portable image compression library jbig.c in your application
+software. The jbig.c library is a full-featured implementation of the
+JBIG1 standard aimed at applications that can hold the entire
+uncompressed and compressed image in RAM.
+
+[For applications that require only the single-bit-per-pixel "fax
+subset" of the JBIG1 standard defined in ITU-T Recommendation T.85
+<http://www.itu.int/rec/T-REC-T.85/en>, the alternative implementation
+found in jbig85.c may be preferable. It keeps not more than three
+lines of the uncompressed image in RAM, which makes it particularly
+suitable for embedded applications. For information on how to use
+jbig85.c, please refer to the separate documentation file jbig85.txt.]
 
 
 1  Introduction to JBIG
@@ -14,7 +25,8 @@ portable image compression library in your application software.
 We start with a short introduction to JBIG1. More detailed information
 is provided in the "Introduction and overview" section of the JBIG1
 standard. Information on how to obtain a copy of the standard is
-available from <http://www.itu.int/> or <http://www.iso.ch/>.
+available from <http://www.itu.int/rec/T-REC-T.82/en> or
+<http://www.iso.ch/>.
 
 Image data encoded with the JBIG algorithm is separated into planes,
 layers, and stripes. Each plane contains one bit per pixel. The number
@@ -697,6 +709,13 @@ provide the user a brief informative message about what when wrong
 while decompressing a JBIG image. The po/ subdirectory contains *.po
 files that translate the English ASCII strings returned by
 jbg_strerror() into other langauges (e.g., for use with GNU gettext).
+The four least-significant bits of the return value of jbg_dec_in()
+may contain additional detailed technical information about the exact
+test that spotted the error condition (see source code for details),
+i.e. more than the text message returned by jbg_strerror() reveals,
+therefore is may be useful to display the return value itself as a
+hexadecimal number in addition to the string returned by
+jbg_strerror() in case an error occurs.
 
 The current implementation of the JBIG-KIT decoder has the following
 limitations:

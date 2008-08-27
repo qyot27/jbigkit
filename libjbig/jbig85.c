@@ -78,13 +78,12 @@ const char jbg85_version[] =
  * to return values from public functions in this library.
  */
 static const char *errmsg[] = {
-  _("Everything is OK"),                                     /* JBG_EOK */
-  _("Reached specified maximum image size"),                 /* JBG_EOK_INTR */
+  _("All OK"),                                               /* JBG_EOK */
+  _("Reached specified image size"),                         /* JBG_EOK_INTR */
   _("Unexpected end of input data stream"),                  /* JBG_EAGAIN */
   _("Not enough memory available"),                          /* JBG_ENOMEM */
   _("ABORT marker segment encountered"),                     /* JBG_EABORT */
   _("Unknown marker segment encountered"),                   /* JBG_EMARKER */
-  _("Incremental BIE does not continue previous one"),       /* JBG_ENOCONT */
   _("Input data stream contains invalid data"),              /* JBG_EINVAL */
   _("Input data stream uses unimplemented JBIG features")    /* JBG_EIMPL */
 };
@@ -820,12 +819,12 @@ static int finish_sde(struct jbg85_dec_state *s)
  *                   This function can be called again with the
  *                   rest of the BIE to continue the decoding process.
  *                   The remaining len - *cnt bytes of the previous
- *                   data block will then have to passed to this function
- *                   again (only if len > *cnt).
+ *                   data block will then have to be passed to this
+ *                   function again (only if len > *cnt).
  *
  * Any other return value indicates that the decoding process was
  * aborted by a serious problem and the only function you can then
- * still call is jbg_strerror() to find out what to tell the user.
+ * still call is jbg85_strerror() to find out what to tell the user.
  * (Looking at the least significant bits of the return value will
  * provide additional information by identifying which test exactly
  * has failed.)
@@ -847,30 +846,31 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
     if (s->bie_len < 20) 
       return JBG_EAGAIN;
     /* test whether this looks like a valid JBIG header at all */
-    if (s->buffer[1] < s->buffer[0]) return JBG_EINVAL | 0;
+    if (s->buffer[1] < s->buffer[0]) return JBG_EINVAL | 1;
     /* are padding bits zero as required? */
-    if (s->buffer[3] != 0)           return JBG_EINVAL | 1; /* padding != 0 */
-    if ((s->buffer[18] & 0xf0) != 0) return JBG_EINVAL | 2; /* padding != 0 */
-    if ((s->buffer[19] & 0x80) != 0) return JBG_EINVAL | 3; /* padding != 0 */
+    if (s->buffer[3] != 0)           return JBG_EINVAL | 2; /* padding != 0 */
+    if ((s->buffer[18] & 0xf0) != 0) return JBG_EINVAL | 3; /* padding != 0 */
+    if ((s->buffer[19] & 0x80) != 0) return JBG_EINVAL | 4; /* padding != 0 */
     s->x0 = (((long) s->buffer[ 4] << 24) | ((long) s->buffer[ 5] << 16) |
 	     ((long) s->buffer[ 6] <<  8) | (long) s->buffer[ 7]);
     s->y0 = (((long) s->buffer[ 8] << 24) | ((long) s->buffer[ 9] << 16) |
 	     ((long) s->buffer[10] <<  8) | (long) s->buffer[11]);
     s->l0 = (((long) s->buffer[12] << 24) | ((long) s->buffer[13] << 16) |
 	     ((long) s->buffer[14] <<  8) | (long) s->buffer[15]);
-    if (!s->x0) return JBG_EINVAL | 4;
-    if (!s->y0) return JBG_EINVAL | 5;
-    if (!s->l0) return JBG_EINVAL | 6;
+    if (!s->buffer[2]) return JBG_EINVAL | 5;
+    if (!s->x0)        return JBG_EINVAL | 6;
+    if (!s->y0)        return JBG_EINVAL | 7;
+    if (!s->l0)        return JBG_EINVAL | 8;
     s->mx = s->buffer[16];
     if (s->mx > 127)
-      return JBG_EINVAL | 7;
-    if (s->buffer[ 0] != 0) return JBG_EIMPL | 0; /* parameter outside T.85 */
-    if (s->buffer[ 1] != 0) return JBG_EIMPL | 1; /* parameter outside T.85 */
-    if (s->buffer[ 2] != 1) return JBG_EIMPL | 2; /* parameter outside T.85 */
-    if (s->buffer[17] != 0) return JBG_EIMPL | 3; /* parameter outside T.85 */
-    if (s->buffer[18] != 0) return JBG_EIMPL | 4; /* parameter outside T.85 */
+      return JBG_EINVAL | 9;
+    if (s->buffer[ 0] != 0) return JBG_EIMPL | 8; /* parameter outside T.85 */
+    if (s->buffer[ 1] != 0) return JBG_EIMPL | 9; /* parameter outside T.85 */
+    if (s->buffer[ 2] != 1) return JBG_EIMPL |10; /* parameter outside T.85 */
+    if (s->buffer[17] != 0) return JBG_EIMPL |11; /* parameter outside T.85 */
+    if (s->buffer[18] != 0) return JBG_EIMPL |12; /* parameter outside T.85 */
     s->options = s->buffer[19];
-    if (s->options & 0x17)  return JBG_EIMPL | 5; /* parameter outside T.85 */
+    if (s->options & 0x17)  return JBG_EIMPL |13; /* parameter outside T.85 */
     if (s->x0 > (s->linebuf_len / ((s->options & JBG_LRLTWO) ? 2 : 3)) * 8)
       return JBG_ENOMEM; /* provided line buffer is too short */
     arith_decode_init(&s->s, 0);
@@ -972,17 +972,17 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	      (s->at_tx[s->at_moves] < ((s->options & JBG_LRLTWO) ? 5 : 3) &&
 	       s->at_tx[s->at_moves] != 0) ||
 	      s->buffer[7] != 0)
-	    return JBG_EINVAL | 8;
+	    return JBG_EINVAL | 11;
 	  s->at_moves++;
 	} else
-	  return JBG_EIMPL | 6; /* more than JBG85_ATMOVES_MAX ATMOVES */
+	  return JBG_EIMPL | 14; /* more than JBG85_ATMOVES_MAX ATMOVES */
 	break;
       case MARKER_NEWLEN:
 	y = (((long) s->buffer[2] << 24) | ((long) s->buffer[3] << 16) |
 	     ((long) s->buffer[4] <<  8) | (long) s->buffer[5]);
-	if (y > s->y0)                   return JBG_EINVAL | 9;
+	if (y > s->y0)                   return JBG_EINVAL | 12;
 #ifndef JBG85_TOLERATE_MULTIPLE_NEWLEN
-	if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 10;
+	if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 13;
 	s->options &= ~JBG_VLENGTH;
 #endif
 	s->y0 = y;
@@ -1032,8 +1032,8 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	  /* process peek-ahead NEWLEN marker sequence */
 	  y = (((long) s->buffer[4] << 24) | ((long) s->buffer[5] << 16) |
 	       ((long) s->buffer[6] <<  8) | (long) s->buffer[7]);
-	  if (y > s->y0)                   return JBG_EINVAL | 11;
-	  if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 12;
+	  if (y > s->y0)                   return JBG_EINVAL | 12;
+	  if (!(s->options & JBG_VLENGTH)) return JBG_EINVAL | 13;
 	  s->y0 = y;
 	  if (finish_sde(s))
 	    return JBG_EOK_INTR;  /* line_out() requested interrupt */
@@ -1066,7 +1066,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 		"%02x %02x %02x %02x ...\n", data[*cnt], data[*cnt+1],
 		data[*cnt+2], data[*cnt+3]);
 #endif
-	return JBG_EINVAL | 13; /* PSCD was longer than expected */
+	return JBG_EINVAL | 14; /* PSCD was longer than expected */
       }
       
     }
