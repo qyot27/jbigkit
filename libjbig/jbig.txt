@@ -103,14 +103,14 @@ standard and indicated by four bits in the header.
 
 It is possible to use the raw BIE data stream as specified by the JBIG
 standard directly as the format of a file used for storing images.
-This is what the pbmtojbg and jbgtopbm conversion tools do that are
-provided in this package as demonstration applications. However, as
-the BIE format has been designed for a large number of very different
-applications, and to allow efficient direct processing by special JBIG
-hardware chip implementations, the BIE header contains only the
-minimum amount of information absolutely required by the decompression
-algorithm. Many features expected from a good file format are missing
-in the BIE data stream:
+This is what the pbmtojbg, jbgtopbm, pbmtojbg85, and jbgtopbm85
+conversion tools do that are provided in this package as demonstration
+applications. However, as the BIE format has been designed for a large
+number of very different applications, and to allow efficient direct
+processing by special JBIG hardware chip implementations, the BIE
+header contains only the minimum amount of information absolutely
+required by the decompression algorithm. Many features expected from a
+good file format are missing in the BIE data stream:
 
   - no "magic code" in the first few bytes to allow identification
     of the file format on a typeless file system and to allow
@@ -144,12 +144,12 @@ search operations.
 
 2.1  Format of the source image
 
-To be processed by the JBIG-KIT encoder, the image has to be present
-in memory as separate bitmap planes. Each byte of a bitmap contains
-eight pixels, where the most significant bit represents the leftmost
-of these. Each line of a bitmap has to be stored in an integral number
-of bytes. If the image width is not an integral multiple of eight,
-then the final byte has to be padded with zero bits.
+To be processed by the jbig.c encoder, the image has to be present in
+memory as separate bitmap planes. Each byte of a bitmap contains eight
+pixels, where the most significant bit represents the leftmost of
+these. Each line of a bitmap has to be stored in an integral number of
+bytes. If the image width is not an integral multiple of eight, then
+the final byte has to be padded with zero bits.
 
 For example the 23x5 pixels large single plane image:
 
@@ -239,7 +239,7 @@ into your source code.
 The library interface follows object-oriented programming principles.
 You have to declare a variable (object)
 
-  struct jbg_enc_state se;
+  struct jbg_enc_state s;
 
 which contains the current status of an encoder. Then you initialize
 the encoder by calling the constructor function

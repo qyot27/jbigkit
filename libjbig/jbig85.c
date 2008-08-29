@@ -868,7 +868,9 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
     if (s->buffer[ 1] != 0) return JBG_EIMPL | 9; /* parameter outside T.85 */
     if (s->buffer[ 2] != 1) return JBG_EIMPL |10; /* parameter outside T.85 */
     if (s->buffer[17] != 0) return JBG_EIMPL |11; /* parameter outside T.85 */
+#if 0
     if (s->buffer[18] != 0) return JBG_EIMPL |12; /* parameter outside T.85 */
+#endif
     s->options = s->buffer[19];
     if (s->options & 0x17)  return JBG_EIMPL |13; /* parameter outside T.85 */
     if (s->x0 > (s->linebuf_len / ((s->options & JBG_LRLTWO) ? 2 : 3)) * 8)
@@ -1093,27 +1095,4 @@ int jbg85_dec_end(struct jbg85_dec_state *s)
 {
   s->end_of_bie = 1;
   return jbg85_dec_in(s, NULL, 0, NULL);
-}
-
-
-/*
- * From the first call to line_out (and even inside the line_out routine),
- * you can call this function in order to find out the width of the image.
- */
-unsigned long jbg85_dec_getwidth(const struct jbg85_dec_state *s)
-{
-  return s->x0;
-}
-
-
-/*
- * After jbg85_dec_in() returned JBG_EOK, you can call this function
- * in order to find out the height of the image. (You can call it
- * already from the first call to line_out, but note that the result
- * can change later on due to a NEWLEN marker, so make sure you also
- * call this function after jbg85_dec_in() returned JBG_EOK.)
- */
-unsigned long jbg85_dec_getheight(const struct jbg85_dec_state *s)
-{
-  return s->y0;
 }

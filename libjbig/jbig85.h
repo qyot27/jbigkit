@@ -154,9 +154,18 @@ void jbg85_dec_init(struct jbg85_dec_state *s,
 int  jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 		  size_t *cnt);
 int  jbg85_dec_end(struct jbg85_dec_state *s);
-unsigned long jbg85_dec_getwidth(const struct jbg85_dec_state *s);
-unsigned long jbg85_dec_getheight(const struct jbg85_dec_state *s);
-
 const char *jbg85_strerror(int errnum);
+
+/* some macros for examining decoder state */
+
+#define jbg85_dec_finished(s)    ((s)->bie_len == 20 && (s)->y >= (s)->y0)
+/* enquire about image size */
+#define jbg85_dec_getwidth(s)    ((s)->x0)
+#define jbg85_dec_getheight(s)   ((s)->y0)
+/* enquire about validity of image-size results */
+#define jbg85_dec_validwidth(s)  ((s)->bie_len == 20)
+#define jbg85_dec_finalheight(s) ((s)->bie_len == 20 &&			\
+				  ((((s)->options & JBG_VLENGHT) == 0) || \
+				   ((s)->y >= (s)->y0)))
 
 #endif /* JBG85_H */
