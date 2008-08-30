@@ -34,5 +34,5 @@ distribution: clean
 	rm -f libjbig/libjbig*.a
 	(cd ..; tar -c -v --exclude .svn -f jbigkit-$(VERSION).tar jbigkit ; \
 	  gzip -9f jbigkit-$(VERSION).tar )
-	scp ../jbigkit-$(VERSION).tar.gz slogin.cl.cam.ac.uk:public_html/download/
-	scp CHANGES slogin.cl.cam.ac.uk:/public_html/jbigkit/
+	scp ../jbigkit-$(VERSION).tar.gz slogin-serv1.cl.cam.ac.uk:public_html/download/
+	scp CHANGES slogin-serv1.cl.cam.ac.uk:public_html/jbigkit/
