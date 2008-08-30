@@ -2,7 +2,7 @@
 JBIG-KIT revision history
 -------------------------
 
-Changes in version 2.0 (yet to be released)
+Changes in version 2.0 (2008-08-30)
 
 Main new features of release 2.0:
 
@@ -26,7 +26,7 @@ Main new features of release 2.0:
     T.85 library. (Note to distribution maintainers: there is probably
     little point in adding pbmtojbg85 and jbgtopbm85 to precompiled
     JBIG-KIT packages for workstation operating systems, as these two
-    programs do not really provide the end user any additional
+    programs do not really provide the end user much additional
     functionality beyond what pbmtojbg and jbgtopbm already do, which
     use the full library instead.)
 
@@ -36,8 +36,9 @@ Changes to the original full jbig.c library from version 1.6:
     file (they are now used by both the full library jbig.c and the new
     T.85 library jbig85.c, and might also be of use to other applications)
 
-  - arithmetic decoder changed to enable the lookahead needed
-    to handle T.85-style NEWLEN after the final stripe
+  - arithmetic decoder behaviour slightly changed to enable the
+    lookahead needed to handle T.85-style NEWLEN after the final
+    stripe
 
   - added encoder support for adding comment marker segment
 
@@ -60,7 +61,7 @@ Changes to the original full jbig.c library from version 1.6:
     error, beyond what the more general error text messages returned by
     jbg_strerror() reveal
 
-  - pbmtojbg has new option -f as a shortcut for all the options
+  - pbmtojbg has a new option -f as a shortcut for all the options
     needed to make the output comply to the basic ITU-T T.85 fax
     profile
 
@@ -71,6 +72,11 @@ Changes to the original full jbig.c library from version 1.6:
   - jbgtopbm now outputs image dimensions in header padded to 10
     digits fixed width, for consistency with jbgtopbm85
     to allow for later in-place update of height due to NEWLEN
+
+  - macro JBG_LICENCE can be changed from the default value "GPL" to a
+    licence agreement reference code to if the library is used under a
+    commercial licence, to clarify under which exact licence the
+    library is used in a particular application
 
 Changes in version 1.6 (2004-06-11)
 

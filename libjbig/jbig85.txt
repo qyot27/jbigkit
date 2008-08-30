@@ -2,7 +2,7 @@
 Using the T.85 "light" version of the JBIG-KIT library
 ------------------------------------------------------
 
-Markus Kuhn -- 2008-08-29
+Markus Kuhn -- 2008-08-30
 
 
 This text explains how to use the functions provided by the JBIG-KIT
@@ -15,9 +15,8 @@ software.
 The jbig85.c library implements only the "single-progression
 sequential coding" subset of the JBIG1 standard, which is defined in
 ITU-T Recommendation T.85 <http://www.itu.int/rec/T-REC-T.85/en>, also
-known as the "facsimile application profile". This means, in
-particular, that the JBIG1 data streams that the jbig85.c library can
-process can have
+known as the "facsimile application profile". This means that the
+JBIG1 data streams that the jbig85.c library can process can have
 
   - no progressive encoding, i.e. the image is always encoded in a
     single resolution layer (and not as a sequence of layers of a
@@ -32,11 +31,10 @@ ITU-R Recommendation T.43. For these applications, use the full jbig.c
 library instead.
 
 The T.85 restrictions are sufficient for black/white fax transmission
-and several other common bi-level document handling applications
-(printer drivers, document archiving, etc.). They considerably
-simplify the design of the encoder and decoder. They allow the
-jbig85.c library to provide several advantages over the full-featured
-jbig.c:
+and several other common bi-level image applications (printer drivers,
+document archiving, etc.). They simplify the design of the encoder and
+decoder and allow the jbig85.c library to provide several advantages
+over the full-featured jbig.c:
 
   - Only the last three lines of the uncompressed image need to be
     kept in RAM at any time.
@@ -49,7 +47,7 @@ jbig.c:
     decoded.
 
   - All usage modes of the NEWLEN marker segment are supported,
-    including a NEWLEN occuring after the final stripe, as required by
+    including a NEWLEN occurring after the final stripe, as required by
     ITU-T Recommendation T.85, using only a single pass over the data.
 
   - The code is smaller and there is no need to store tables related
@@ -62,8 +60,9 @@ that the library is non-recursive and requires only a very small stack
 library may also be a good choice where very large black/white images
 are processed.
 
-The jbig85.c and jbig.c libraries was designed such that both can be
-linked simultaneously with the same application.
+The jbig85.c and jbig.c libraries both can be linked simultaneously
+with the same application if you #include jbig85.h after jbig.h into
+your source code.
 
 
 2  Introduction to JBIG (T.85 subset)
@@ -80,14 +79,12 @@ final one.
 
 The compressed data stream specified by the JBIG standard is called a
 bi-level image entity (BIE). A BIE consists of a 20-byte header,
-followed by an optional 1728-byte table (usually not present, except
-in special applications) followed by a sequence of stripe data
-entities (SDE). Each SDE encodes the content of one single stripe in
-one plane of one resolution layer. Between the SDEs, other information
-blocks (called floating marker segments) can also be present. They are
-used to change certain parameters of the algorithm in the middle of an
-image or contain additional application specific information. A BIE
-looks like this:
+followed by a sequence of stripe data entities (SDE). Each SDE encodes
+the content of one single stripe in one plane of one resolution layer.
+Between the SDEs, other information blocks (called floating marker
+segments) can also be present. They are used to change certain
+parameters of the algorithm in the middle of an image or contain
+additional application specific information. A BIE looks like this:
 
 
           +------------------------------------------------+
@@ -135,8 +132,8 @@ good file format are missing in the BIE data stream:
     automatic distinction from other compression algorithms
 
   - no standardized way to encode additional information such as a
-    textual description, information about the meaning of various bit
-    planes, the physical size and resolution of the document, etc.
+    textual description, the physical size and resolution of the
+    document, etc.
 
   - a checksum to ensure image integrity
 
@@ -152,10 +149,10 @@ Existing established multi-purpose file formats with a rich set of
 auxiliary information attributes like TIFF could be extended easily to
 also hold JBIG compressed data.
 
-On the other hand, in database applications for instance, a BIE might
-be stored directly in a variable length field. Auxiliary information
-would then be stored in other fields of the same record, to simply
-search operations.
+On the other hand, in e.g. database applications, a BIE might be
+stored directly in a binary variable-length field. Auxiliary
+information would then be stored in other fields of the same record,
+to simplify search operations.
 
 
 2  Compressing an image
@@ -193,9 +190,8 @@ This is the format used in binary PBM files and it can also be handled
 directly by the Xlib library of the X Window System.
 
 The standard recommends that a 0 pixel represents the background and a
-1 pixel represents the foreground color of an image, in other words, 0
+1 pixel represents the foreground colour of an image, in other words, 0
 is white and 1 is black for scanned paper documents.
-
 
 
 2.2  A simple compression application
@@ -213,10 +209,10 @@ into your source code.
 The library interface follows object-oriented programming principles.
 You have to declare a variable (object)
 
-  struct jbg85_enc_state se;
+  struct jbg85_enc_state s;
 
 which contains the current status of an encoder. Then you initialize
-the encoder by calling the constructor function
+the encoder by calling
 
   void jbg85_enc_init(struct jbg85_enc_state *s,
                       unsigned long x, unsigned long y,
@@ -226,28 +222,30 @@ the encoder by calling the constructor function
 
 The parameters have the following meaning:
 
-  s             A pointer to the jbg85_enc_state structure which you want
+  s             A pointer to the jbg85_enc_state structure that you want
                 to initialize.
 
-  x             The width of your image.
+  x             The width of your image in pixels.
 
-  y             The height of your image. This can be a larger value
-                than the actual height of the image, or even 2^32-1
-                (or equally -1), if the height of the image is not yet
-                known. In that case, set the JBG_VLENGTH option (see below)
-                and call jbg85_enc_newlen() as soon as the actual image
-                height is known.
+  y             The height of your image in pixels (lines). This can be
+                a larger value than the actual height of the image, or
+                even 2^32-1 (or equally -1), if the height of the
+                image is not yet known. In that case, leave the
+                JBG_VLENGTH option set (see below) and call
+                jbg85_enc_newlen() as soon as the actual image height
+                is known.
 
-  data_out      This is a call-back function which will be called during
-                the compression process by libjbig85 in order to deliver
-                the BIE data to the application. The parameters of the
-                function data_out are a pointer start to the new block
-                of data to be delivered, as well as the number len of
-                delivered bytes. The pointer file is transparently
-                delivered to data_out, as specified in jbg85_enc_init().
-                Typically, data_out will write the BIE portion to a
-                file, send it to a network connection, or append it to
-                some memory buffer.
+  data_out      This is a call-back function that the encoder will
+                call during the compression process in order to
+                deliver the BIE data to your application. The
+                parameters of the function data_out are a pointer
+                start to the new block of data being delivered, as
+                well as the number len of delivered bytes. The pointer
+                file is transparently delivered to data_out, as
+                specified in jbg85_enc_init(). Typically, data_out
+                will write the BIE portion to a file, send it to a
+                network connection, or append it to some memory
+                buffer.
 
   file          A pointer parameter that is passed on to data_out()
                 and can be used, for instance, to allow data_out() to
@@ -259,7 +257,8 @@ The compression can then be started by calling the function
   void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
                          unsigned char *prevline, unsigned char *prevprevline);
 
-successively for each line of the image. The parameters are:
+successively for each line of the image, top to bottom. The parameters
+are:
 
   line          A pointer to the first byte of the line to be encoded.
 
@@ -273,10 +272,11 @@ successively for each line of the image. The parameters are:
 
 After jbg85_enc_lineout() has been called for all lines of the image,
 the complete BIE will have been delivered via several callbacks to
-data_out(). These BIE bytes are delivered as soon as possible.
+data_out(). These BIE bytes are delivered as soon as possible, as the
+encoder cannot buffer more than a few bytes internally.
 
-A minimal example application which sends the BIE of the above
-bitmap to stdout looks like this:
+A minimal example application, which sends the BIE of the above bitmap
+to stdout, looks like this:
 
 ---------------------------------------------------------------------------
 /* A sample JBIG T.85 encoding application */
@@ -302,15 +302,17 @@ int main()
   int i;
   
   jbg85_enc_init(&se, 23, 5, output_bie, stdout);      /* initialize encoder */
+  jbg85_enc_options(&se, JBG_TPBON, 0, -1);      /* clear JBG_VLENGTH option */
   for (i = 0; i < 5; i++) {
-    jbg85_enc_lineout(&se, buf[i*3], buf[i*3]-1, buf[i*3]-2); /* encode line */
+    /* encode line */
+    jbg85_enc_lineout(&se, bitmap+i*3, bitmap+(i-1)*3, bitmap+(i-2)*3);
   }
 
   return 0;
 }
 ---------------------------------------------------------------------------
 
-This software produces a 42 byte long BIE. (JBIG is not very good at
+This software produces a 37 byte long BIE. (JBIG is not very good at
 compressing extremely small images like in this example, because the
 arithmetic encoder requires some startup data in order to generate
 reasonable statistics which influence the compression process and
@@ -325,58 +327,73 @@ following default values are used for various compression parameters:
   - The number of lines per stripe (l0) is set to 128, which is the
     T.85 BASIC setting.
 
-  - The typical-prediction option (TBON) is activated, but the
-    variable-length (VLENGTH) and two-line template (LRLTWO)
-    option are not.
+  - The typical-prediction (TPBON) and variable-length (VLENGTH) options
+    are activated, but the two-line template (LRLTWO) option is not.
 
   - The maximal horizontal offset of the adaptive template pixel is 127
-    (mx = 8, my = 0).
+    (mx = 127, my = 0).
 
 In order to change any of these default parameters, an additional
-function has to be called between jbg85_enc_init() and
+function has to be called between jbg85_enc_init() and the first
 jbg85_enc_lineout():
 
   void jbg85_enc_options(struct jbg85_enc_state *s, int options,
                          unsigned long l0, int mx)
 
+The options value can contain the following bits, which activate some
+of the optional algorithms defined by JBIG:
 
-The options value can contain the following bits, which activate
-some of the optional algorithms defined by JBIG:
+  JBG_LRLTWO     This option bit changes the JBIG algorithm such that the
+                 context in which the probability of a pixel is
+                 estimated includes only the previous line (two-line
+                 template), rather than the previous two lines
+                 (three-line template). This option is off by default
+                 and the author cannot think of a good reason to set it.
+                 [Some people in the JBIG committee seem to have
+                 argued that using a two-line template will make
+                 software implementations a little bit faster, while
+                 others have argued that using only two lines will
+                 decrease compression efficiency by around 5%. As you
+                 might expect from a committee, now both alternatives
+                 are allowed (and add to the implementation and testing
+                 complexity of every decoder).]
 
-  JBG_LRLTWO     Normally, in the lowest resolution layer, pixels
-                 from three lines around the next pixel are used
-                 in order to determine the context in which the next
-                 pixel is encoded. Some people in the JBIG committee
-                 seem to have argued that using only 2 lines will
-                 make software implementations a little bit faster,
-                 however others have argued that using only two lines
-                 will decrease compression efficiency by around 5%.
-                 As you might expect from a committee, now both
-                 alternatives are allowed and if JBG_LRLTWO is set,
-                 the slightly faster but 5% less well compressing two
-                 line alternative is selected. God bless the committees.
-                 Although probably nobody will ever need this option,
-                 it has been implemented in JBIG-KIT and is off by
-                 default.
+  JBG_TPBON      This bit activates the "typical prediction" algorithm. It
+                 is set by default. Typical prediction means that JBIG
+                 prefixes each line to be encoded with a "pseudopixel"
+                 that indicates if the line is identical to the
+                 previous line, and skips encoding the line if it is.
+                 This helps to encode empty parts of a page very
+                 efficiently in just a few bytes, therefore this
+                 option should be left on. (The only reason the author
+                 could think of for ever deactivating this option is
+                 if you know in advance that there will never be two
+                 identical lines follow each other in the image to be
+                 encoded, in which case deactivating this option might
+                 provide a tiny performance improvement.)
 
-  JBG_TPBON      Like JBG_TPDON this activates the "typical prediction"
-                 algorithm in the lowest resolution layer. Also activated
-                 by default.
-
-  JBG_VLENGTH    This option indicates that the image height y provided
+  JBG_VLENGTH    This bit indicates that the image height y provided
                  to jbg85_enc_init() was only an estimate and may
                  be lowered sometimes during the encoding process
                  using a call to jbg85_enc_newlen(). This feature
                  is intended for fax machines that start transmitting
                  a page while still scanning it and without knowing
                  how long the page is going to be.
-                 
-Parameter l0 allows you to specify the number of lines per stripe in
-resolution layer 0 (valid range: 1 to 2^32-1). The parameter mx
-changes the maximal offset allowed for the adaptive template pixel
-(valid range: 0 to 127).
 
-If the JBG_VLENGTH was set, then you can call at any time before a the
+Value -1 for options keeps the current setting, the default is
+JBG_TPBON | JBG_VLENGTH.
+
+The other parameters are:
+
+  l0             Sets the number of lines per stripe (valid range:
+                 1 to 2^32-1, default 128, value 0 keeps the current
+                 setting).
+
+  mx             Changes the maximal offset allowed for the adaptive
+                 template pixel (valid range: 0 to 127, default 127,
+                 value -1 keeps the current setting).
+
+If the JBG_VLENGTH option was set, then you can call at any time the
 function
 
   void jbg85_enc_newlen(struct jbg85_enc_state *s, unsigned long newlen)
@@ -389,23 +406,32 @@ is known. However, it is even possible to call it after the last line
 has already been encoded using jbg85_enc_lineout(). The latter case
 will result in a somewhat odd BIE, where an additional empty stripe
 has to be appended just to announce the new length. This is not pretty
-and not described in great detail in the original JBIG1 standard, but
-decoders are required by ITU-T T.85 to understand even this extremely
-late announcement of the end of the image.
+and was not described in great detail in the original JBIG1 standard,
+but decoders are required by ITU-T T.85 to understand even this
+extremely late announcement of the end of the image.
+
+If the image height y initially given to jbg85_enc_init() is already
+the correct final value and you will therefore never call
+jbg85_enc_newlen(), then it is good practice to clear the JBG_VLENGTH
+option bit, which is set by default, e.g. by calling
+
+  jbg85_enc_options(&s, JBG_TPBON, 0, -1);
+
+between jbg85_enc_init() and jbg85_enc_lineout().
 
 The JBIG standard also has a provision for aborting a BIE with a
 special abort marker segment, and calling
 
   void jbg85_enc_abort(struct jbg85_enc_state *s);
 
-does that. This is probably only needed if there is no other way of
+does that. This is probably only needed if there is no other way
 (e.g., end-of-file) of telling the decoder that no further data bytes
 will be coming.
 
 
 3  Decompressing an image
 
-Like with the compression functions, if you want to use the JBIG-KIT
+Like with the compression functions, if you want to use the jbig85.c
 library, you have to put the line
 
   #include "jbig85.h"
@@ -426,7 +452,7 @@ which is initialized by a call to
                                       unsigned long y, void *file),
                       void *file);
 
-Parameters:
+The parameters are:
 
   buf           A memory buffer that is long enough to store up to
                 three lines of the image. This buffer will be used
@@ -435,26 +461,31 @@ Parameters:
                 has to be only sufficient for two uncompressed
                 image lines.
 
-  buflen        The length in bytes of the buffer area to which buf points.
-                This value prevents accidental buffer overflows and
-                allows the decoder to about with JBG_ENOMEM if the
-                provided buffer was too small, once it knows the width
-                of the image to be decoded from parsing its 20-byte
-                header.
+  buflen        The length in bytes of the buffer area to which buf
+                points. Knowing this value prevents accidental buffer
+                overflows and allows the decoder to abort with
+                JBG_ENOMEM if the provided buffer was too small, once
+                it knows the width of the image to be decoded from
+                parsing its 20-byte header. If xmax is the expected
+                maximum width of the image in pixels, then buflen
+                should be at least ((xmax >> 3) + !!(xmax & 7)) * 3
+                bytes. [If only BIEs with option LRLTWO set will be
+                received, then ((xmax >> 3) + !!(xmax & 7)) * 2
+                bytes will be sufficient.]
 
   line_out      This call-back function will be used whenever the decoder
                 has completed another line. The start parameter will
                 point to the location in buf where the len bytes of
                 the just decoded line reside. The line_out() function
-                has to read (and copy or output) this line, but is not
-                allowed to modify it in-place, as the decoder will
+                has to read (and copy or output) this line, but it is
+                not allowed to modify it in-place, as the decoder will
                 also need to access it while decoding the following
                 two lines. The parameter y is just the line number
                 (starting from 0) and file is the jbg85_dec_init()
                 parameter of the same name passed on. The normal
                 return value of line_out is zero; a non-zero value
                 can be returned to request an interrupt of the decoding
-                process (see below).
+                process (see discussion of JBG_EOK_INTR below).
 
   file          A pointer parameter that is passed on to line_out()
                 and can be used, for instance, to allow line_out() to
@@ -476,12 +507,26 @@ reinitialized with jbg85_dec_init() before it is ready to accept
 another BIE.
 
 If pointer cnt is not NULL, then the number of bytes actually read
-from the data block is stored there. In case the data block did not
-contain the end of the BIE, then the value JBG_EAGAIN will be returned
-and *cnt equals len.
+from the data block will be stored there. In case the decoder did not
+recognize the end of the BIE in the data block, then the value
+JBG_EAGAIN will be returned and *cnt equals len.
 
 Once the end of a BIE has been reached, the return value of
 jbg85_dec_in() will be JBG_EOK.
+
+The decoder can recognize the end of a BIE only if either the VLENGTH
+option is not set, or if there has been a NEWLEN marker segment before
+the start of the last stripe. Otherwise, the decoder cannot know
+whether there is or is not a NEWLEN marker segment following the last
+stripe. For this reason, jbg85_dec_in() can return JBG_EAGAIN even
+though you have already given it the last byte of the BIE. In this
+case, call
+
+  int jbg85_dec_end(struct jbg85_dec_state *s);
+
+to explicitely signal to the decoder that it has already received all
+bytes of the BIE. This function will then output any remaining lines
+and return JBG_EOK if no problem has occurred.
 
 The macros
 
@@ -489,9 +534,10 @@ The macros
   unsigned long jbg85_dec_getheight(struct jbg85_dec_state *s);
 
 can be used to query the dimensions of the image. The width will be
-known already during the first callback to line_out(), but the height
-might not have reached its final value before jbg85_dec_in() has
-returned JBG_EOK. The additional boolean macros
+known already after the first 20 bytes of the BIE have been provided,
+and also during the first callback to line_out(). But the height might
+not have reached its final value before jbg85_dec_in() has returned
+JBG_EOK. The additional boolean macros
 
   int jbg85_dec_validwidth(struct jbg85_dec_state *s);
   int jbg85_dec_finalheight(struct jbg85_dec_state *s);
@@ -501,38 +547,71 @@ tell, whether the width and final height are already known, and
 whether the decoder has finished outputting all lines.
 
 If one of the callbacks to line_out() provides a non-zero return
-value, then the decoder will interrupt the decoding process with a
-return value JBG_EOK_INTR. This feature might be useful to stop the
-decoding process temporarily, e.g. to load a new sheet of paper, where
-performing this task is inconvenient to complete inside line_out(). It
-is then possible to continue calling jbg85_dec_in() with the remaining
-data in order to either decode the remaining lines of the BIE. After
-jbg85_dec_in() returned JBG_EOK_INTR, *cnt is probably not equal to
-len and the remainder of the data block which has not yet been
-processed by the decoder has to be delivered to jbg85_dec_in() again.
-Not that any line that has already been delivered to line_out() will
-not be delivered again.
+value, then the decoder will interrupt the decoding process and
+jbg85_dec_in() or jbg85_dec_end() will return JBG_EOK_INTR. This
+feature might be useful to stop the decoding process temporarily, e.g.
+to load a new sheet of paper, where performing this task is
+inconvenient to complete inside line_out(). It is then possible to
+continue calling jbg85_dec_in() with the remaining data (or
+jbg85_dec_end() if there isn't any left) in order to decode the
+remaining lines of the BIE. After jbg85_dec_in() returned
+JBG_EOK_INTR, *cnt is probably not equal to len and the remainder of
+the data block which has not yet been processed by the decoder has to
+be delivered to jbg85_dec_in() again. Any line that has already been
+delivered to line_out() will not be delivered again.
 
 If any other return value than JBG_EOK, JBG_EOK_INTR or JBG_EAGAIN has
-been returned by jbg85_dec_in(), then an error has occurred and the
-decoding process has been aborted. The function
+been returned by jbg85_dec_in() or jbg85_dec_end(), then an error has
+occurred and the decoding process has been aborted. The function
 
   const char *jbg85_strerror(int errnum);
 
-returns a pointer to a short single line test message which explains
-the return value of jbg85_dec_in(). This message can be used in order
-to provide the user a brief informative message about what when wrong
-while decompressing a JBIG image. The po/ subdirectory contains *.po
-files that translate the English ASCII strings returned by
-jbg85_strerror() into other langauges (e.g., for use with GNU
-gettext). The four least-significant bits of the return value of
-jbg85_dec_in() may contain additional detailed technical information
-about the exact test that spotted the error condition (see source code
-for details), i.e. more than the text message returned by
-jbg85_strerror() reveals, therefore is may be useful to display the
-return value itself as a hexadecimal number in addition to the string
-returned by jbg85_strerror() in case an error occurs.
+returns a pointer to a short single-line test message that explains
+the return value of jbg85_dec_in() or jbg85_dec_end(). This message
+can be used in order to provide the user a brief informative message
+about what when wrong while decompressing a JBIG image. The po/
+subdirectory contains *.po files that translate the English ASCII
+strings returned by jbg85_strerror() into other languages (e.g., for
+use with GNU gettext). The four least-significant bits of the return
+value of jbg85_dec_in() or jbg85_dec_end() may contain additional
+detailed technical information about the exact test that spotted the
+error condition (see source code for details), i.e. more than the text
+message returned by jbg85_strerror() reveals. Therefore it may be
+useful to display the return value itself as a hexadecimal number, in
+addition to the string returned by jbg85_strerror().
 
-*** Happy compressing ***
+
+4  Additional notes
+
+The following remarks will not affect the normal user of the library
+but might be of interest to some users who have to deal with exotic
+cases, in particular dealing with broken non-JBIG-KIT encoders out
+there:
+
+  - There has been one report about malformed BIEs produced by another
+    JBIG implementation that violates the standard by containing
+    several NEWLEN marker segments in the same BIE. The jbig85.c
+    decoder will normally abort with JBG_EINVALID when it encounters
+    such an illegal BIE. The compile-time option
+    JBG85_TOLERATE_MULTIPLE_NEWLEN can be used to make the decoder
+    more tolerant to this type of syntax error.
+
+  - Even though the T.85 standard prescribes all-zero values for the
+    order bits HITOLO, SEQ, ILEAVE, SMID, the jbig85.c decoder will
+    not complain about any other values of these bits, as they do not
+    affect the decoding process when there is only a single plane and
+    resolution layer (the only case supported by this decoder). The
+    compile-time option JBG85_STRICT_ORDER_BITS will make the decoder
+    less tolerant and abort with JBG_EIMPL if the received order bits
+    do not comply with the T.85 "single-progression sequential coding"
+    requirements.
+
+  - The T.85 standard allows only a single ATMOVE marker segment per
+    SDE, and the jbig85.c decoder enforces this limit by default. This
+    limit can be increased by setting JBG85_ATMOVES_MAX in jbig85.h to
+    the desired value. The encoder will never output more than a
+    single ATMOVE marker segment per stripe.
+
+*** Happy decompressing ***
 
 [end]

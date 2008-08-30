@@ -2,7 +2,7 @@
 Using the JBIG-KIT library
 --------------------------
 
-Markus Kuhn -- 2008-08-27
+Markus Kuhn -- 2008-08-30
 
 
 This text explains how to use the functions provided by the JBIG-KIT
@@ -134,10 +134,10 @@ Existing established multi-purpose file formats with a rich set of
 auxiliary information attributes like TIFF could be extended easily to
 also hold JBIG compressed data.
 
-On the other hand, in database applications for instance, a BIE might
-be stored directly in a variable length field. Auxiliary information
-would then be stored in other fields of the same record, to simply
-search operations.
+On the other hand, in e.g. database applications, a BIE might be
+stored directly in a binary variable-length field. Auxiliary
+information would then be stored in other fields of the same record,
+to simplify search operations.
 
 
 2  Compressing an image
@@ -180,12 +180,12 @@ bitmaps with one pointer per plane.
 
 For single-plane images, the standard recommends that a 0 pixel
 represents the background and a 1 pixel represents the foreground
-color of an image, in other words, 0 is white and 1 is black for
+colour of an image, in other words, 0 is white and 1 is black for
 scanned paper documents. For images with several bits per pixel, the
-JBIG standard makes no recommendations about how various colors should
+JBIG standard makes no recommendations about how various colours should
 be encoded.
 
-For greyscale images, by using a Gray code instead of a simple binary
+For grey-scale images, by using a Gray code instead of a simple binary
 weighted representation of the pixel intensity, some increase in
 coding efficiency can be reached.
 
@@ -212,7 +212,7 @@ half of the code (numbers 4 - 7) is simply the mirrored first half
 (numbers 3 - 0) with the first bit set to one. This way, arbitrarily
 large Gray codes can be generated quickly by mirroring the above
 example and prefixing the first half with zeros and the second half
-with ones as often as required. In greyscale images, it is common
+with ones as often as required. In grey-scale images, it is common
 practise to use the all-0 code for black and the all-1 code for white.
 
 No matter whether a Gray code or a binary code is used for encoding a
@@ -252,12 +252,12 @@ the encoder by calling the constructor function
 
 The parameters have the following meaning:
 
-  s             A pointer to the jbg_enc_state structure which you want
+  s             A pointer to the jbg_enc_state structure that you want
                 to initialize.
 
-  x             The width of your image.
+  x             The width of your image in pixels.
 
-  y             The height of your image.
+  y             The height of your image in pixels (lines).
 
   pl            the number of bitmap planes you want to encode.
 
@@ -265,16 +265,16 @@ The parameters have the following meaning:
                 pointing to the first byte of a bitmap as described in
                 section 2.1.
 
-  data_out      This is a call-back function which will be called during
-                the compression process by libjbig in order to deliver
-                the BIE data to the application. The parameters of the
-                function data_out are a pointer start to the new block
-                of data to be delivered, as well as the number len of
-                delivered bytes. The pointer file is transparently
-                delivered to data_out, as specified in jbg_enc_init().
-                Typically, data_out will write the BIE portion to a
-                file, send it to a network connection, or append it to
-                some memory buffer.
+  data_out      This is a call-back function that the encoder will
+                call during the compression process by in order to
+                deliver the BIE data to your application. The
+                parameters of the function data_out are a pointer
+                start to the new block of data being delivered, as
+                well as the number len of delivered bytes. The pointer
+                file is transparently delivered to data_out, as
+                specified in jbg_enc_init(). Typically, data_out will
+                write the BIE portion to a file, send it to a network
+                connection, or append it to some memory buffer.
 
   file          A pointer parameter that is passed on to data_out()
                 and can be used, for instance, to allow data_out() to
@@ -294,8 +294,8 @@ After jbg_enc_out has returned, a call to the destructor function
 will release any heap memory allocated by the previous functions.
 
 
-A minimal example application which sends the BIE of the above
-bitmap to stdout looks like this:
+A minimal example application, which sends the BIE of the above bitmap
+to stdout, looks like this:
 
 ---------------------------------------------------------------------------
 /* A sample JBIG encoding application */
@@ -504,7 +504,7 @@ some of the optional algorithms defined by JBIG:
 
   JBG_TPDON      This activates the "typical prediction" algorithm
                  for differential layers which avoids that large
-                 areas of equal color have to be encoded at all.
+                 areas of equal colour have to be encoded at all.
                  This is on by default and there is no good reason to
                  switch it off except for debugging or preparing data
                  for cheap JBIG hardware that might not support this
@@ -518,7 +518,7 @@ some of the optional algorithms defined by JBIG:
                  layers the "deterministic prediction" algorithm,
                  which avoids that higher resolution layer pixels are
                  encoded when their value can already be determined
-                 with the knowledge of the neighbor pixels, the
+                 with the knowledge of the neighbour pixels, the
                  corresponding lower resolution pixels and the
                  resolution reduction algorithm. This is also
                  activated by default and one reason for deactivating
@@ -556,7 +556,7 @@ jbg_int2dppriv and jbg_dppriv2int are provided in order to convert the
 DPTABLE data from the format used in the standard into the more
 efficient format used internally by JBIG-KIT.
 
-If you want to encode a greyscale image, you can use the library
+If you want to encode a grey-scale image, you can use the library
 function
 
   void jbg_split_planes(unsigned long x, unsigned long y, int has_planes,
@@ -621,9 +621,9 @@ will return the error JBG_ENOCONT after the header of the new BIE has
 been received completely.
 
 If pointer cnt is not NULL, then the number of bytes actually read
-from the data block is stored there. In case the data block did not
-contain the end of the BIE, then the value JBG_EAGAIN will be returned
-and *cnt equals len.
+from the data block will be stored there. In case the data block did
+not contain the end of the BIE, then the value JBG_EAGAIN will be
+returned and *cnt equals len.
 
 Once the end of a BIE has been reached, the return value of
 jbg_dec_in() will be JBG_EOK. After this has happened, the functions
@@ -703,19 +703,19 @@ The function
 
   const char *jbg_strerror(int errnum);
 
-returns a pointer to a short single line test message which explains
+returns a pointer to a short single line test message that explains
 the return value of jbg_dec_in(). This message can be used in order to
 provide the user a brief informative message about what when wrong
 while decompressing a JBIG image. The po/ subdirectory contains *.po
 files that translate the English ASCII strings returned by
-jbg_strerror() into other langauges (e.g., for use with GNU gettext).
+jbg_strerror() into other languages (e.g., for use with GNU gettext).
 The four least-significant bits of the return value of jbg_dec_in()
 may contain additional detailed technical information about the exact
 test that spotted the error condition (see source code for details),
-i.e. more than the text message returned by jbg_strerror() reveals,
-therefore is may be useful to display the return value itself as a
-hexadecimal number in addition to the string returned by
-jbg_strerror() in case an error occurs.
+i.e. more than the text message returned by jbg_strerror() reveals.
+Therefore it may be useful to display the return value itself as a
+hexadecimal number, in addition to the string returned by
+jbg_strerror().
 
 The current implementation of the JBIG-KIT decoder has the following
 limitations:

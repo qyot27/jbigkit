@@ -31,8 +31,8 @@ clean:
 	(cd pbmtools; make clean)
 
 distribution: clean
-	rm -f libjbig/libjbig.a
+	rm -f libjbig/libjbig*.a
 	(cd ..; tar -c -v --exclude .svn -f jbigkit-$(VERSION).tar jbigkit ; \
 	  gzip -9f jbigkit-$(VERSION).tar )
-	mv ../jbigkit-$(VERSION).tar.gz $(HOME)/public_html/download/
-	cp CHANGES $(HOME)/public_html/jbigkit/
+	scp ../jbigkit-$(VERSION).tar.gz slogin.cl.cam.ac.uk:public_html/download/
+	scp CHANGES slogin.cl.cam.ac.uk:/public_html/jbigkit/

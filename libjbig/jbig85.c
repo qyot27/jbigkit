@@ -148,6 +148,8 @@ void jbg85_enc_init(struct jbg85_enc_state *s,
 void jbg85_enc_options(struct jbg85_enc_state *s, int options,
 		       unsigned long l0, int mx)
 {
+  if (s->y > 0) return; /* too late to change anything now */
+
   if (options >= 0) s->options = options;
   if (l0 > 0) s->l0 = l0;
   if (mx >= 0 && mx < 128) s->mx = mx;
@@ -571,6 +573,8 @@ void jbg85_dec_init(struct jbg85_dec_state *s,
 				    unsigned long y, void *file),
 		    void *file)
 {
+  s->x0 = 0;
+  s->y0 = 0;
   s->linebuf = buf;
   s->linebuf_len = buflen;
   s->line_out = line_out;
@@ -868,7 +872,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
     if (s->buffer[ 1] != 0) return JBG_EIMPL | 9; /* parameter outside T.85 */
     if (s->buffer[ 2] != 1) return JBG_EIMPL |10; /* parameter outside T.85 */
     if (s->buffer[17] != 0) return JBG_EIMPL |11; /* parameter outside T.85 */
-#if 0
+#if JBG85_STRICT_ORDER_BITS
     if (s->buffer[18] != 0) return JBG_EIMPL |12; /* parameter outside T.85 */
 #endif
     s->options = s->buffer[19];
