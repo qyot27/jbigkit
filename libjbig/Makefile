@@ -7,13 +7,13 @@ CC = gcc
 # Options for the compiler: A high optimization level is suggested
 CFLAGS = -g -O -Wall -ansi -pedantic # --coverage
 
-all: libjbig.a tstcodec tstcodec85
+all: libjbig.a libjbig85.a tstcodec tstcodec85
 
 tstcodec: tstcodec.o jbig.o jbig_ar.o
-	$(CC) $(CFLAGS) -o tstcodec $+
+	$(CC) $(CFLAGS) -o tstcodec tstcodec.o jbig.o jbig_ar.o
 
 tstcodec85: tstcodec85.o jbig85.o jbig_ar.o
-	$(CC) $(CFLAGS) -o tstcodec85 $+
+	$(CC) $(CFLAGS) -o tstcodec85 tstcodec85.o jbig85.o jbig_ar.o
 
 libjbig.a: jbig.o jbig_ar.o
 	rm -f libjbig.a
@@ -34,7 +34,7 @@ tstcodec85.o: tstcodec85.c jbig85.h
 jbig.pot: jbig.c
 	xgettext -o$@ -k_ \
 	  --copyright-holder='Markus Kuhn' \
-	  --msgid-bugs-address='http://www.cl.cam.ac.uk/~mgk25/jbigkit/' $+
+	  --msgid-bugs-address='http://www.cl.cam.ac.uk/~mgk25/jbigkit/' jbig.c
 
 test: tstcodec tstcodec85
 	./tstcodec

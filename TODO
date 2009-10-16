@@ -1,8 +1,8 @@
-Ideas which I may implement in some release regarding jbib.c:
+Features that may appear in some future release regarding jbig.c:
 
-  - routine which prepares incompletely decoded images for Xlib
+  - function to prepare incompletely decoded images for display by Xlib
 
-  - use more efficient resolution reduction code suggested by
+  - use a more efficient resolution-reduction method suggested by
     Dr. Klaus Bartz <bartzkau@kou3.ina.de>
 
   - investigate whether there is a standard way of embedding JBIG
@@ -13,8 +13,16 @@ Ideas which I may implement in some release regarding jbib.c:
 
   - multichannel (e.g., RGB) support, PPM support
 
-The following wishes may have become less important since the release
-of jbig85.c:
+  - JBG_VERSION should have been numeric, for easier comparison in
+    #ifdefs. (suggested by David Woodhouse <dwmw2@infradead.org>)
+
+  - add dynamic library target to Makefile (patch by David Woodhouse),
+    for the benefit of Linux packagers
+
+  - perhaps back-port new NEWLEN look-ahead from jbig85.c to jbig.c
+
+The following past feature requests for jbig.c probably have become
+less important since the release of jbig85.c:
 
   - compile-time option to remove progressive encoding and
     resolution-reduction support (in the interest of reducing code
@@ -31,6 +39,6 @@ of jbig85.c:
 
   - call-back function for progress meter
 
-Ideas which I may implement in some future release regarding jbig85.c:
+Features that may appear in some future release regarding jbig85.c:
 
   - man pages for pbmtojbg85 and jbgtopbm85
