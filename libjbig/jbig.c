@@ -825,7 +825,7 @@ void jbg_enc_init(struct jbg_enc_state *s, unsigned long x, unsigned long y,
   s->tx = (int *) checked_malloc(s->planes, sizeof(int));
   lx = jbg_ceil_half(x, 1);
   s->tp = (char *) checked_malloc(lx, sizeof(char));
-  for (l = 0; l < lx; s->tp[l++] = 2);
+  for (l = 0; l < lx; s->tp[l++] = 2) ;
   s->sde = NULL;
 
   return;
@@ -1000,9 +1000,9 @@ static void encode_sde(struct jbg_enc_state *s,
     p1 = hp - hbpl;
     if (y > 1) {
       q1 = p1 - hbpl;
-      while (p1 < hp && (ltp_old = (*p1++ == *q1++)) != 0);
+      while (p1 < hp && (ltp_old = (*p1++ == *q1++)) != 0) ;
     } else
-      while (p1 < hp && (ltp_old = (*p1++ == 0)) != 0);
+      while (p1 < hp && (ltp_old = (*p1++ == 0)) != 0) ;
   }
 
   if (layer == 0) {
@@ -1054,9 +1054,9 @@ static void encode_sde(struct jbg_enc_state *s,
 	p1 = hp;
 	if (i > 0 || !reset) {
 	  q1 = hp - hbpl;
-	  while (q1 < hp && (ltp = (*p1++ == *q1++)) != 0);
+	  while (q1 < hp && (ltp = (*p1++ == *q1++)) != 0) ;
 	} else
-	  while (p1 < hp + hbpl && (ltp = (*p1++ == 0)) != 0);
+	  while (p1 < hp + hbpl && (ltp = (*p1++ == 0)) != 0) ;
 	arith_encode(se, (s->options & JBG_LRLTWO) ? TPB2CX : TPB3CX,
 		     ltp == ltp_old);
 #ifdef DEBUG
@@ -1742,7 +1742,7 @@ void jbg_int2dppriv(unsigned char *dptable, const char *internal)
   int trans2[11] = { 1, 0, 3, 2, 10, 9, 8, 7, 6, 5, 4 };
   int trans3[12] = { 1, 0, 3, 2, 11, 10, 9, 8, 7, 6, 5, 4 };
   
-  for (i = 0; i < 1728; dptable[i++] = 0);
+  for (i = 0; i < 1728; dptable[i++] = 0) ;
 
 #define FILL_TABLE1(offset, len, trans) \
   for (i = 0; i < len; i++) { \

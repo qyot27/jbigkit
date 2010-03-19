@@ -311,9 +311,9 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
     q1 = prevline;
     ltp = 1;
     if (q1)
-      while (p1 < line + bpl && (ltp = (*p1++ == *q1++)) != 0);
+      while (p1 < line + bpl && (ltp = (*p1++ == *q1++)) != 0) ;
     else
-      while (p1 < line + bpl && (ltp = (*p1++ == 0    )) != 0);
+      while (p1 < line + bpl && (ltp = (*p1++ == 0    )) != 0) ;
     arith_encode(&s->s, (s->options & JBG_LRLTWO) ? TPB2CX : TPB3CX,
 		 ltp == s->ltp_old);
 #ifdef DEBUG
@@ -651,7 +651,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 	/* this line is 'typical' (i.e. identical to the previous one) */
 	if (s->p[1] < 0) {
 	  /* first line of page or (following SDRST) of stripe */
-	  for (p1 = hp1; p1 < hp1 + s->bpl; *p1++ = 0);
+	  for (p1 = hp1; p1 < hp1 + s->bpl; *p1++ = 0) ;
 	  s->intr = s->line_out(s, hp1, s->bpl, s->y, s->file);
 	  /* rotate the ring buffer that holds the last three lines */
 	  s->p[2] = s->p[1];
