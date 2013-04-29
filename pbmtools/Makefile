@@ -3,7 +3,10 @@
 .DELETE_ON_ERROR:
 
 # Select an ANSI/ISO C compiler here, e.g. GNU gcc is recommended
-CC = gcc
+CC = $(CROSS)gcc
+AR = $(CROSS)ar
+LD = $(CROSS)ld
+RANLIB = $(CROSS)ranlib
 
 # Options for the compiler
 CFLAGS = -g -O -W -Wall -Wno-unused-result -ansi -pedantic # --coverage

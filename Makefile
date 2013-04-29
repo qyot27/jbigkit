@@ -1,7 +1,10 @@
 # Unix makefile for JBIG-KIT
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
-CC = gcc
+CC = $(CROSS)gcc
+AR = $(CROSS)ar
+LD = $(CROSS)ld
+RANLIB = $(CROSS)ranlib
 
 # Options for the compiler: A high optimization level is suggested
 CFLAGS = -O2 -W -Wno-unused-result
