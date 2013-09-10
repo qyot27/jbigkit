@@ -25,8 +25,7 @@ The following past feature requests for jbig.c probably have become
 less important since the release of jbig85.c:
 
   - compile-time option to remove progressive encoding and
-    resolution-reduction support (in the interest of reducing code
-    size and attack surface for software patent lawyers)
+    resolution-reduction support (in the interest of reducing code size)
 
   - investigate how to best deal with broken BIEs that contain
     multiple NEWLEN marker segments, which are not permitted by ITU-T

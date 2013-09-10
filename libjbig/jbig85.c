@@ -27,15 +27,6 @@
  * 
  *  If you want to use this program under different license conditions,
  *  then contact the author for an arrangement.
- *
- *  It is possible that certain products which can be built using this
- *  software module might form inventions protected by patent rights in
- *  some countries (e.g., by patents about arithmetic coding algorithms
- *  owned by IBM and AT&T in the USA). Provision of this software by the
- *  author does NOT include any licences for any patents. In those
- *  countries where a patent licence is required for certain applications
- *  of this software module, you will have to obtain such a licence
- *  yourself.
  */
 
 #ifdef DEBUG
