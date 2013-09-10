@@ -2,7 +2,7 @@
 Using the JBIG-KIT library
 --------------------------
 
-Markus Kuhn -- 2008-08-30
+Markus Kuhn -- 2013-09-10
 
 
 This text explains how to use the functions provided by the JBIG-KIT
@@ -174,7 +174,7 @@ or in hexadecimal notation
 This is the format used in binary PBM files and it can also be handled
 directly by the Xlib library of the X Window System.
 
-As JBIG can also handle images with multiple bit planes, the JBIG-KIT
+As JBIG can also handle images with multiple bit planes, the jbig.c
 library functions accept and return always arrays of pointers to
 bitmaps with one pointer per plane.
 
@@ -226,7 +226,7 @@ during the transmission.
 
 2.2  A simple compression application
 
-In order to use JBIG-KIT in your application, just link libjbig.a to
+In order to use jbig.c in your application, just link libjbig.a to
 your executable (on Unix systems just add -ljbig and -L. to the
 command line options of your compiler, on other systems you will have
 to write a new Makefile anyway), copy the file jbig.h into your source
@@ -442,7 +442,7 @@ the SDEs are stored in the BIE. The bits have the following meaning:
                to a database which can easily reorder the SDEs before
                sending them to a decoder. Warning: JBIG decoders are
                not expected to support the HITOLO option (e.g. the
-               JBIG-KIT decoder currently does not) so you should
+               jbig.c decoder currently does not) so you should
                normally not use it.
 
   JBG_SEQ      Usually, at first all stripes of one resolution layer
@@ -451,7 +451,7 @@ the SDEs are stored in the BIE. The bits have the following meaning:
                all layers of the first stripe will be written,
                followed by all layers of the second stripe, etc. This
                option also should normally never be required and is
-               not supported by the current JBIG-KIT decoder.
+               not supported by the current jbig.c decoder.
 
   JBG_SMID     In case there exist several bit planes, then the order of
                the stripes is determined by three loops over all stripes,
@@ -499,7 +499,7 @@ some of the optional algorithms defined by JBIG:
                  the slightly faster but 5% less well compressing two
                  line alternative is selected. God bless the committees.
                  Although probably nobody will ever need this option,
-                 it has been implemented in JBIG-KIT and is off by
+                 it has been implemented in jbig.c and is off by
                  default.
 
   JBG_TPDON      This activates the "typical prediction" algorithm
@@ -586,7 +586,7 @@ the pixel integer values will be used instead of the Gray code. Plane
 
 3  Decompressing an image
 
-Like with the compression functions, if you want to use the JBIG-KIT
+Like with the compression functions, if you want to use the jbig.c
 library, you have to put the line
 
   #include "jbig.h"
@@ -717,7 +717,7 @@ Therefore it may be useful to display the return value itself as a
 hexadecimal number, in addition to the string returned by
 jbg_strerror().
 
-The current implementation of the JBIG-KIT decoder has the following
+The current implementation of the jbig.c decoder has the following
 limitations:
 
   - The maximal vertical offset MY of the adaptive template pixel
@@ -734,11 +734,25 @@ None of the above limitations can be exceeded by a JBIG data stream
 that conforms to the ITU-T T.85 application profile for the use of
 JBIG1 in fax machines.
 
+The current implementation of the jbig.c decoder does not impose any
+limits on the image size that it will process, as long as malloc() is
+able to allocate enough heap space for the resulting bitmaps. The only
+exception is that jbg_dec_in() will return "Input data stream uses
+unimplemented JBIG features" (JBG_EIMPL | 1) if Y_D equals 0xffffffff,
+which is an extreme value commonly used to encode images according to
+ITU-T T.85 where the height was unknown when the BIH was emitted.
+After jbg_dec_in() received the 20-byte long BIH at the start of the
+BIE, it will malloc() to allocate enough memory to hold the requested
+image planes and layers. If you want to defend your application
+against excessive image-size parameters in a received BIH, then do
+make sure that you check X_D, Y_D, and P against appropriate safety
+limits before handing over the BIH to jbg_dec_in().
+
 There are two more limitations of the current implementation of the
-JBIG-KIT decoder that might cause problems with processing JBIG data
+jbig.c decoder that might cause problems with processing JBIG data
 stream that conform to ITU-T T.85:
 
-  - The JBIG-KIT decoder was designed to operate incrementally.
+  - The jbig.c decoder was designed to operate incrementally.
     Each received byte is processed immediately as soon as it arrives.
     As a result, it does not look beyond the SDRST/SDNORM at the end
     of all stripes for any immediately following NEWLEN marker that
@@ -757,7 +771,7 @@ stream that conform to ITU-T T.85:
     start of the transmission) cannot be decoded directly by this
     version.
 
-For both issues, there is a very simple workaround:
+For both issues, there is a workaround available:
 
 If you encounter a BIE that has in the header the VLENGTH=1 option bit
 set, then first wait until you have received the entire BIE and stored
@@ -776,6 +790,10 @@ was encountered, and JBG_EABORT if an ABORT marker segment was found.
 After having patched the image-height value in the BIE using
 jbg_newlen(), simply hand over the BIE as usual to jbg_dec_in().
 
+In general, for applications where NEWLEN markers can appear, in
+particular fax reception, you should consider using the jbig85.c
+decoder instead, as it can process BIEs with NEWLEN markers in a
+single pass.
 
 A more detailed description of the JBIG-KIT implementation is
 
