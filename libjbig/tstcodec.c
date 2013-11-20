@@ -483,11 +483,16 @@ int main(int argc, char **argv)
   problems += test_cycle(&pp, 1960, 1951,
 			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON,
 			 0, 6, 1, 2, 8, 279314L, "3.4");
-#if 0
-  puts("Test 3.5: as Test 3.4 but with order bit SEQ set");
+  puts("Test 3.5: as Test 3.4 but with DPPRIV=1");
+  problems += test_cycle(&pp, 1960, 1951,
+			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON |
+			 JBG_DPPRIV,
+			 0, 6, 1, 2, 8, 279314L + 1728, "3.5");
+#if 0 /* Note: option SEQ is currently not supported by the decoder */
+  puts("Test 3.6: as Test 3.4 but with order bit SEQ set");
   problems += test_cycle(&pp, 1960, 1951,
 			 JBG_DELAY_AT | JBG_TPBON | JBG_TPDON | JBG_DPON,
-			 JBG_SEQ, 6, 1, 2, 8, 279314L, "3.5");
+			 JBG_SEQ, 6, 1, 2, 8, 279314L, "3.6");
 #endif
 #endif
 
