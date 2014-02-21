@@ -3,8 +3,6 @@
  *  JBIG image compression library
  *
  *  Copyright 1995-2008 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
- *
- *  $Id$
  */
 
 #ifndef JBG85_H

@@ -1,5 +1,4 @@
 # Unix makefile for JBIG-KIT
-# $Id$
 
 # Select an ANSI/ISO C compiler here, GNU gcc is recommended
 CC = gcc
@@ -32,7 +31,7 @@ clean:
 
 distribution: clean
 	rm -f libjbig/libjbig*.a
-	(cd ..; tar -c -v --exclude .svn -f jbigkit-$(VERSION).tar jbigkit ; \
+	(cd ..; tar -c -v --exclude .git -f jbigkit-$(VERSION).tar jbigkit ; \
 	  gzip -9f jbigkit-$(VERSION).tar )
 	scp ../jbigkit-$(VERSION).tar.gz slogin-serv1.cl.cam.ac.uk:public_html/download/
 	scp CHANGES slogin-serv1.cl.cam.ac.uk:public_html/jbigkit/

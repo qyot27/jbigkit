@@ -3,8 +3,6 @@
  *
  *  Copyright 1995-2007 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
- *  $Id$
- *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG1 lossless bi-level image compression algorithm
  *  specified in International Standard ISO 11544:1993 and
@@ -72,8 +70,7 @@
 
 const char jbg_version[] = 
   "JBIG-KIT " JBG_VERSION " -- (c) 1995-2008 Markus Kuhn -- "
-  "Licence: " JBG_LICENCE "\n"
-  "$Id$ ";
+  "Licence: " JBG_LICENCE "\n";
 
 /*
  * the following array specifies for each combination of the 3

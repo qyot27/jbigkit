@@ -2,8 +2,6 @@
  *  jbgtopbm85 - JBIG to Portable Bitmap converter (T.85 version)
  *
  *  Markus Kuhn - http://www.cl.cam.ac.uk/~mgk25/jbigkit/
- *
- *  $Id$
  */
 
 #include <stdio.h>

@@ -3,8 +3,6 @@
  *  the portable JBIG compression library
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/jbigkit/
- *
- *  $Id$
  */
 
 #ifndef JBG_AR_H

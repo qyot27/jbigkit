@@ -4,8 +4,6 @@
  *  Run this test sequence after each modification on the JBIG library.
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
- *
- *  $Id$
  */
 
 #include <stdio.h>

@@ -2,8 +2,6 @@
  *  Header file for the portable JBIG compression library
  *
  *  Copyright 1995-2008 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
- *
- *  $Id$
  */
 
 #ifndef JBG_H
