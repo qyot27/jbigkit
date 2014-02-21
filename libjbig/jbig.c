@@ -73,7 +73,7 @@ const char jbg_version[] =
   "Licence: " JBG_LICENCE "\n";
 
 /*
- * the following array specifies for each combination of the 3
+ * The following array specifies for each combination of the 3
  * ordering bits, which ii[] variable represents which dimension
  * of s->sde.
  */
@@ -3112,7 +3112,6 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
 					   void *file), void *file)
 {
 #define BUFLEN 4096
-  int bpp;
   unsigned long bpl, line, i;
   unsigned k = 8;
   int p;
@@ -3129,7 +3128,6 @@ void jbg_dec_merge_planes(const struct jbg_dec_state *s, int use_graycode,
   y = jbg_dec_getheight(s);
   if (x == 0 || y == 0)
     return;
-  bpp = (s->planes + 7) / 8;   /* bytes per pixel in dest image */
   bpl = jbg_ceil_half(x, 3);   /* bytes per line in src plane */
 
   if (iindex[s->order & 7][LAYER] == 0)

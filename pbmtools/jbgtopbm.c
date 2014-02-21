@@ -164,8 +164,6 @@ void diagnose_bie(FILE *fin)
 	  bie[19] & JBG_DPPRIV ? " DPPRIV" : "",
 	  bie[19] & JBG_DPLAST ? " DPLAST" : "",
 	  bie[19] & 0x80 ? " other" : "");
-  stripes = ((yd >> d) + 
-	     ((((1UL << d) - 1) & xd) != 0) + l0 - 1) / l0;
   stripes = jbg_stripes(l0, yd, d);
   layers = d - dl + 1;
   fprintf(f, "\n  %lu stripes, %d layers, %d planes => ",
