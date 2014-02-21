@@ -108,7 +108,7 @@ void fprint_bytes(FILE *f, unsigned char *p, size_t len, int width)
   for (i = 0; i < len && i < max; i++)
     fprintf(f, "%02x ", p[i]);
   if (len > i)
-    fprintf(f, "... %d bytes total", len);
+    fprintf(f, "... %lu bytes total", (unsigned long) len);
   fprintf(f, "\n");
 }
 
@@ -132,8 +132,8 @@ void diagnose_bie(FILE *fin)
   /* read BIH */
   read_file(&bie, &buflen, &len, fin);
   if (len < 20) {
-    fprintf(f, "Error: Input file is %d < 20 bytes long and therefore "
-	    "does not contain an intact BIE header!\n", len);
+    fprintf(f, "Error: Input file is %lu < 20 bytes long and therefore "
+	    "does not contain an intact BIE header!\n", (unsigned long) len);
     return;
   }
 
@@ -186,18 +186,20 @@ void diagnose_bie(FILE *fin)
       == (JBG_DPON | JBG_DPPRIV))
     p += 1728;  /* skip DPTABLE */
   if (p > bie + len) {
-    fprintf(f, "Error: Input file is %d < 20+1728 bytes long and therefore "
-	    "does not contain an intact BIE header with DPTABLE!\n", len);
+    fprintf(f, "Error: Input file is %lu < 20+1728 bytes long and therefore "
+	    "does not contain an intact BIE header with DPTABLE!\n",
+	    (unsigned long) len);
     return;
   }
   while (p != bie + len) {
     if (p > bie + len - 2) {
-      fprintf(f, "%06x: Error: single byte 0x%02x left\n", p - bie, *p);
+      fprintf(f, "%06lx: Error: single byte 0x%02x left\n",
+	      (long) (p - bie), *p);
       return;
     }
     pnext = jbg_next_pscdms(p, len - (p - bie));
     if (p[0] != MARKER_ESC || p[1] == MARKER_STUFF) {
-      fprintf(f, "%06x: PSCD: ", p - bie);
+      fprintf(f, "%06lx: PSCD: ", (long) (p - bie));
       fprint_bytes(f, p, pnext ? (size_t) (pnext - p) : len - (p - bie), 60);
       if (!pnext) {
 	fprintf(f, "Error: PSCD not terminated by SDNORM or SDRST marker\n");
@@ -207,7 +209,7 @@ void diagnose_bie(FILE *fin)
       switch (p[1]) {
       case MARKER_SDNORM:
       case MARKER_SDRST:
-	fprintf(f, "%06x: ESC %s, ending SDE #%lu", p - bie,
+	fprintf(f, "%06lx: ESC %s, ending SDE #%lu", (long) (p - bie),
 		(p[1] == MARKER_SDNORM) ? "SDNORM" : "SDRST", ++sde);
 	if (sde == sdes)
 	  fprintf(f, " (final SDE)");
@@ -217,10 +219,10 @@ void diagnose_bie(FILE *fin)
 	fprintf(f, "\n");
 	break;
       case MARKER_ABORT:
-	fprintf(f, "%06x: ESC ABORT\n", p - bie);
+	fprintf(f, "%06lx: ESC ABORT\n", (long) (p - bie));
 	break;
       case MARKER_NEWLEN:
-	fprintf(f, "%06x: ESC NEWLEN ", p - bie);
+	fprintf(f, "%06lx: ESC NEWLEN ", (long) (p - bie));
 	if (p + 5 < bie + len) {
 	  fprintf(f, "YD = %lu\n",
 		  yd = (((long) p[2] << 24) | ((long) p[3] << 16) |
@@ -240,7 +242,7 @@ void diagnose_bie(FILE *fin)
 	  fprintf(f, "unexpected EOF\n");
 	break;
       case MARKER_ATMOVE:
-	fprintf(f, "%06x: ESC ATMOVE ", p - bie);
+	fprintf(f, "%06lx: ESC ATMOVE ", (long) (p - bie));
 	if (p + 7 < bie + len)
 	  fprintf(f, "YAT = %lu, tX = %d, tY = %d\n",
 		  (((long) p[2] << 24) | ((long) p[3] << 16) |
@@ -249,7 +251,7 @@ void diagnose_bie(FILE *fin)
 	  fprintf(f, "unexpected EOF\n");
 	break;
       case MARKER_COMMENT:
-	fprintf(f, "%06x: ESC COMMENT ", p - bie);
+	fprintf(f, "%06lx: ESC COMMENT ", (long) (p - bie));
 	if (p + 5 < bie + len)
 	  fprintf(f, "LC = %lu\n",
 		  (((long) p[2] << 24) | ((long) p[3] << 16) |
@@ -258,7 +260,7 @@ void diagnose_bie(FILE *fin)
 	  fprintf(f, "unexpected EOF\n");
 	break;
       default:
-	fprintf(f, "%06x: ESC 0x%02x\n", p - bie, p[1]);
+	fprintf(f, "%06lx: ESC 0x%02x\n", (long) (p - bie), p[1]);
       }
     if (!pnext) {
       fprintf(f, "Error encountered!\n");
@@ -370,8 +372,8 @@ int main (int argc, char **argv)
   /* read BIH first to check VLENGTH */
   len = fread(buffer, 1, 20, fin);
   if (len < 20) {
-    fprintf(stderr, "Input file '%s' (%d bytes) must be at least "
-	    "20 bytes long\n", fnin, len);
+    fprintf(stderr, "Input file '%s' (%lu bytes) must be at least "
+	    "20 bytes long\n", fnin, (unsigned long) len);
     if (fout != stdout) {
       fclose(fout);
       remove(fnout);

@@ -397,8 +397,8 @@ int main(int argc, char **argv)
   for (i = 0; i < 16 * 16 && !trouble; i++) {
     pix = arith_decode(sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
     if (pix < 0) {
-      printf("Problem at pixel %ld, byte %d.\n\n",
-	     i+1, sd->pscd_ptr - sd->pscd_end);
+      printf("Problem at pixel %ld, byte %ld.\n\n",
+	     i+1, (long) (sd->pscd_ptr - sd->pscd_end));
       trouble++;
       break;
     }
@@ -409,8 +409,8 @@ int main(int argc, char **argv)
     }
   }
   if (!trouble && sd->pscd_ptr != sd->pscd_end - 2) {
-    printf("%d bytes left after decoder finished.\n\n",
-	   sd->pscd_end - sd->pscd_ptr - 2);
+    printf("%ld bytes left after decoder finished.\n\n",
+	   (long) (sd->pscd_end - sd->pscd_ptr - 2));
     trouble++;
   }
   printf("Test result: ");
@@ -437,8 +437,8 @@ int main(int argc, char **argv)
       pix = arith_decode(sd, (t82cx[i >> 4] >> ((15 - i) & 15)) & 1);
     }
     if (pix < 0) {
-      printf("Problem at pixel %ld, byte %d.\n\n",
-	     i+1, sd->pscd_ptr - sd->pscd_end);
+      printf("Problem at pixel %ld, byte %ld.\n\n",
+	     i+1, (long) (sd->pscd_ptr - sd->pscd_end));
       trouble++;
       break;
     }
@@ -449,8 +449,8 @@ int main(int argc, char **argv)
     }
   }
   if (!trouble && sd->pscd_ptr != sd->pscd_end - 2) {
-    printf("%d bytes left after decoder finished.\n\n",
-	   sd->pscd_end - sd->pscd_ptr - 2);
+    printf("%ld bytes left after decoder finished.\n\n",
+	   (long) (sd->pscd_end - sd->pscd_ptr - 2));
     trouble++;
   }
   printf("Test result: ");
