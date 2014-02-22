@@ -2715,7 +2715,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
       s->dppriv[s->bie_len++ - 20] = data[(*cnt)++];
     if (s->bie_len < 20 + 1728) 
       return JBG_EAGAIN;
-    dppriv = s->dppriv;
+    dppriv = (unsigned char *) s->dppriv;
     s->dppriv = (char *) checked_malloc(6912, sizeof(char));
     jbg_dppriv2int(s->dppriv, dppriv);
     checked_free(dppriv);

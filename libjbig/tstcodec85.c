@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <assert.h>
 
 #include "jbig85.h"
 
@@ -76,6 +77,9 @@ static int line_out(const struct jbg85_dec_state *s,
 		    unsigned char *start, size_t len,
 		    unsigned long y, void *bitmap)
 {
+  assert(jbg85_dec_validwidth(s));
+  assert(len == (jbg85_dec_getwidth(s) >> 3) + !!(jbg85_dec_getwidth(s) & 7));
+  assert(y < jbg85_dec_getheight(s));
   memcpy((unsigned char *) bitmap + len * y, start, len);
   return 0;
 }
