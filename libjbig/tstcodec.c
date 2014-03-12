@@ -62,8 +62,8 @@ static void testbuf_writel(unsigned char *start, size_t len, void *dummy)
     unsigned sum = 0;
     
     for (p = start; p - start < (ptrdiff_t) len; sum = (sum ^ *p++) << 1);
-    printf("  testbuf_writel: %4d bytes, checksum %04x\n",
-	   len, sum & 0xffff);
+    printf("  testbuf_writel: %4lu bytes, checksum %04x\n",
+	   (unsigned long) len, sum & 0xffff);
   }
 #endif
 

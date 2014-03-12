@@ -2847,7 +2847,7 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
 	if (j) {
 #ifdef DEBUG
 	  fprintf(stderr, "This was the final SDE in this BIE, "
-		  "%d bytes left.\n", len - *cnt);
+		  "%ld bytes left.\n", (long) (len - *cnt));
 #endif
 	  s->bie_len = 0;
 	  return JBG_EOK;

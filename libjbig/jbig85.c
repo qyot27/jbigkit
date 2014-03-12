@@ -471,7 +471,7 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
       /* we have decided to perform an ATMOVE */
       s->new_tx = tmax;
 #ifdef DEBUG
-      fprintf(stderr, "ATMOVE: tx=%d, c_all=%d\n",
+      fprintf(stderr, "ATMOVE: tx=%d, c_all=%lu\n",
 	      s->new_tx, s->c_all);
 #endif
     } else {
