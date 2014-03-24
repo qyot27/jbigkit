@@ -30,10 +30,14 @@ jbig_ar.o: jbig_ar.c jbig_ar.h
 tstcodec.o: tstcodec.c jbig.h
 tstcodec85.o: tstcodec85.c jbig85.h
 
-jbig.pot: jbig.c
-	xgettext -o$@ -k_ \
+update-po: jbig.c jbig85.c Makefile
+	xgettext -ojbig.pot -k_ \
 	  --copyright-holder='Markus Kuhn' \
-	  --msgid-bugs-address='http://www.cl.cam.ac.uk/~mgk25/jbigkit/' jbig.c
+	  --msgid-bugs-address='http://www.cl.cam.ac.uk/~mgk25/jbigkit/' \
+	  --package-name jbigkit \
+	jbig.c jbig85.c
+	cd po && for po in *.po ; do \
+	  msgmerge --update $$po ../jbig.pot ; done
 
 test: tstcodec tstcodec85
 	./tstcodec
