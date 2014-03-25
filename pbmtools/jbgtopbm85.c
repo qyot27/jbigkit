@@ -159,13 +159,14 @@ int main (int argc, char **argv)
     }
     exit(1);
   }
-  while (result == JBG_EAGAIN || result == JBG_EOK_INTR) {
+  if (result == JBG_EAGAIN || result == JBG_EOK_INTR) {
     /* signal end-of-BIE explicitely */
     result = jbg85_dec_end(&s);
-    if (result == JBG_EOK_INTR) {
+    while (result == JBG_EOK_INTR) {
       /* demonstrate decoder interrupt at given line number */
       printf("Decoding interrupted after %lu lines and %lu BIE bytes "
 	     "... continuing ...\n", s.y, (unsigned long) bytes_read);
+      result = jbg85_dec_end(&s);
     }
   }
   if (result != JBG_EOK) {
