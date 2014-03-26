@@ -935,7 +935,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 	return JBG_EABORT;
       case MARKER_STUFF:
 	/* forward stuffed 0xff to arithmetic decoder */
-	if (decode_pscd(s, s->buffer, 2) == 2)
+	if (decode_pscd(s, s->buffer, 2) == 2 || !s->intr)
 	  s->buf_len = 0;
 	if (s->intr)
 	  return JBG_EOK_INTR;  /* line_out() requested interrupt */
