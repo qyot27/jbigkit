@@ -569,6 +569,19 @@ void jbg85_dec_init(struct jbg85_dec_state *s,
   s->file = file;
   s->bie_len = 0;
   s->end_of_bie = 0;
+  s->x = 0;
+  s->y = 0;
+  s->i = 0;
+  s->comment_skip = 0;
+  s->buf_len = 0;
+  s->pseudo = 1;
+  s->at_moves = 0;
+  s->tx = 0;
+  s->lntp = 1;
+  s->p[0] = 0;
+  s->p[1] = -1;
+  s->p[2] = -1;
+  arith_decode_init(&s->s, 0);
   return;
 }
 
@@ -837,23 +850,27 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
       s->buffer[s->bie_len++] = data[(*cnt)++];
     if (s->bie_len < 20) 
       return JBG_EAGAIN;
-    /* test whether this looks like a valid JBIG header at all */
-    if (s->buffer[1] < s->buffer[0]) return JBG_EINVAL | 1;
-    /* are padding bits zero as required? */
-    if (s->buffer[3] != 0)           return JBG_EINVAL | 2; /* padding != 0 */
-    if ((s->buffer[18] & 0xf0) != 0) return JBG_EINVAL | 3; /* padding != 0 */
-    if ((s->buffer[19] & 0x80) != 0) return JBG_EINVAL | 4; /* padding != 0 */
+    /* parse header parameters */
     s->x0 = (((long) s->buffer[ 4] << 24) | ((long) s->buffer[ 5] << 16) |
 	     ((long) s->buffer[ 6] <<  8) | (long) s->buffer[ 7]);
     s->y0 = (((long) s->buffer[ 8] << 24) | ((long) s->buffer[ 9] << 16) |
 	     ((long) s->buffer[10] <<  8) | (long) s->buffer[11]);
     s->l0 = (((long) s->buffer[12] << 24) | ((long) s->buffer[13] << 16) |
 	     ((long) s->buffer[14] <<  8) | (long) s->buffer[15]);
+    s->bpl = (s->x0 >> 3) + !!(s->x0 & 7); /* bytes per line */
+    s->mx = s->buffer[16];
+    s->options = s->buffer[19];
+    s->s.nopadding = s->options & JBG_VLENGTH;
+    /* test whether this looks like a valid JBIG header at all */
+    if (s->buffer[1] < s->buffer[0]) return JBG_EINVAL | 1;
+    /* are padding bits zero as required? */
+    if (s->buffer[3] != 0)           return JBG_EINVAL | 2; /* padding != 0 */
+    if ((s->buffer[18] & 0xf0) != 0) return JBG_EINVAL | 3; /* padding != 0 */
+    if ((s->buffer[19] & 0x80) != 0) return JBG_EINVAL | 4; /* padding != 0 */
     if (!s->buffer[2]) return JBG_EINVAL | 5;
     if (!s->x0)        return JBG_EINVAL | 6;
     if (!s->y0)        return JBG_EINVAL | 7;
     if (!s->l0)        return JBG_EINVAL | 8;
-    s->mx = s->buffer[16];
     if (s->mx > 127)
       return JBG_EINVAL | 9;
     if (s->buffer[ 0] != 0) return JBG_EIMPL | 8; /* parameter outside T.85 */
@@ -863,25 +880,9 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 #if JBG85_STRICT_ORDER_BITS
     if (s->buffer[18] != 0) return JBG_EIMPL |12; /* parameter outside T.85 */
 #endif
-    s->options = s->buffer[19];
     if (s->options & 0x17)  return JBG_EIMPL |13; /* parameter outside T.85 */
     if (s->x0 > (s->linebuf_len / ((s->options & JBG_LRLTWO) ? 2 : 3)) * 8)
       return JBG_ENOMEM; /* provided line buffer is too short */
-    arith_decode_init(&s->s, 0);
-    s->s.nopadding = s->options & JBG_VLENGTH;
-    s->comment_skip = 0;
-    s->buf_len = 0;
-    s->x = 0;
-    s->y = 0;
-    s->i = 0;
-    s->pseudo = 1;
-    s->at_moves = 0;
-    s->tx = 0;
-    s->lntp = 1;
-    s->bpl = (s->x0 >> 3) + !!(s->x0 & 7); /* bytes per line */
-    s->p[0] = 0;
-    s->p[1] = -1;
-    s->p[2] = -1;
   }
 
   /*
