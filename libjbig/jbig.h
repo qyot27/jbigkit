@@ -1,7 +1,7 @@
 /*
  *  Header file for the portable JBIG compression library
  *
- *  Copyright 1995-2008 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
+ *  Copyright 1995-2014 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  */
 
 #ifndef JBG_H
@@ -14,7 +14,9 @@
  * JBIG-KIT version number
  */
 
-#define JBG_VERSION    "2.0"
+#define JBG_VERSION    "2.1"
+#define JBG_VERSION_MAJOR 2
+#define JBG_VERSION_MINOR 1
 
 /*
  * JBIG-KIT licence agreement reference code:

@@ -1,7 +1,7 @@
 /*
  *  T.85 "light" version of the portable JBIG image compression library
  *
- *  Copyright 1995-2008 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
+ *  Copyright 1995-2014 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG1 lossless bi-level image compression algorithm
@@ -56,7 +56,7 @@
 /* object code version id */
 
 const char jbg85_version[] = 
-  "JBIG-KIT " JBG85_VERSION " (T.85 version) -- (c) 1995-2008 Markus Kuhn -- "
+  "JBIG-KIT " JBG85_VERSION " (T.85 version) -- (c) 1995-2014 Markus Kuhn -- "
   "Licence: " JBG85_LICENCE "\n";
 
 #define _(String) String  /* to mark translatable string for GNU gettext */

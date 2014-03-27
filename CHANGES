@@ -2,6 +2,25 @@
 JBIG-KIT revision history
 -------------------------
 
+Changes in version 2.1 (2014-04-08)
+
+This is a security-critical bug-fix release that remains API and ABI
+backwards compatible to version 2.0. Users who process BIE data from
+untrusted sources should upgrade.
+
+  - fixed a buffer-overflow vulnerability in the jbig.c decoder,
+    reported by Florian Weimer (Red Hat): CVE-2013-6369
+    
+  - fixed ability of corrupted input data to force jbig85.c decoder
+    into an end-less loop
+
+  - fixed a bug in the processing of private deterministic-prediction
+    tables (DPPRIV=1) in jbig.c decoder
+
+  - fixed integer-type mismatches in printf arguments on 64-bit systems
+
+  - fuzz-testing script added
+
 Changes in version 2.0 (2008-08-30)
 
 Main new features of release 2.0:

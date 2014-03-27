@@ -1,7 +1,7 @@
 /*
  *  Portable JBIG image compression library
  *
- *  Copyright 1995-2007 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
+ *  Copyright 1995-2014 -- Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
  *
  *  This module implements a portable standard C encoder and decoder
  *  using the JBIG1 lossless bi-level image compression algorithm
@@ -69,7 +69,7 @@
 /* object code version id */
 
 const char jbg_version[] = 
-  "JBIG-KIT " JBG_VERSION " -- (c) 1995-2008 Markus Kuhn -- "
+  "JBIG-KIT " JBG_VERSION " -- (c) 1995-2014 Markus Kuhn -- "
   "Licence: " JBG_LICENCE "\n";
 
 /*
