@@ -3251,6 +3251,7 @@ int jbg_newlen(unsigned char *bie, size_t len)
 {
   unsigned char *p = bie + 20;
   int i;
+  unsigned long y, yn;
 
   if (len < 20)
     return JBG_EAGAIN;
@@ -3266,6 +3267,11 @@ int jbg_newlen(unsigned char *bie, size_t len)
     else if (p[0] == MARKER_ESC)
       switch (p[1]) {
       case MARKER_NEWLEN:
+	y = (((long) bie[ 8] << 24) | ((long) bie[ 9] << 16) |
+	     ((long) bie[10] <<  8) |  (long) bie[11]);
+	yn = (((long) p[2] << 24) | ((long) p[3] << 16) |
+	      ((long) p[4] <<  8) |  (long) p[5]);
+	if (yn > y) return JBG_EINVAL | 12;
 	/* overwrite YD in BIH with YD from NEWLEN */
 	for (i = 0; i < 4; i++) {
 	  bie[8+i] = p[2+i];
