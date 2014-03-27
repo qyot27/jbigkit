@@ -4,7 +4,7 @@
 CC = gcc
 
 # Options for the compiler: A high optimization level is suggested
-CFLAGS = -g -O -Wall -ansi -pedantic # --coverage
+CFLAGS = -g -O -W -Wall -ansi -pedantic # --coverage
 
 all: libjbig.a libjbig85.a tstcodec tstcodec85
 
@@ -39,6 +39,9 @@ update-po: jbig.c jbig85.c Makefile
 	cd po && for po in *.po ; do \
 	  msgmerge --update $$po ../jbig.pot ; done
 
+analyze:
+	clang --analyze *.c
+
 test: tstcodec tstcodec85
 	./tstcodec
 	./tstcodec85
@@ -47,6 +50,6 @@ t82test.pbm: tstcodec
 	./tstcodec $@
 
 clean:
-	rm -f *.o *.gcda *.gcno *.gcov *~ core gmon.out dbg_d\=??.pbm
+	rm -f *.o *.gcda *.gcno *.gcov *.plist *~ core gmon.out dbg_d\=??.pbm
 	rm -f t82test.pbm
 	rm -f tstcodec tstcodec85

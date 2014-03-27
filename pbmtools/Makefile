@@ -4,12 +4,15 @@
 CC = gcc
 
 # Options for the compiler
-CFLAGS = -g -Wall -ansi -pedantic -I../libjbig # --coverage
+CFLAGS = -g -O -W -Wall -Wno-unused-result -ansi -pedantic # --coverage
+CPPFLAGS = -I../libjbig 
 
 .SUFFIXES: .1 .5 .txt $(SUFFIXES)
+.PHONY: txt test test82 test85 clean
 
-all: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85 \
-	pbmtojbg.txt jbgtopbm.txt pbm.txt pgm.txt
+all: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85 txt
+
+txt: pbmtojbg.txt jbgtopbm.txt pbm.txt pgm.txt
 
 pbmtojbg: pbmtojbg.o ../libjbig/libjbig.a
 	$(CC) $(CFLAGS) -o pbmtojbg pbmtojbg.o -L../libjbig -ljbig
@@ -35,6 +38,9 @@ pbmtojbg85.o: pbmtojbg85.c ../libjbig/jbig85.h
 ../libjbig/libjbig85.a: ../libjbig/jbig85.c ../libjbig/jbig85.h \
 	../libjbig/jbig_ar.c ../libjbig/jbig_ar.h
 	make -C ../libjbig libjbig85.a
+
+analyze:
+	clang $(CPPFLAGS) --analyze *.c
 
 test: test82 test85
 
@@ -157,4 +163,4 @@ fuzz: test-t82.pbm
 clean:
 	rm -f *.o *~ core pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85
 	rm -f test-*.jbg test-*.pbm test-*.pgm test-*.jbg85 test-*.pbm85
-	rm -f *.gcda *.gcno
+	rm -f *.gcda *.gcno *.plist
