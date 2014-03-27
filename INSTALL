@@ -1,50 +1,53 @@
 
-Installing and Using the JBIG-KIT Package
------------------------------------------
+Getting started with JBIG-KIT
+-----------------------------
 
-Markus Kuhn -- 2003-06-11
+Markus Kuhn -- 2014-03-27
 
 
-This text will help you to compile the included demonstration software
-and get started with a guided tour to playing around with example
-files.
+JBIG-KIT is a portable C library that should work on any platform with
+an ANSI/ISO C compiler, such as GNU gcc.
 
-You should be able to use any ANSI/ISO C compiler, such as GNU gcc.
+To get started, compile the demonstration software in pbmtools/ and
+test it with some of the provided example files.
 
 On a Unix system, check Makefile to suit your compiler, then start
-"make". If libjbig.a has been produced correctly, then activate the
-automatic library test suite with "make test" or just start
-libjbig/test_codec. If this test fails, please do let me know.
+"make". If libjbig.a and/or libjbig85.a have been produced correctly,
+then activate the automatic library test suite with "make test", or
+just start libjbig/tstcodec and libjbig/tstcodec85. If these tests
+fail, please do let me know.
 
 On other operating systems, just link libjbig/jbig.c and
-libjbig/jbig_tables.c together with any application in which you want
-to use the JBIG-KIT library.
+libjbig/jbig_ar.c together with any application in which you want to
+use the full JBIG-KIT library. Likewise, just link libjbig/jbig85.c
+and libjbig/jbig_ar.c together with any application in which you want
+to use the simpler variant optimized for fax applications.
 
 In subdirectory pbmtools/, you will find the programs pbmtojbg and
-jbgtopbm. These are two file converters as examples for applications
-which use the JBIG-KIT library. After testing them on some of the
-example JBIG files, you can move these executable files together with
-the man-pages (if you are in a UNIX style environment) to the
-appropriate directories on your system. Options -h and --help will
-give you short command line usage summaries of both programs.
+jbgtopbm. These are two file converters, serving as examples for
+applications that use the full JBIG-KIT library (jbig.c). After
+testing them on some of the example JBIG files, you can move these
+executable files together with their respective man pages (in a UNIX
+style environment) to the appropriate directories. Options -h and
+--help will give you short command-line usage summaries. The programs
+pbmtojbg85 and jbgtopbm85 are very similar, but demonstrate use of the
+simpler jbig85.c library instead.
 
 The subdirectory examples/ contains a few files as raw JBIG data
-streams (these are called bi-level image entities (BIE) in the
-standard).
+streams (called bi-level image entities (BIE) in the standard).
 
-A few examples which you might want to try:
+Try
 
   jbgtopbm ccitt1.jbg ccitt1.pbm
 
-decompresses the CCITT test letter number one into a portable bitmap
-file which you can further convert using Jef Poskanzer's PBM tools
-<http://www.acme.com/software/pbmplus/> or view with many popular
-image processing systems like xv (available for Unix/X11 systems on
-<http://www.trilon.com/xv/downloads.html>).
+to decompress CCITT test letter #1 into a portable bitmap file, which
+you can then further convert using Jef Poskanzer's PBM tools
+<http://www.acme.com/software/pbmplus/>, or view with many popular
+image file viewers, such as the "display" command from ImageMagick.
 
-The ccitt1.jbg image is 1728 x 2376 pixels large and can not be easily
-displayed on your screen. However fortunately, I have stored it in
-progressive mode with the following resolution layers:
+The ccitt1.jbg image is 1728 x 2376 pixels large and may not fit onto
+your display screen. However, fortunately, I have stored it in JBIG's
+"progressive mode" with the following resolution layers:
 
   layer 0:  216 x  297 pixel
   layer 1:  432 x  594 pixel
@@ -52,26 +55,31 @@ progressive mode with the following resolution layers:
   layer 3: 1728 x 2376 pixel
 
 In progressive mode, each layer has twice the resolution of the
-previous one. Resolution layer 0 encodes all is pixels independent
-from any other data, all other resolution layers encode only the
-difference between the previous and the new resolution layer which
+previous one. Resolution layer 0 encodes all its pixels independent
+from any other data; all other resolution layers encode only the
+difference between the previous and the new resolution layer, which
 requires much less space than encoding resolution layers without
 referring to the lower layer. By default, the BIE files produced by
-pbmtojbg start all with a lowest resolution layer 0 which will fit on
-a 640 x 480 screen.
+pbmtojbg will all start with a lowest resolution layer 0 that fits
+onto a 640 x 480 screen.
 
 In order to tell jbgtopbm that you do not want to decode higher
-resolution layers if they will not fit on your e.g. 1024 x 768 pixel
-display, then simply use
+resolution layers if they will not fit onto your (say) 1024 x 768
+pixel display, simply use
 
   jbgtopbm -x 1024 -y 768 ccitt1.jbg ccitt1.pbm
 
-and you will get much faster a 4 times smaller image, the highest
-resolution layer that still fits on your screen. You can also directly
-pipe the image to another application using standard output by
-removing the second file name, e.g.
+You will get a 4 times smaller image, the highest resolution layer
+that still fits onto your screen. You can also directly pipe the image
+to another application using standard output, by removing the second
+file name, e.g.
 
-  jbgtopbm -x 1024 -y 768 ccitt1.jbg | xv -
+  jbgtopbm -x 1024 -y 768 ccitt1.jbg | display
+
+In fact, the data in the first quarter of the input file is sufficient
+to decode the requested resolution:
+
+  head --bytes=4000 ccitt1.jbg | ../pbmtools/jbgtopbm -x 1024 -y 768 | display
 
 Now let's do some compression. With
 
@@ -83,35 +91,34 @@ followed by
 
 you produce again the same data stream as ccitt1.jbg. However if you
 want that the lowest resolution layer is not larger than 70 x 100
-pixel (thumb nail image), then use
+pixels ("thumb nail" image), then use
 
   pbmtojbg -v -x 100 -y 150 ccitt1.pbm test.jbg
 
-Option -v will tell you that this has caused 5 additional resolution
-layers to the lowest 54 x 75 pixel large layer 0. If you have a look at
-the lowest resolution layer in test.jbg with
+Option -v will output some technical data, and will tell you that five
+incremental resolution layers have been created, in addition to the
+lowest 54 x 75 pixel large layer 0. Look at the lowest resolution
+layer in test.jbg with
 
-  jbgtopbm -x 100 test.jbg | xv -
+  jbgtopbm -x 100 test.jbg | display
 
-you will still be able to clearly recognize the layout and line
-structure of the page, which is not the case if less sophisticated
-resolution reduction techniques would have been utilized (e.g. as in
-xv). With
+and you will still be able to clearly recognize the layout and line
+structure of the page, which the implemented bi-level
+resolution-reduction algorithm tried to preserve. With
 
   pbmtojbg -q ccitt1.pbm test.jbg
 
-you can enforce a single resolution layer which is usually a little
-bit more efficient and requires a little bit less space than
-progressive encoding.
+you can enforce a single resolution layer, which usually requires a
+slightly less space than progressive encoding.
 
 
-OK, another small exercise: Assume you want to build a document
+OK, another small exercise. Assume you want to build a document
 database in which you want to store scanned images in two resolution
-layers, one for screen previewing and one for laser printer output.
-However you do not want that your decision to store images in two
-resolutions causes too much additional storage requirement. You decide
-that 3 resolution layers in JBIG fit your requirement and you want to
-store
+layers, one for screen previewing and one for laser-printer output.
+However, you do not want your decision to store images in two
+resolutions to cause too much additional storage requirement. You
+decide that 3 resolution layers in JBIG fit your requirement and you
+want to store
 
   layer 0:  432 x  594 pixels
 
@@ -125,18 +132,17 @@ in the second file test-high.jbg. No problem, just call
   pbmtojbg -d 2 -l 0 -h 0 ccitt1.pbm test-low.jbg
   pbmtojbg -d 2 -l 1 -h 2 ccitt1.pbm test-high.jbg
 
-where -d specifies the total number of layers and -l/-h select the
-range of layers written to the output file. You will see that the low
-and high resolution file together are only 1.6 kb larger than if you
-would have stored only the high-res version directly without
-progressive mode (option -q). Progressive mode has here reduced the
-additional storage requirement by 50 % compared to storing the 3.2 kb
-long low resolution version completely separately from the high
-resolution image.
+where option -d specifies the total number of layers and -l/-h select
+the range of layers written to the output file. You will see that the
+low and high resolution file together are only 1.6 kB larger than if
+you had stored only the high-res version directly without progressive
+mode (option -q). Progressive mode has reduced the additional storage
+requirement by 50% compared to storing the 3.2 kB low-resolution
+version independently of the high resolution image.
 
 In order to view only the screen version, use
 
-  jbgtopbm test-low.jbg | xv -
+  jbgtopbm test-low.jbg | display
 
 and in order to send the full version to the printer, just concatenate
 both BIE files like in
@@ -144,10 +150,14 @@ both BIE files like in
   cat test-low.jbg test-high.jbg | jbgtopbm -m | ....
 
 
-All this functionality and a few tricky things more are available as
-functions in the libjbig C library which you can link into your
-application. Just copy the relevant files from libjbig/ into your own
-source code directory and adapt your Makefile. In libjbig/jbig.doc,
-you will find documentation about how to use the library.
+All this functionality, and more, are available as functions in the
+libjbig C library, which you can link into your application. Just copy
+the relevant files from libjbig/ into your own source-code directory
+and adapt your Makefile. In libjbig/jbig.txt, you will find
+documentation about how to use the full library, while
+libjbig/jbig85.txt documents the fax variant of the library. The
+latter lacks progressive encoding, but can instead deal better with
+images where the height is not yet known at the start of a
+transmission.
 
 Markus
