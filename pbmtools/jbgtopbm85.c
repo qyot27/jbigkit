@@ -170,7 +170,7 @@ int main (int argc, char **argv)
     }
   }
   if (result != JBG_EOK) {
-    fprintf(stderr, "Problem with input file '%s':\n%s\n"
+    fprintf(stderr, "Problem with input file '%s': %s\n"
             "(error code 0x%02x, %lu = 0x%04lx BIE bytes "
 	    "and %lu pixel rows processed)\n",
 	    fnin, jbg85_strerror(result), result,

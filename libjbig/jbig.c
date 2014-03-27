@@ -2078,8 +2078,8 @@ void jbg_dec_maxsize(struct jbg_dec_state *s, unsigned long xmax,
  * Decode the new len PSDC bytes to which data points and add them to
  * the current stripe. Return the number of bytes which have actually
  * been read (this will be less than len if a marker segment was 
- * part of the data or if the final byte was 0xff were this code
- * can not determine, whether we have a marker segment.
+ * part of the data or if the final byte was 0xff, in which case
+ * this code cannot determine whether we have a marker segment).
  */
 static size_t decode_pscd(struct jbg_dec_state *s, unsigned char *data,
 			  size_t len)
