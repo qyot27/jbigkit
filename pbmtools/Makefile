@@ -144,6 +144,13 @@ test-t82.pbm:
 	make -C ../libjbig tstcodec
 	../libjbig/tstcodec $@
 
+FOPT=-c 1000 -p 300000 -m 3
+fuzz: test-t82.pbm
+	while \
+	  ./pbmtojbg -f test-t82.pbm | ./jbgfuzz.pl $(FOPT) && \
+	  ./pbmtojbg test-t82.pbm | ./jbgfuzz.pl $(FOPT) -d jbgtopbm ; \
+	do true; done
+
 .1.txt .5.txt:
 	groff -man -Tascii -P -c -P -b -P -u $< >$@
 
