@@ -73,6 +73,7 @@ void read_file(unsigned char **buf, size_t *buflen, size_t *len, FILE *f)
       exit(1);
     }
   } while (!feof(f));
+  if (!*len) return;
   *buflen = *len;
   *buf = (unsigned char *) realloc(*buf, *buflen);
   if (!*buf) {
@@ -134,6 +135,7 @@ void diagnose_bie(FILE *fin)
   if (len < 20) {
     fprintf(f, "Error: Input file is %lu < 20 bytes long and therefore "
 	    "does not contain an intact BIE header!\n", (unsigned long) len);
+    free(bie);
     return;
   }
 
