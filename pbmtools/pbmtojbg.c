@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <limits.h>
 #include "jbig.h"
 
 
@@ -81,12 +82,16 @@ static unsigned long getint(FILE *f)
   int c;
   unsigned long i;
 
-  while ((c = getc(f)) != EOF && !isdigit(c))
+  while ((c = getc(f)) != EOF)
     if (c == '#')
       while ((c = getc(f)) != EOF && !(c == 13 || c == 10)) ;
-  if (c != EOF) {
-    ungetc(c, f);
-    fscanf(f, "%lu", &i);
+    else if (!isspace(c))
+      break;
+  if (c == EOF) return 0;
+  ungetc(c, f);
+  if (fscanf(f, "%lu", &i) != 1) {
+    fprintf(stderr, "Unsigned integer value expected!\n");
+    exit(1);
   }
 
   return i;
@@ -267,19 +272,32 @@ int main (int argc, char **argv)
   type = getc(fin);
   width = getint(fin);
   height = getint(fin);
+  if (width < 1 || height < 1 ||
+      width > 0xffffffff || height > 0xffffffff) {
+    fprintf(stderr, "Invalid width or height!\n");
+    exit(1);
+  }
   if (type == '2' || type == '5' ||
       type == '3' || type == '6')
     max = getint(fin);
   else
     max = 1;
+  if (max < 1) {
+    fprintf(stderr, "Invalid maxval!\n");
+    exit(1);
+  }
   for (planes = 0, v = max; v; planes++, v >>= 1) ;
   bpp = (planes + 7) / 8;
-  if (encode_planes < 0 || encode_planes > planes)
+  if (encode_planes < 1 || encode_planes > planes)
     encode_planes = planes;
   fgetc(fin);    /* skip line feed */
 
   /* read PBM image data */
-  bpl = (width + 7) / 8;     /* bytes per line */
+  bpl = jbg_ceil_half(width, 3);     /* bytes per line */
+  if (ULONG_MAX / height < bpl) {
+    fprintf(stderr, "Image too large!\n");
+    exit(1);
+  }
   bitmap_size = bpl * (size_t) height;
   bitmap = (unsigned char **) checkedmalloc(sizeof(unsigned char *) *
 					    encode_planes);
@@ -305,6 +323,10 @@ int main (int argc, char **argv)
   case '2':
   case '5':
     /* PGM */
+    if ((ULONG_MAX / bpp) / height < width) {
+      fprintf(stderr, "Image too large!\n");
+      exit(1);
+    }
     image = (unsigned char *) checkedmalloc(width * height * bpp);
     if (type == '2') {
       for (x = 0; x < width * height; x++) {

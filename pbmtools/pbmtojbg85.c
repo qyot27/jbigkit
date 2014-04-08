@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <limits.h>
 #include "jbig85.h"
 
 
@@ -65,12 +66,16 @@ static unsigned long getint(FILE *f)
   int c;
   unsigned long i;
 
-  while ((c = getc(f)) != EOF && !isdigit(c))
+  while ((c = getc(f)) != EOF)
     if (c == '#')
       while ((c = getc(f)) != EOF && !(c == 13 || c == 10)) ;
-  if (c != EOF) {
-    ungetc(c, f);
-    fscanf(f, "%lu", &i);
+    else if (!isspace(c))
+      break;
+  if (c == EOF) return 0;
+  ungetc(c, f);
+  if (fscanf(f, "%lu", &i) != 1) {
+    fprintf(stderr, "Unsigned integer value expected!\n");
+    exit(1);
   }
 
   return i;
@@ -184,8 +189,9 @@ int main (int argc, char **argv)
   fgetc(fin);    /* skip line feed */
 
   /* Test for valid parameters */
-  if (width < 1 || height < 1) {
-    fprintf(stderr, "Image dimensions must be positive!\n");
+  if (width < 1 || height < 1 ||
+      width > 0xffffffff || height > 0xffffffff) {
+    fprintf(stderr, "Invalid width or height!\n");
     exit(1);
   }
 
