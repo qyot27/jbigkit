@@ -2,6 +2,7 @@
 JBIG-KIT revision history
 -------------------------
 
+
 Changes in version 2.1 (2014-04-08)
 
 This is a security-critical bug-fix release that remains API and ABI
@@ -21,6 +22,7 @@ untrusted sources should upgrade.
 
   - fuzz-testing script added
 
+
 Changes in version 2.0 (2008-08-30)
 
 Main new features of release 2.0:
@@ -38,18 +40,30 @@ Main new features of release 2.0:
     uncompressed image to reside in memory at any time. This 3-line
     buffer has to be allocated by the calling application, therefore
     the T.85 library will not call any heap management functions such
-    as malloc() or free() itself.
+    as malloc() or free() itself. It can fully deal with endless-paper
+    fax, where the height of the encoded image is not known initially.
 
   - There are also two new example applications pbmtojbg85 and
     jbgtopbm85 included that provide command-line access to the new
-    T.85 library. (Note to distribution maintainers: there is probably
-    little point in adding pbmtojbg85 and jbgtopbm85 to precompiled
-    JBIG-KIT packages for workstation operating systems, as these two
-    programs do not really provide the end user much additional
-    functionality beyond what pbmtojbg and jbgtopbm already do, which
-    use the full library instead.)
+    T.85 library.
 
-Changes to the original full jbig.c library from version 1.6:
+API changes in 2.0 to the original full jbig.c library (compared to 1.6):
+
+  - jbg_dec_getwidth(), jbg_dec_getheight(), jbg_dec_getsize(), and
+    jbg_dec_getsize_merged() return now an unsigned long value
+    (was: long), and return 0 (was: -1) if no image is available yet
+
+  - jbg_dec_in() return values changed; the least significant bits of
+    the error codes now provide more information about what caused the
+    error, beyond what the more general error text messages returned by
+    jbg_strerror() reveal
+
+  - non-English translations of error messages are now provided
+    in a separate PO file (e.g., for use with GNU gettext),
+    jbg_strerror() no longer has a language attribute and the
+    JBG_EN, JBG_DE_8859_1, JBG_DE_UTF_8 constants no longer exist
+
+Other changes in 2.0 to the original full jbig.c library:
 
   - the arithmetic codec routines are now located in a separate source
     file (they are now used by both the full library jbig.c and the new
@@ -65,37 +79,26 @@ Changes to the original full jbig.c library from version 1.6:
     (only useful to make encoder able to generate a wider range
     of test data)
 
+  - macro JBG_LICENCE can be changed from the default value "GPL" to a
+    licence agreement reference code to if the library is used under a
+    commercial licence, to clarify under which exact licence the
+    library is used in a particular application
+
+Changes in 2.0 to the command-line wrappers for jbig.c:
+
   - added pbmtojbg options -C and -r, which provide command-line
     access to the previous two extensions
 
   - slightly improved diagnostic output of jbgtopbm option -d
 
-  - non-English translations of error messages are now provided
-    in a separate PO file (e.g., for use with GNU gettext),
-    jbg_strerror() no longer has a language attribute and the
-    JBG_EN, JBG_DE_8859_1, JBG_DE_UTF_8 constants no longer exist
-
-  - jbg_dec_in() return values changed; the least significant bits of
-    the error codes now provide more information about what caused the
-    error, beyond what the more general error text messages returned by
-    jbg_strerror() reveal
-
   - pbmtojbg has a new option -f as a shortcut for all the options
     needed to make the output comply to the basic ITU-T T.85 fax
     profile
-
-  - jbg_dec_getwidth(), jbg_dec_getheight(), jbg_dec_getsize(), and
-    jbg_dec_getsize_merged() return now an unsigned long value
-    (was: long), and return 0 (was: -1) if no image is available yet
 
   - jbgtopbm now outputs image dimensions in header padded to 10
     digits fixed width, for consistency with jbgtopbm85
     to allow for later in-place update of height due to NEWLEN
 
-  - macro JBG_LICENCE can be changed from the default value "GPL" to a
-    licence agreement reference code to if the library is used under a
-    commercial licence, to clarify under which exact licence the
-    library is used in a particular application
 
 Changes in version 1.6 (2004-06-11)
 
@@ -110,6 +113,7 @@ Changes in version 1.6 (2004-06-11)
 
   - lots of type casts added such that the C source code is now
     also compilable as C++
+
 
 Changes in version 1.5 (2003-06-11)
 
@@ -142,11 +146,13 @@ Changes in version 1.5 (2003-06-11)
         doesn't know the height of the image at the start of
         transmission)
 
+
 Changes in version 1.4 (2002-04-09)
 
   - typo fixed in stripe number calculation, which caused encoder and
     decoder to fail on certain image sizes (special thanks to Koen Denecker
     <denecker@elis.rug.ac.be> for locating this one)
+
 
 Changes in version 1.3 (2002-03-23):
 
@@ -156,12 +162,14 @@ Changes in version 1.3 (2002-03-23):
   - example converters now can handle PGM files with up to 32 bits
     per pixel
 
+
 Changes in version 1.2 (2000-04-08):
 
   - bug in the decoder fixed, which caused the rest of the input file
     to be skipped whenever a comment marker was encountered (special
     thanks to Ben Rudiak-Gould <benrg@math.berkeley.edu> for
     reporting this one)
+
 
 Changes in version 1.1 (1999-11-16):
 
@@ -173,6 +181,7 @@ Changes in version 1.1 (1999-11-16):
     tracking that one down)
 
   - minor bug in the "jbgtopbm -d" diagnostic output fixed
+
 
 Changes in version 1.0 (1998-04-11):
 
@@ -188,6 +197,7 @@ Changes in version 1.0 (1998-04-11):
 
   - more changes to avoid paranoid compiler warnings
 
+
 Changes in version 0.9 (1996-01-09):
 
   - encoder won't break any more on input bitmap data with incorrect
@@ -201,6 +211,7 @@ Changes in version 0.9 (1996-01-09):
 
   - many minor changes in order to avoid warnings from paranoid
     compilers
+
 
 Changes in version 0.8 (1995-09-20):
 
@@ -216,12 +227,14 @@ Changes in version 0.8 (1995-09-20):
 
   - Bug in pbmtojbg fixed (handling of ASCII PBM files)
 
+
 Changes in version 0.7 (1995-06-10):
 
   - more problems on 16-bit int systems and on Macintosh systems fixed
     (special thanks to Jean-Pierre Gachen <jpg11@calvanet.calvacom.fr>)
 
   - global Makefile
+
 
 Changes in version 0.6 (1995-06-08):
 
@@ -232,6 +245,7 @@ Changes in version 0.6 (1995-06-08):
   - changes of the JBIG "Technical Corrigendum 1" included (special
     thanks to Dr. Sebestyen from Siemens AG for sending me a copy
     of the draft)
+
 
 First release: version 0.5 (1995-05-28)
 
