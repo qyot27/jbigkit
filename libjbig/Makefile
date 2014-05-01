@@ -6,13 +6,17 @@ CC = gcc
 # Options for the compiler: A high optimization level is suggested
 CFLAGS = -g -O -W -Wall -ansi -pedantic # --coverage
 
-all: libjbig.a libjbig85.a tstcodec tstcodec85
+all: libjbig.a libjbig85.a tstcodec tstcodec85 tstjoint
 
 tstcodec: tstcodec.o jbig.o jbig_ar.o
 	$(CC) $(LDFLAGS) $(CFLAGS) -o tstcodec tstcodec.o jbig.o jbig_ar.o
 
 tstcodec85: tstcodec85.o jbig85.o jbig_ar.o
 	$(CC) $(LDFLAGS) $(CFLAGS) -o tstcodec85 tstcodec85.o jbig85.o jbig_ar.o
+
+tstjoint: tstjoint.o jbig.o jbig85.o jbig_ar.o
+	$(CC) $(LDFLAGS) $(CFLAGS) -o tstjoint \
+	  tstjoint.o jbig.o jbig85.o jbig_ar.o
 
 libjbig.a: jbig.o jbig_ar.o
 	rm -f libjbig.a
@@ -42,9 +46,10 @@ update-po: jbig.c jbig85.c Makefile
 analyze:
 	clang --analyze *.c
 
-test: tstcodec tstcodec85
+test: tstcodec tstcodec85 tstjoint
 	./tstcodec
 	./tstcodec85
+	./tstjoint
 
 t82test.pbm: tstcodec
 	./tstcodec $@
@@ -52,4 +57,4 @@ t82test.pbm: tstcodec
 clean:
 	rm -f *.o *.gcda *.gcno *.gcov *.plist *~ core gmon.out dbg_d\=??.pbm
 	rm -f t82test.pbm
-	rm -f tstcodec tstcodec85
+	rm -f tstcodec tstcodec85 tstjoint
