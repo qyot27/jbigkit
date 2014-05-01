@@ -9,10 +9,10 @@ CFLAGS = -g -O -W -Wall -ansi -pedantic # --coverage
 all: libjbig.a libjbig85.a tstcodec tstcodec85
 
 tstcodec: tstcodec.o jbig.o jbig_ar.o
-	$(CC) $(CFLAGS) -o tstcodec tstcodec.o jbig.o jbig_ar.o
+	$(CC) $(LDFLAGS) $(CFLAGS) -o tstcodec tstcodec.o jbig.o jbig_ar.o
 
 tstcodec85: tstcodec85.o jbig85.o jbig_ar.o
-	$(CC) $(CFLAGS) -o tstcodec85 tstcodec85.o jbig85.o jbig_ar.o
+	$(CC) $(LDFLAGS) $(CFLAGS) -o tstcodec85 tstcodec85.o jbig85.o jbig_ar.o
 
 libjbig.a: jbig.o jbig_ar.o
 	rm -f libjbig.a

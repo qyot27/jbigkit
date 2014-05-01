@@ -6,6 +6,7 @@ CC = gcc
 # Options for the compiler
 CFLAGS = -g -O -W -Wall -Wno-unused-result -ansi -pedantic # --coverage
 CPPFLAGS = -I../libjbig 
+LDFLAGS = -L../libjbig
 
 .SUFFIXES: .1 .5 .txt $(SUFFIXES)
 .PHONY: txt test test82 test85 clean
@@ -15,16 +16,16 @@ all: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85 txt
 txt: pbmtojbg.txt jbgtopbm.txt pbm.txt pgm.txt
 
 pbmtojbg: pbmtojbg.o ../libjbig/libjbig.a
-	$(CC) $(CFLAGS) -o pbmtojbg pbmtojbg.o -L../libjbig -ljbig
+	$(CC) $(LDFLAGS) $(CFLAGS) -o pbmtojbg pbmtojbg.o -ljbig
 
 jbgtopbm: jbgtopbm.o ../libjbig/libjbig.a
-	$(CC) $(CFLAGS) -o jbgtopbm jbgtopbm.o -L../libjbig -ljbig
+	$(CC) $(LDFLAGS) $(CFLAGS) -o jbgtopbm jbgtopbm.o -ljbig
 
 pbmtojbg85: pbmtojbg85.o ../libjbig/libjbig85.a
-	$(CC) $(CFLAGS) -o pbmtojbg85 pbmtojbg85.o -L../libjbig -ljbig85
+	$(CC) $(LDFLAGS) $(CFLAGS) -o pbmtojbg85 pbmtojbg85.o -ljbig85
 
 jbgtopbm85: jbgtopbm85.o ../libjbig/libjbig85.a
-	$(CC) $(CFLAGS) -o jbgtopbm85 jbgtopbm85.o -L../libjbig -ljbig85
+	$(CC) $(LDFLAGS) $(CFLAGS) -o jbgtopbm85 jbgtopbm85.o -ljbig85
 
 jbgtopbm.o: jbgtopbm.c ../libjbig/jbig.h
 pbmtojbg.o: pbmtojbg.c ../libjbig/jbig.h
@@ -33,11 +34,11 @@ pbmtojbg85.o: pbmtojbg85.c ../libjbig/jbig85.h
 
 ../libjbig/libjbig.a: ../libjbig/jbig.c ../libjbig/jbig.h \
 	../libjbig/jbig_ar.c ../libjbig/jbig_ar.h
-	make -C ../libjbig libjbig.a
+	$(MAKE) -C ../libjbig libjbig.a
 
 ../libjbig/libjbig85.a: ../libjbig/jbig85.c ../libjbig/jbig85.h \
 	../libjbig/jbig_ar.c ../libjbig/jbig_ar.h
-	make -C ../libjbig libjbig85.a
+	$(MAKE) -C ../libjbig libjbig85.a
 
 analyze:
 	clang $(CPPFLAGS) --analyze *.c
@@ -45,22 +46,22 @@ analyze:
 test: test82 test85
 
 test82: pbmtojbg jbgtopbm
-	make IMG=ccitt1     OPTIONSP=                      dotest1
-	make IMG=ccitt2     OPTIONSP=                      dotest1
-	make IMG=ccitt3     OPTIONSP=                      dotest1
-	make IMG=xvlogo    "OPTIONSP=-d 3"                 dotest1
-	make IMG=sandra     OPTIONSP=      OPTIONSJ=       dotest2g
-	make IMG=sandra     OPTIONSP=-b    OPTIONSJ=-b     dotest2g
-	make IMG=sandra     OPTIONSP=-q    OPTIONSJ=       dotest2g
-	make IMG=sandra    "OPTIONSP=-o 0" OPTIONSJ=       dotest2g
-	make IMG=sandra    "OPTIONSP=-o 2" OPTIONSJ=       dotest2g
-	make IMG=multi      OPTIONSP=      OPTIONSJ=       dotest2g
-	make IMG=multi      OPTIONSP=-b    OPTIONSJ=-b     dotest2g
-	make IMG=mx        "OPTIONSP=-q -s 3 -m 128"       dotest1
-	make IMG=mx        "OPTIONSP=-q -s 3 -m 128"       dotest2b
-	make IMG=mx        "OPTIONSP=-q -s 3 -m 128 -p 92" dotest2b
-	make IMG=mx        "OPTIONSP=-q -Y -1"             dotest2b
-	make IMG=mx        "OPTIONSP=-Y -1"                dotest2b
+	$(MAKE) IMG=ccitt1     OPTIONSP=                      dotest1
+	$(MAKE) IMG=ccitt2     OPTIONSP=                      dotest1
+	$(MAKE) IMG=ccitt3     OPTIONSP=                      dotest1
+	$(MAKE) IMG=xvlogo    "OPTIONSP=-d 3"                 dotest1
+	$(MAKE) IMG=sandra     OPTIONSP=      OPTIONSJ=       dotest2g
+	$(MAKE) IMG=sandra     OPTIONSP=-b    OPTIONSJ=-b     dotest2g
+	$(MAKE) IMG=sandra     OPTIONSP=-q    OPTIONSJ=       dotest2g
+	$(MAKE) IMG=sandra    "OPTIONSP=-o 0" OPTIONSJ=       dotest2g
+	$(MAKE) IMG=sandra    "OPTIONSP=-o 2" OPTIONSJ=       dotest2g
+	$(MAKE) IMG=multi      OPTIONSP=      OPTIONSJ=       dotest2g
+	$(MAKE) IMG=multi      OPTIONSP=-b    OPTIONSJ=-b     dotest2g
+	$(MAKE) IMG=mx        "OPTIONSP=-q -s 3 -m 128"       dotest1
+	$(MAKE) IMG=mx        "OPTIONSP=-q -s 3 -m 128"       dotest2b
+	$(MAKE) IMG=mx        "OPTIONSP=-q -s 3 -m 128 -p 92" dotest2b
+	$(MAKE) IMG=mx        "OPTIONSP=-q -Y -1"             dotest2b
+	$(MAKE) IMG=mx        "OPTIONSP=-Y -1"                dotest2b
 	rm -f test-*.jbg test-*.pbm test-*.pgm
 	./jbgtopbm ../examples/ccitt1.jbg | ./pbmtojbg > test-ccitt1.jbg
 	cmp ../examples/ccitt1.jbg test-ccitt1.jbg
@@ -96,24 +97,24 @@ dotest2g:
 	cmp test-$(IMG).pgm ../examples/$(IMG).pgm
 
 test85: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85 test-t82.pbm
-	make IMG=t82 "OPTIONSP=-p 0"      dotest85
-	make IMG=t82 "OPTIONSP=-p 8"      dotest85
-	make IMG=t82 "OPTIONSP=-p 8 -r"   dotest85b
-	make IMG=t82 "OPTIONSP=-p 64"     dotest85
-	make IMG=t82 "OPTIONSP=-p 72"     dotest85
-	make IMG=t82 "OPTIONSP=-s 2 -C c" dotest85
-	make IMG=t82 "OPTIONSP=-s 99999"  dotest85
-	make IMG=t82 "OPTIONSP=-Y 9999 0" dotest85
-	make IMG=t82 "OPTIONSP=-Y 1951 0" dotest85
-	make IMG=t82 "OPTIONSP=-Y -1 127" dotest85
-	make IMG=t82 "OPTIONSP=-Y -1 128" dotest85
-	make IMG=t82 "OPTIONSP=-Y -1 1919" dotest85
-	make IMG=t82 "OPTIONSP=-Y -1 1920" dotest85
-	make IMG=t82 "OPTIONSP=-Y -1 1949" dotest85
-	make IMG=t82 "OPTIONSP=-Y -1 1950" dotest85
-	make IMG=ccitt1 dotest85
-	make IMG=ccitt2 dotest85
-	make IMG=ccitt3 dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-p 0"      dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-p 8"      dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-p 8 -r"   dotest85b
+	$(MAKE) IMG=t82 "OPTIONSP=-p 64"     dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-p 72"     dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-s 2 -C c" dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-s 99999"  dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-Y 9999 0" dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-Y 1951 0" dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-Y -1 127" dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-Y -1 128" dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-Y -1 1919" dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-Y -1 1920" dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-Y -1 1949" dotest85
+	$(MAKE) IMG=t82 "OPTIONSP=-Y -1 1950" dotest85
+	$(MAKE) IMG=ccitt1 dotest85
+	$(MAKE) IMG=ccitt2 dotest85
+	$(MAKE) IMG=ccitt3 dotest85
 	rm -f test-*.jbg test-*.jbg85 test-*.pbm
 	@echo
 	@echo "The T.85 pbmtools have PASSED the functional tests. Good!"
@@ -147,7 +148,7 @@ test-%.pbm: ../examples/%.jbg
 	./jbgtopbm $< $@
 
 test-t82.pbm:
-	make -C ../libjbig tstcodec
+	$(MAKE) -C ../libjbig tstcodec
 	../libjbig/tstcodec $@
 
 FOPT=-c 1000 -p 300000 -m 3

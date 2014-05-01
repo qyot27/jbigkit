@@ -36,7 +36,7 @@ clean:
 distribution:
 	rm -rf jbigkit-$(VERSION)
 	git archive v$(VERSION) --prefix jbigkit-$(VERSION)/ | tar xvf -
-	make -C jbigkit-$(VERSION)/pbmtools txt
+	$(MAKE) -C jbigkit-$(VERSION)/pbmtools txt
 	tar cvaf jbigkit-$(VERSION).tar.gz jbigkit-$(VERSION)
 
 release:
