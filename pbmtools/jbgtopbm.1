@@ -1,4 +1,4 @@
-.TH JBGTOPBM 1 "2003-06-04"
+.TH JBGTOPBM 1 "2014-08-22"
 .SH NAME
 jbgtopbm \- JBIG1 to portable bitmap file converter
 .SH SYNOPSIS
@@ -15,8 +15,8 @@ jbgtopbm \- JBIG1 to portable bitmap file converter
 .SH DESCRIPTION
 Reads in a 
 .I JBIG1
-bi-level image entity (BIE) from a file or standard
-input, decompresses it, and outputs a portable bitmap (PBM) file.
+bi-level image entity (BIE), decompresses it, and outputs a portable
+bitmap (PBM) file.
 
 .I JBIG1
 is a highly effective lossless compression algorithm for
@@ -28,12 +28,12 @@ A
 encoded image can be stored in several resolutions in one or several
 BIEs. All resolution layers except the lowest one are stored
 efficiently as differences to the next lower resolution layer. Options
-.BI -x
+.B -x
 and
-.BI -y
+.B -y
 can be used to stop the decompression at a specified maximal output
 image size. With option
-.BI -m
+.B -m
 the input file can consist of multiple concatenated BIEs
 which contain different increasing resolution layers of the same
 image.
@@ -41,8 +41,8 @@ image.
 If more than one bit per pixel is stored in the JBIG1 file, then a PGM
 file will be produced.
 .SH OPTIONS
-.TP 14
-.BI \-
+.TP 12
+.B \-
 A single hyphen instead of an input file name will cause 
 .I jbgtopbm
 to read the data from standard input instead from a file.
@@ -60,13 +60,13 @@ more than
 .I number
 pixels high. If no such resolution layer exists, then use the smallest
 one available. Options
-.BI \-x
+.B \-x
 and
-.BI \-y
+.B \-y
 can also be used together in which case the largest layer that satisfies
 both limits will be selected.
 .TP
-.BI \-m
+.B \-m
 Process multiple concatenated BIEs. If there are bytes left after the
 final SDE in the first BIE, then with this option
 .I jbgtopbm
@@ -74,7 +74,7 @@ will attempt to decode these as the start of another BIE that may
 contain higher resolution data. Normally, any remaining bytes will
 generate a warning message.
 .TP
-.BI \-b
+.B \-b
 Use binary values instead of Gray code words in order to decode pixel
 values from multiple bitplanes. This option has only an effect if the
 input has more than one bitplane and a PGM output file is produced.
@@ -82,7 +82,7 @@ Note that the decoder has to be used in the same mode as the encoder
 and cannot determine from the BIE, whether Gray or binary code words
 were used by the encoder.
 .TP
-.BI \-d
+.B \-d
 Diagnose a single BIE. With this option,
 .I jbgtopbm
 will print a summary of the header information found in the input
@@ -101,18 +101,14 @@ inserted or deleted and this will damage the binary data.
 .SH STANDARDS
 This program implements the
 .I JBIG1
-image coding algorithm as specified in ISO/IEC 11544:1993 and
-ITU-T T.82(1993).
+image coding algorithm as specified in international standard ISO/IEC
+11544:1993 and ITU-T Recommendation T.82(1993).
 .SH AUTHOR
-The
-.I jbgtopbm 
-program is part of the 
+Markus Kuhn wrote
+.UR http://www.cl.cam.ac.uk/~mgk25/jbigkit/
 .I JBIG-KIT
-package, which has been developed by Markus Kuhn.
-The most recent version of this
-portable
-.I JBIG1
-library and tools set is available from
-<http://www.cl.cam.ac.uk/~mgk25/jbigkit/>.
+.UE ,
+which includes
+.IR jbgtopbm .
 .SH SEE ALSO
 pbm(5), pgm(5), pbmtojbg(1)

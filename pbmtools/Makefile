@@ -1,4 +1,6 @@
-# Unix makefile for the JBIG-KIT PBM tools
+# GNU makefile for the JBIG-KIT PBM tools
+
+.DELETE_ON_ERROR:
 
 # Select an ANSI/ISO C compiler here, e.g. GNU gcc is recommended
 CC = gcc
@@ -8,12 +10,13 @@ CFLAGS = -g -O -W -Wall -Wno-unused-result -ansi -pedantic # --coverage
 CPPFLAGS = -I../libjbig 
 LDFLAGS = -L../libjbig
 
-.SUFFIXES: .1 .5 .txt $(SUFFIXES)
-.PHONY: txt test test82 test85 clean
+.PHONY: txt pdf test test82 test85 clean
 
 all: pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85 txt
 
 txt: pbmtojbg.txt jbgtopbm.txt pbm.txt pgm.txt
+
+pdf: pbmtojbg.pdf jbgtopbm.pdf pbm.pdf pgm.pdf
 
 pbmtojbg: pbmtojbg.o ../libjbig/libjbig.a
 	$(CC) $(LDFLAGS) $(CFLAGS) -o pbmtojbg pbmtojbg.o -ljbig
@@ -158,10 +161,22 @@ fuzz: test-t82.pbm
 	  ./pbmtojbg test-t82.pbm | ./jbgfuzz.pl $(FOPT) -d jbgtopbm ; \
 	do true; done
 
-.1.txt .5.txt:
-	groff -man -Tascii -P -c -P -b -P -u $< >$@
+MAN2TXT=groff -man -Tascii -P -c -P -b -P -u
+%.txt: %.1
+	$(MAN2TXT) $< >$@
+%.txt: %.5
+	$(MAN2TXT) $< >$@
+MAN2PS=groff -man -Tps
+%.ps: %.1
+	$(MAN2PS) $< >$@
+%.ps: %.5
+	$(MAN2PS) $< >$@
+%.pdf: %.ps
+	ps2pdf $<
+
 
 clean:
 	rm -f *.o *~ core pbmtojbg jbgtopbm pbmtojbg85 jbgtopbm85
 	rm -f test-*.jbg test-*.pbm test-*.pgm test-*.jbg85 test-*.pbm85
 	rm -f *.gcda *.gcno *.plist
+	rm -f *.ps *.pdf
