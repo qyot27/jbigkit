@@ -7,7 +7,7 @@ LD = $(CROSS)ld
 RANLIB = $(CROSS)ranlib
 
 # Options for the compiler: A high optimization level is suggested
-CFLAGS = -g -O -W -Wall -ansi -pedantic # --coverage
+CFLAGS = -g -O -W -Wall -ansi -pedantic $(XCFLAGS) # --coverage
 
 all: libjbig.a libjbig85.a tstcodec tstcodec85 tstjoint
 

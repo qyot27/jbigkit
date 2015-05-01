@@ -7,7 +7,7 @@ LD = $(CROSS)ld
 RANLIB = $(CROSS)ranlib
 
 # Options for the compiler: A high optimization level is suggested
-CFLAGS = -O2 -W -Wno-unused-result
+CFLAGS = -O2 -W -Wno-unused-result $(XCFLAGS)
 # CFLAGS = -O -g -W -Wall -Wno-unused-result -ansi -pedantic # -DDEBUG
 
 export CC CFLAGS
