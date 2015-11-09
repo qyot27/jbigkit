@@ -226,11 +226,12 @@ during the transmission.
 
 2.2  A simple compression application
 
-In order to use jbig.c in your application, just link libjbig.a to
-your executable (on Unix systems just add -ljbig and -L. to the
-command line options of your compiler, on other systems you will have
-to write a new Makefile anyway), copy the file jbig.h into your source
-directory and put the line
+In order to use jbig.c in your application, just link your executable
+with both jbig.c and jbig_ar.c. Both are already combined into
+libjbig.a by the provided Makefile, so on Unix systems, just add
+-ljbig and -L. to the command line options of your compiler. On other
+systems you will probably have to write a new Makefile. Make sure your
+compiler can find the file jbig.h and put the line
 
   #include "jbig.h"
 

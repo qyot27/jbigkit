@@ -196,11 +196,12 @@ is white and 1 is black for scanned paper documents.
 
 2.2  A simple compression application
 
-In order to use the library in your application, just link libjbig85.a
-to your executable (on Unix systems just add -ljbig85 and -L. to the
-command line options of your compiler, on other systems you will have
-to write a new Makefile anyway), copy the file jbig85.h into your
-source directory and put the line
+In order to use jbig85.c in your application, just link your
+executable with both jbig85.c and jbig_ar.c. Both are already combined
+into libjbig85.a by the provided Makefile, so on Unix systems, just
+add -ljbig85 and -L. to the command line options of your compiler. On
+other systems you will probably have to write a new Makefile. Make
+sure your compiler can find the file jbig85.h and put the line
 
   #include "jbig85.h"
 
