@@ -157,7 +157,7 @@ void diagnose_bie(FILE *fin)
 	  bie[18] & JBG_ILEAVE ? " ILEAVE" : "",
 	  bie[18] & JBG_SMID ? " SMID" : "",
 	  bie[18] & 0xf0 ? " other" : "");
-  fprintf(f, "  options = %d %s%s%s%s%s%s%s%s\n", bie[19],
+  fprintf(f, "  options = %d %s%s%s%s%s%s%s%s\n\n", bie[19],
 	  bie[19] & JBG_LRLTWO ? " LRLTWO" : "",
 	  bie[19] & JBG_VLENGTH ? " VLENGTH" : "",
 	  bie[19] & JBG_TPDON ? " TPDON" : "",
@@ -166,11 +166,13 @@ void diagnose_bie(FILE *fin)
 	  bie[19] & JBG_DPPRIV ? " DPPRIV" : "",
 	  bie[19] & JBG_DPLAST ? " DPLAST" : "",
 	  bie[19] & 0x80 ? " other" : "");
+  if (d < dl) { fprintf(f, "D >= DL required!\n"); return; }
+  if (l0 == 0) { fprintf(f, "L0 > 0 required!\n"); return; }
   stripes = jbg_stripes(l0, yd, d);
   layers = d - dl + 1;
-  fprintf(f, "\n  %lu stripes, %d layers, %d planes => ",
+  fprintf(f, "  %lu stripes, %d layers, %d planes => ",
 	  stripes, layers, planes);
-  if ((ULONG_MAX / layers) / planes >= stripes) {
+  if (planes == 0 || (ULONG_MAX / layers) / planes >= stripes) {
     sdes = stripes * layers * planes;
     fprintf(f, "%lu SDEs\n\n", sdes);
   } else {
@@ -178,6 +180,7 @@ void diagnose_bie(FILE *fin)
     fprintf(f, ">%lu SDEs!\n", ULONG_MAX);
     return;
   }
+  if (planes == 0) { fprintf(f, "P > 0 required!\n\n"); }
 
   /* parse BID */
   fprintf(f, "BID:\n\n");
