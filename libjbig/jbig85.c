@@ -22,7 +22,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- * 
+ *
  *  If you want to use this program under different license conditions,
  *  then contact the author for an arrangement.
  */
@@ -55,7 +55,7 @@
 
 /* object code version id */
 
-const char jbg85_version[] = 
+const char jbg85_version[] =
   "JBIG-KIT " JBG85_VERSION " (T.85 version) -- (c) 1995-2014 Markus Kuhn -- "
   "Licence: " JBG85_LICENCE "\n";
 
@@ -118,12 +118,12 @@ void jbg85_enc_init(struct jbg85_enc_state *s,
   s->y = 0;
   s->i = 0;
   s->ltp_old = 0;
-  
+
   /* initialize arithmetic encoder */
   arith_encode_init(&s->s, 0);
   s->s.byte_out = &enc_byte_out;
   s->s.file = s;
-  
+
   return;
 }
 
@@ -197,7 +197,7 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
     /* we have already output the full image, go away */
     return;
   }
-  
+
   /* line 0 has no previous line */
   if (s->y < 1)
     prevline = NULL;
@@ -264,7 +264,7 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
       buf[7] = 0;
       s->data_out(buf, 8, s->file);
     }
-    
+
     /* initialize adaptive template movement algorithm */
     if (s->mx == 0) {
       s->new_tx = 0;  /* ATMOVE has been disabled */
@@ -309,7 +309,7 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
 #endif
     s->ltp_old = ltp;
   }
-  
+
   if (!ltp) {
 
     /*
@@ -320,16 +320,16 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
      *          76543210765432107654321076543210     line_h2
      *  76543210765432107654321X76543210             line_h1
      */
-  
+
     /* pointer to first image byte of the three lines of interest */
     hp3 = prevprevline;
     hp2 = prevline;
     hp1 = line;
-  
+
     line_h1 = line_h2 = line_h3 = 0;
     if (hp2) line_h2 = (long)*hp2 << 8;
     if (hp3) line_h3 = (long)*hp3 << 8;
-  
+
     /* encode line */
     for (j = 0; j < s->x0;) {
       line_h1 |= *hp1;
@@ -479,7 +479,7 @@ void jbg85_enc_lineout(struct jbg85_enc_state *s, unsigned char *line,
     }
   }
   assert(s->tx >= 0); /* i.e., tx can safely be cast to unsigned */
-  
+
 #ifdef DEBUG
   if (s->y == s->y0)
     fprintf(stderr, "tp_lines = %ld, encoded_pixels = %ld\n",
@@ -552,7 +552,7 @@ const char *jbg85_strerror(int errnum)
 
 
 /*
- * The constructor for a decoder 
+ * The constructor for a decoder
  */
 void jbg85_dec_init(struct jbg85_dec_state *s,
 		    unsigned char *buf, size_t buflen,
@@ -609,7 +609,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
   /* forward data to arithmetic decoder */
   s->s.pscd_ptr = data;
   s->s.pscd_end = data + len;
-  
+
   /* restore a few local variables */
   line_h1 = s->line_h1;
   line_h2 = s->line_h2;
@@ -640,7 +640,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
 #endif
 	}
     assert(s->tx >= 0); /* i.e., tx can safely be cast to unsigned */
-    
+
     /* typical prediction */
     if (s->options & JBG_TPBON && s->pseudo) {
       slntp = arith_decode(&s->s, (s->options & JBG_LRLTWO) ? TPB2CX : TPB3CX);
@@ -668,7 +668,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
       /* this line is 'not typical' and has to be coded completely */
     }
     s->pseudo = 0;
-    
+
     /*
      * Layout of the variables line_h1, line_h2, line_h3, which contain
      * as bits the neighbour pixels of the currently decoded pixel X:
@@ -677,7 +677,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
      *                     76543210 76543210 76543210 76543210     line_h2
      *   76543210 76543210 76543210 76543210 X                     line_h1
      */
-    
+
     if (x == 0) {
       line_h1 = line_h2 = line_h3 = 0;
       if (s->p[1] >= 0)
@@ -685,7 +685,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
       if (s->p[2] >= 0)
 	line_h3 = (long)*hp3 << 8;
     }
-    
+
     /* decode line */
     while (x < s->x0) {
       if ((x & 7) == 0) {
@@ -763,7 +763,7 @@ static size_t decode_pscd(struct jbg85_dec_state *s, unsigned char *data,
     s->p[1] = s->p[0];
     if (++(s->p[0]) >= buflines) s->p[0] = 0;
   } /* for (i = ...) */
-  
+
  leave:
 
   /* save a few local variables */
@@ -785,11 +785,11 @@ static int finish_sde(struct jbg85_dec_state *s)
   s->s.nopadding = 0;
   if (decode_pscd(s, s->buffer, 2) != 2 && s->intr)
     return 1;
-  
+
   /* prepare decoder for next SDE */
   arith_decode_init(&s->s, s->buffer[1] == MARKER_SDNORM);
   s->s.nopadding = s->options & JBG_VLENGTH;
-	
+
   s->x = 0;
   s->i = 0;
   s->pseudo = 1;
@@ -804,7 +804,7 @@ static int finish_sde(struct jbg85_dec_state *s)
 
   return 0;
 }
-	
+
 /*
  * Provide to the decoder a new BIE fragment of len bytes starting at data.
  *
@@ -848,7 +848,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
   if (s->bie_len < 20) {
     while (s->bie_len < 20 && *cnt < len)
       s->buffer[s->bie_len++] = data[(*cnt)++];
-    if (s->bie_len < 20) 
+    if (s->bie_len < 20)
       return JBG_EAGAIN;
     /* parse header parameters */
     s->x0 = (((long) s->buffer[ 4] << 24) | ((long) s->buffer[ 5] << 16) |
@@ -888,7 +888,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
   /*
    * BID processing loop
    */
-  
+
   while (*cnt < len || s->end_of_bie == 1) {
     if (s->end_of_bie == 1) s->end_of_bie = 2;
 
@@ -905,7 +905,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
       }
       continue;
     }
-    
+
     /* load marker segments into s->buffer for processing */
     if (s->buf_len > 0) {
       assert(s->buffer[0] == MARKER_ESC);
@@ -982,7 +982,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 #endif
 	s->y0 = y;
 	break;
-	
+
       case MARKER_SDNORM:
       case MARKER_SDRST:
 
@@ -1063,7 +1063,7 @@ int jbg85_dec_in(struct jbg85_dec_state *s, unsigned char *data, size_t len,
 #endif
 	return JBG_EINVAL | 14; /* PSCD was longer than expected */
       }
-      
+
     }
   }  /* of BID processing loop 'while (*cnt < len) ...' */
 

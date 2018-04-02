@@ -47,17 +47,17 @@ static void usage(void)
 void *checkedmalloc(size_t n)
 {
   void *p;
-  
+
   if ((p = malloc(n)) == NULL) {
     fprintf(stderr, "Sorry, not enough memory available!\n");
     exit(1);
   }
-  
+
   return p;
 }
 
 
-/* 
+/*
  * Read an ASCII integer number from file f and skip any PBM
  * comments which are encountered.
  */
@@ -163,7 +163,7 @@ int main (int argc, char **argv)
 	usage();
       }
   }
-  
+
   /* open input file */
   if (fnin) {
     fin = fopen(fnin, "rb");
@@ -198,7 +198,7 @@ int main (int argc, char **argv)
   /* allocate buffer for a single image line */
   bpl = (width >> 3) + !!(width & 7);     /* bytes per line */
   lines = (unsigned char *) checkedmalloc(bpl * 3);
-  
+
   /* open output file */
   if (fnout) {
     fout = fopen(fnout, "wb");

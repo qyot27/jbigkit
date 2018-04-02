@@ -1,6 +1,6 @@
 /*
  *  A sequence of test procedures for this JBIG implementation
- * 
+ *
  *  Run this test sequence after each modification on the JBIG library.
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
@@ -29,12 +29,12 @@ long testbuf_len;
 static void *checkedmalloc(size_t n)
 {
   void *p;
-  
+
   if ((p = calloc(1, n)) == NULL) {
     fprintf(stderr, "Sorry, not enough memory available!\n");
     exit(1);
   }
-  
+
   return p;
 }
 
@@ -61,7 +61,7 @@ static void testbuf_writel(unsigned char *start, size_t len, void *dummy)
   {
     unsigned char *p;
     unsigned sum = 0;
-    
+
     for (p = start; p - start < (ptrdiff_t) len; sum = (sum ^ *p++) << 1);
     printf("  testbuf_writel: %4lu bytes, checksum %04x\n",
 	   (unsigned long) len, sum & 0xffff);
@@ -89,13 +89,13 @@ static int line_out(const struct jbg85_dec_state *s,
  * Store the artificial test image defined in T.82, clause 7.2.1 at
  * pic. The image requires 477995 bytes of memory, is 1960 x 1951 pixels
  * large and has one plane.
- */ 
+ */
 static void testimage(unsigned char *pic)
 {
   unsigned long i, j, sum;
   unsigned int prsg, repeat[8];
   unsigned char *p;
-  
+
   memset(pic, 0, TESTPIC_SIZE);
   p = pic;
   prsg = 1;
@@ -131,7 +131,7 @@ static void testimage(unsigned char *pic)
 
   return;
 }
-  
+
 
 /*
  * Perform a full test cycle with one set of parameters. Encode an image
@@ -157,7 +157,7 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
   plane_size = bpl * height;
   image = (unsigned char *) checkedmalloc(plane_size);
   memcpy(image, orig_image, plane_size);
-  
+
   printf("\nTest-85 %s.1: Encoding ...\n", test_id);
   testbuf_len = 0;
   jbg85_enc_init(&sje, width, height, testbuf_writel, NULL);
@@ -178,7 +178,7 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
     }
   else
     puts("");
-  
+
 #if 1
   buffer_len = ((width >> 3) + !!(width & 7)) * 3;
   buffer = (unsigned char *) checkedmalloc(buffer_len);
@@ -239,7 +239,7 @@ static int test_cycle(unsigned char *orig_image, int width, int height,
 
 #endif
   puts("");
-  
+
   return trouble != 0;
 }
 
@@ -283,11 +283,11 @@ int main(int argc, char **argv)
    * output file name for exporting test image */
   if (argc > 1) {
     FILE *f;
-    
+
     puts("Generating test image ...");
     testimage(testpic);
     printf("Storing in '%s' ...\n", argv[1]);
-    
+
     /* write out test image as PBM file */
     f = fopen(argv[1], "wb");
     if (!f) abort();
@@ -399,7 +399,7 @@ int main(int argc, char **argv)
   } else
     puts(PASSED);
   printf("\n");
-  
+
   puts("3) Parametric algorithm test sequence from ITU-T T.82, clause 7.2\n"
        "-----------------------------------------------------------------\n");
   puts("Generating test image ...");

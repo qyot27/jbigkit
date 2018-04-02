@@ -7,7 +7,7 @@ CC = gcc
 
 # Options for the compiler
 CFLAGS = -g -O -W -Wall -Wno-unused-result -ansi -pedantic # --coverage
-CPPFLAGS = -I../libjbig 
+CPPFLAGS = -I../libjbig
 LDFLAGS = -L../libjbig
 
 .PHONY: txt pdf test test82 test85 clean

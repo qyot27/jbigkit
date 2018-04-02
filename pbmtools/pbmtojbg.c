@@ -63,17 +63,17 @@ static void usage(void)
 void *checkedmalloc(size_t n)
 {
   void *p;
-  
+
   if ((p = malloc(n)) == NULL) {
     fprintf(stderr, "Sorry, not enough memory available!\n");
     exit(1);
   }
-  
+
   return p;
 }
 
 
-/* 
+/*
  * Read an ASCII integer number from file f and skip any PBM
  * comments which are encountered.
  */
@@ -241,7 +241,7 @@ int main (int argc, char **argv)
 	usage();
       }
   }
-  
+
   if (fnin) {
     fin = fopen(fnin, "rb");
     if (!fin) {

@@ -1,6 +1,6 @@
 /*
  *  A sequence of test procedures for this JBIG implementation
- * 
+ *
  *  Run this test sequence after each modification on the JBIG library.
  *
  *  Markus Kuhn -- http://www.cl.cam.ac.uk/~mgk25/
@@ -28,12 +28,12 @@ long testbuf_len;
 static void *checkedmalloc(size_t n)
 {
   void *p;
-  
+
   if ((p = malloc(n)) == NULL) {
     fprintf(stderr, "Sorry, not enough memory available!\n");
     exit(1);
   }
-  
+
   return p;
 }
 
@@ -60,7 +60,7 @@ static void testbuf_writel(unsigned char *start, size_t len, void *dummy)
   {
     unsigned char *p;
     unsigned sum = 0;
-    
+
     for (p = start; p - start < (ptrdiff_t) len; sum = (sum ^ *p++) << 1);
     printf("  testbuf_writel: %4lu bytes, checksum %04x\n",
 	   (unsigned long) len, sum & 0xffff);
@@ -76,13 +76,13 @@ static void testbuf_writel(unsigned char *start, size_t len, void *dummy)
  * Store the artificial test image defined in T.82, clause 7.2.1 at
  * pic. The image requires 477995 bytes of memory, is 1960 x 1951 pixels
  * large and has one plane.
- */ 
+ */
 static void testimage(unsigned char *pic)
 {
   unsigned long i, j, sum;
   unsigned int prsg, repeat[8];
   unsigned char *p;
-  
+
   memset(pic, 0, TESTPIC_SIZE);
   p = pic;
   prsg = 1;
@@ -118,7 +118,7 @@ static void testimage(unsigned char *pic)
 
   return;
 }
-  
+
 
 /*
  * Perform a full test cycle with one set of parameters. Encode an image
@@ -166,7 +166,7 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
     }
   else
     puts("");
-  
+
   printf("Test %s.2: Decoding whole chunk ...\n", test_id);
   jbg_dec_init(&sjd);
   result = jbg_dec_in(&sjd, testbuf, testbuf_len, NULL);
@@ -225,7 +225,7 @@ static int test_cycle(unsigned char **orig_image, int width, int height,
 
   jbg_dec_free(&sjd);
   puts("");
-  
+
   return trouble != 0;
 }
 
@@ -348,7 +348,7 @@ int main(int argc, char **argv)
     puts("Generating test image ...");
     testimage(testpic);
     printf("Storing in '%s' ...\n", argv[1]);
-    
+
     /* write out test image as PBM file */
     f = fopen(argv[1], "wb");
     if (!f) abort();
@@ -460,7 +460,7 @@ int main(int argc, char **argv)
   } else
     puts(PASSED);
   printf("\n");
-  
+
   puts("3) Parametric algorithm test sequence from ITU-T T.82, clause 7.2\n"
        "-----------------------------------------------------------------\n");
   puts("Generating test image ...");
@@ -518,7 +518,7 @@ int main(int argc, char **argv)
 
   puts("5) Small test image, 0-3 layers, 4 planes, different orders\n"
        "-----------------------------------------------------------\n");
-  
+
   /* test a simple multi-plane image */
   ppp[0] = jbig_normal;
   ppp[1] = jbig_upsidedown;

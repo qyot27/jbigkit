@@ -80,7 +80,7 @@ void read_file(unsigned char **buf, size_t *buflen, size_t *len, FILE *f)
     fprintf(stderr, "Oops, realloc failed when shrinking buffer!\n");
     exit(1);
   }
-  
+
   return;
 }
 
@@ -129,7 +129,7 @@ void diagnose_bie(FILE *fin)
   unsigned long stripes;
   int layers, planes;
   unsigned long sdes, sde = 0;
-  
+
   /* read BIH */
   read_file(&bie, &buflen, &len, fin);
   if (len < 20) {

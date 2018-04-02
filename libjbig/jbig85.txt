@@ -288,7 +288,7 @@ to stdout, looks like this:
 void output_bie(unsigned char *start, size_t len, void *file)
 {
   fwrite(start, 1, len, (FILE *) file);
-  
+
   return;
 }
 
@@ -301,7 +301,7 @@ int main()
   };
   struct jbg85_enc_state se;
   int i;
-  
+
   jbg85_enc_init(&se, 23, 5, output_bie, stdout);      /* initialize encoder */
   jbg85_enc_options(&se, JBG_TPBON, 0, -1);      /* clear JBG_VLENGTH option */
   for (i = 0; i < 5; i++) {

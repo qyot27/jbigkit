@@ -307,7 +307,7 @@ to stdout, looks like this:
 void output_bie(unsigned char *start, size_t len, void *file)
 {
   fwrite(start, 1, len, (FILE *) file);
-  
+
   return;
 }
 
@@ -320,12 +320,12 @@ int main()
   };
   unsigned char *bitmaps[1] = { bitmap };
   struct jbg_enc_state se;
-  
-  jbg_enc_init(&se, 23, 5, 1, bitmaps, 
+
+  jbg_enc_init(&se, 23, 5, 1, bitmaps,
 	       output_bie, stdout);              /* initialize encoder */
   jbg_enc_out(&se);                                    /* encode image */
   jbg_enc_free(&se);                    /* release allocated resources */
-  
+
   return 0;
 }
 ---------------------------------------------------------------------------
@@ -365,7 +365,7 @@ In order to change any of these default parameters, additional
 functions have to be called between jbg_enc_init() and jbg_enc_out().
 
 In order to activate progressive encoding, it is possible to specify
-with 
+with
 
   void jbg_enc_layers(struct jbg_enc_state *s, int d);
 

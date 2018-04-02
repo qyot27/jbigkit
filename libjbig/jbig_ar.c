@@ -22,7 +22,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- * 
+ *
  *  If you want to use this program under different license conditions,
  *  then contact the author for an arrangement.
  */
@@ -106,7 +106,7 @@ static unsigned char nlpstab[113] = {
 void arith_encode_init(struct jbg_arenc_state *s, int reuse_st)
 {
   int i;
-  
+
   if (!reuse_st)
     for (i = 0; i < 4096; s->st[i++] = 0) ;
   s->c = 0;
@@ -114,7 +114,7 @@ void arith_encode_init(struct jbg_arenc_state *s, int reuse_st)
   s->sc = 0;
   s->ct = 11;
   s->buffer = -1;    /* empty */
-  
+
   return;
 }
 
@@ -144,7 +144,7 @@ void arith_encode_flush(struct jbg_arenc_state *s)
 	s->byte_out(0x00, s->file);
   } else {
     if (s->buffer >= 0)
-      s->byte_out(s->buffer, s->file); 
+      s->byte_out(s->buffer, s->file);
     /* T.82 figure 30 says buffer+1 for the above line! Typo? */
     for (; s->sc; --s->sc) {
       s->byte_out(0xff, s->file);
@@ -167,7 +167,7 @@ void arith_encode_flush(struct jbg_arenc_state *s)
 }
 
 
-void arith_encode(struct jbg_arenc_state *s, int cx, int pix) 
+void arith_encode(struct jbg_arenc_state *s, int cx, int pix)
 {
   register unsigned lsz, ss;
   register unsigned char *st;
@@ -254,7 +254,7 @@ void arith_encode(struct jbg_arenc_state *s, int cx, int pix)
       s->ct = 8;
     }
   } while (s->a < 0x8000);
- 
+
   return;
 }
 
@@ -262,7 +262,7 @@ void arith_encode(struct jbg_arenc_state *s, int cx, int pix)
 void arith_decode_init(struct jbg_ardec_state *s, int reuse_st)
 {
   int i;
-  
+
   if (!reuse_st)
     for (i = 0; i < 4096; s->st[i++] = 0) ;
   s->c = 0;
@@ -295,7 +295,7 @@ void arith_decode_init(struct jbg_ardec_state *s, int reuse_st)
  *   decoded.
  *
  * s->pscd_ptr == s->pscd_end - 1:
- * 
+ *
  *   The decoder has used up all provided PSCD bytes except for the
  *   very last byte, because that has the value 0xff. The decoder can
  *   at this point not yet tell whether this 0xff belongs to a
@@ -338,7 +338,7 @@ int arith_decode(struct jbg_ardec_state *s, int cx)
       if (s->pscd_ptr >= s->pscd_end) {
 	return -1;  /* more bytes needed */
       }
-      if (*s->pscd_ptr == 0xff) 
+      if (*s->pscd_ptr == 0xff)
 	if (s->pscd_ptr + 1 >= s->pscd_end) {
 	  return -1; /* final 0xff byte not processed */
 	} else {

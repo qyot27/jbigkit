@@ -152,7 +152,7 @@ struct jbg_dec_state {
 
   /*
    * Pointers to array [planes] of lower/higher resolution images.
-   * lhp[d & 1] contains image of layer d. 
+   * lhp[d & 1] contains image of layer d.
    */
   unsigned char **lhp[2];
 
@@ -167,7 +167,7 @@ struct jbg_dec_state {
   int buf_len;                                /* number of bytes in buffer */
   unsigned long comment_skip;      /* remaining bytes of a COMMENT segment */
   unsigned long x;              /* x position of next pixel in current SDE */
-  unsigned long i; /* line in current SDE (first line of each stripe is 0) */ 
+  unsigned long i; /* line in current SDE (first line of each stripe is 0) */
   int at_moves;                /* number of AT moves in the current stripe */
   unsigned long at_line[JBG_ATMOVES_MAX];           /* lines at which an   *
 					             * AT move will happen */

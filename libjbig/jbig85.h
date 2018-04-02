@@ -114,8 +114,8 @@ struct jbg85_dec_state {
   unsigned long comment_skip;      /* remaining bytes of a COMMENT segment */
   unsigned long x;                             /* x position of next pixel */
   unsigned long stripe;                                  /* current stripe */
-  unsigned long y;                      /* line in image (first line is 0) */ 
-  unsigned long i;   /* line in current stripe (first line of stripe is 0) */ 
+  unsigned long y;                      /* line in image (first line is 0) */
+  unsigned long i;   /* line in current stripe (first line of stripe is 0) */
   int at_moves;                /* number of AT moves in the current stripe */
   unsigned long at_line[JBG85_ATMOVES_MAX];         /* lines at which an   *
 					             * AT move will happen */

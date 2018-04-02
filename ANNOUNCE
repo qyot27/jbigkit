@@ -55,7 +55,7 @@ The JBIG compression algorithm offers the following features:
 
   - About 2 times better compression on typical 300 dpi documents
     compared to 'gzip -9' on raw bitmaps.
-    
+
   - About 3-4 times better compression than GIF on typical 300 dpi
     documents.
 
