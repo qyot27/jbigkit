@@ -9,7 +9,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <limits.h>
-#include "jbig85.h"
+#include "libjbig/jbig85.h"
 
 
 char *progname;                  /* global pointer to argv[0] */

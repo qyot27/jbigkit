@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <limits.h>
-#include "jbig.h"
+#include "libjbig/jbig.h"
 
 char *progname;                  /* global pointer to argv[0] */
 
