@@ -2,6 +2,15 @@
 JBIG-KIT revision history
 -------------------------
 
+Changes in upcoming version (TBA)
+
+  - The jbig.c decoder will now, by default, return JBG_ENOMEM if the
+    final image layer would occupy more than two gigabytes. Users can
+    adjust this limit by changing sd->maxmem right after having called
+    jbg_dec_init(&sd). This is to reduce the risk of denial-of-service
+    attacks through excessive image dimensions (e.g., CVE-2017-9937).
+
+  - minor bug fixes and documentation clarifications
 
 Changes in version 2.1 (2014-04-08)
 

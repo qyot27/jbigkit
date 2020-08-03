@@ -2051,6 +2051,7 @@ void jbg_dec_init(struct jbg_dec_state *s)
   s->xmax = 4294967295UL;
   s->ymax = 4294967295UL;
   s->dmax = 256;
+  s->maxmem = 2000000000;  /* no final image larger than 2 GB by default */
   s->s = NULL;
 
   return;
@@ -2639,6 +2640,10 @@ int jbg_dec_in(struct jbg_dec_state *s, unsigned char *data, size_t len,
     if (s->dl != s->d && (s->order & JBG_HITOLO || s->order & JBG_SEQ))
       return JBG_EIMPL | 5;
     s->options = s->buffer[19];
+
+    /* will the final image require more bytes than permitted by s->maxmem? */
+    if (s->maxmem / s->planes / s->yd / jbg_ceil_half(s->xd, 3) == 0)
+      return JBG_ENOMEM;   /* increase s->maxmem if needed */
 
     /* calculate number of stripes that will be required */
     s->stripes = jbg_stripes(s->l0, s->yd, s->d);

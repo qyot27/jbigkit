@@ -181,6 +181,8 @@ struct jbg_dec_state {
   unsigned long xmax, ymax;         /* if possible abort before image gets *
 				     * larger than this size */
   int dmax;                                      /* abort after this layer */
+  size_t maxmem;               /* return JBG_ENOMEM if final image layer D
+                                  would require more than maxmem bytes     */
 };
 
 
