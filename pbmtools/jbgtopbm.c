@@ -129,6 +129,7 @@ void diagnose_bie(FILE *fin)
   unsigned long stripes;
   int layers, planes;
   unsigned long sdes, sde = 0;
+  double size;
 
   /* read BIH */
   read_file(&bie, &buflen, &len, fin);
@@ -174,12 +175,14 @@ void diagnose_bie(FILE *fin)
 	  stripes, layers, planes);
   if (planes == 0 || (ULONG_MAX / layers) / planes >= stripes) {
     sdes = stripes * layers * planes;
-    fprintf(f, "%lu SDEs\n\n", sdes);
+    fprintf(f, "%lu SDEs\n", sdes);
   } else {
     /* handle integer overflow */
     fprintf(f, ">%lu SDEs!\n", ULONG_MAX);
     return;
   }
+  size = (double) planes * (double) yd * (double) jbg_ceil_half(xd, 3);
+  fprintf(f, "  decompressed %.15g bytes\n\n", size);
   if (planes == 0) { fprintf(f, "P > 0 required!\n\n"); }
 
   /* parse BID */
