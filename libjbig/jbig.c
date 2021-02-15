@@ -3272,6 +3272,8 @@ int jbg_newlen(unsigned char *bie, size_t len)
     else if (p[0] == MARKER_ESC)
       switch (p[1]) {
       case MARKER_NEWLEN:
+        if (p + 5 >= bie + len)
+          return JBG_EAGAIN;
 	y = (((long) bie[ 8] << 24) | ((long) bie[ 9] << 16) |
 	     ((long) bie[10] <<  8) |  (long) bie[11]);
 	yn = (((long) p[2] << 24) | ((long) p[3] << 16) |
